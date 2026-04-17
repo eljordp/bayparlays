@@ -598,8 +598,8 @@ export default function Home() {
               className="space-y-4 mb-10"
             >
               <p className="text-base text-white/40 leading-relaxed">
-                Free gets you 2 parlays a day. Upgrade for unlimited AI parlays,
-                full builder access, and every edge calculated.
+                Unlimited AI parlays, full builder access, and every edge calculated.
+                Start with a free 7-day trial on Sharp.
               </p>
               <div className="flex items-baseline gap-4">
                 <div className="flex items-baseline gap-1">

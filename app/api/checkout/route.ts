@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
         "line_items[0][quantity]": "1",
         "success_url": `${BASE_URL}/subscribe?success=true`,
         "cancel_url": `${BASE_URL}/subscribe?canceled=true`,
-        "subscription_data[trial_period_days]": "7",
+        // Only Sharp tier gets a 7-day free trial
+        ...(tier === "sharp" ? { "subscription_data[trial_period_days]": "7" } : {}),
       }),
     });
 

@@ -259,14 +259,13 @@ function SubscribeContent() {
       {/* ── PRICING TIERS ── */}
       <section className="py-12 md:py-24">
         <div className="w-full max-w-[1200px] mx-auto px-4 md:px-10">
-          {/* Free note */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
             className="text-center text-sm text-white/30 mb-10"
           >
-            Free users get 2 AI parlays per day + live odds. Upgrade for unlimited access.
+            Sharp includes a 7-day free trial. Cancel anytime before it ends — no charge.
           </motion.p>
 
           <motion.div
@@ -362,7 +361,7 @@ function SubscribeContent() {
                   )}
 
                   <p className="text-xs text-white/20 text-center mt-4">
-                    7-day free trial. Cancel anytime.
+                    {plan.id === "sharp" ? "7-day free trial. Cancel anytime." : "Cancel anytime."}
                   </p>
                 </div>
               </motion.div>
