@@ -15,6 +15,8 @@ import {
   Shield,
   Flame,
   ArrowUpRight,
+  Menu,
+  X,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -110,6 +112,7 @@ export default function ParlaysPage() {
   const [selectedLegs, setSelectedLegs] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("ev");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const fetchParlays = useCallback(async () => {
     setLoading(true);
@@ -179,24 +182,70 @@ export default function ParlaysPage() {
               ))}
             </div>
           </div>
-          <Link
-            href="/builder"
-            className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300"
-            style={{
-              background: "#00D4AA",
-              color: "#0a0a0a",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#00E8BC"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#00D4AA"; e.currentTarget.style.transform = "translateY(0)"; }}
-          >
-            Build Your Own
-            <ArrowUpRight size={14} strokeWidth={2.5} />
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/builder"
+              className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300"
+              style={{
+                background: "#00D4AA",
+                color: "#0a0a0a",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#00E8BC"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#00D4AA"; e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              Build Your Own
+              <ArrowUpRight size={14} strokeWidth={2.5} />
+            </Link>
+            <button
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile dropdown */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden overflow-hidden"
+              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <div className="px-6 py-4 flex flex-col gap-1">
+                {[
+                  { href: "/", label: "Home" },
+                  { href: "/parlays", label: "AI Parlays" },
+                  { href: "/odds", label: "Odds" },
+                  { href: "/builder", label: "Builder" },
+                ].map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-150"
+                    style={{
+                      color: link.href === "/parlays" ? "#00D4AA" : "rgba(255,255,255,0.6)",
+                      background: link.href === "/parlays" ? "rgba(0,212,170,0.08)" : "transparent",
+                    }}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* ─── Header ─── */}
-      <header className="pt-32 pb-16 px-6">
+      <header className="pt-24 pb-10 px-4 md:pt-32 md:pb-16 md:px-6">
         <div className="max-w-[1400px] mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -227,7 +276,7 @@ export default function ParlaysPage() {
           {/* Meta stats */}
           {meta && (
             <motion.div
-              className="flex flex-wrap gap-8 mt-12"
+              className="flex flex-wrap gap-4 md:gap-8 mt-12"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -256,18 +305,18 @@ export default function ParlaysPage() {
       </header>
 
       {/* ─── Filters ─── */}
-      <section className="px-6 pb-12 sticky top-16 z-40" style={{ background: "rgba(10,10,10,0.92)", backdropFilter: "blur(12px)" }}>
+      <section className="px-4 md:px-6 pb-12 sticky top-16 z-40" style={{ background: "rgba(10,10,10,0.92)", backdropFilter: "blur(12px)" }}>
         <div className="max-w-[1400px] mx-auto py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           {/* Sport filters */}
-          <div className="flex flex-wrap items-center gap-3 mb-5">
-            <span className="text-xs font-medium uppercase tracking-wider mr-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mb-5">
+            <span className="text-xs font-medium uppercase tracking-wider mr-2 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
               Sport
             </span>
             {SPORTS.map((sport) => (
               <button
                 key={sport}
                 onClick={() => setSelectedSport(sport)}
-                className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
+                className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
                 style={{
                   background: selectedSport === sport ? "#00D4AA" : "rgba(255,255,255,0.05)",
                   color: selectedSport === sport ? "#0a0a0a" : "rgba(255,255,255,0.5)",
@@ -280,9 +329,9 @@ export default function ParlaysPage() {
           </div>
 
           {/* Leg count + Sort */}
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-medium uppercase tracking-wider mr-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-6">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                 Legs
               </span>
               {LEG_COUNTS.map((count) => (
@@ -301,10 +350,10 @@ export default function ParlaysPage() {
               ))}
             </div>
 
-            <div className="h-6 w-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="h-6 w-px flex-shrink-0" style={{ background: "rgba(255,255,255,0.08)" }} />
 
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-medium uppercase tracking-wider mr-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                 Sort
               </span>
               {SORT_OPTIONS.map((opt) => (
@@ -327,7 +376,7 @@ export default function ParlaysPage() {
       </section>
 
       {/* ─── Main Content ─── */}
-      <main className="px-6 pb-32">
+      <main className="px-4 pb-20 md:px-6 md:pb-32">
         <div className="max-w-[1400px] mx-auto">
           <AnimatePresence mode="wait">
             {/* Loading */}
@@ -443,7 +492,7 @@ function ParlayCard({
       }}
     >
       {/* Card header */}
-      <div className="px-6 md:px-8 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="px-4 md:px-8 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="flex items-center gap-4">
           <span className="text-2xl font-black" style={{ color: "rgba(255,255,255,0.12)", fontVariantNumeric: "tabular-nums" }}>
             #{String(index + 1).padStart(2, "0")}
@@ -467,7 +516,7 @@ function ParlayCard({
       </div>
 
       {/* Legs */}
-      <div className="px-6 md:px-8 py-4">
+      <div className="px-4 md:px-8 py-4">
         <div className="space-y-1">
           {parlay.legs.map((leg, i) => (
             <div
@@ -533,7 +582,7 @@ function ParlayCard({
 
       {/* Bottom section */}
       <div
-        className="px-6 md:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+        className="px-4 md:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
         style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,212,170,0.02)" }}
       >
         {/* Left: Combined odds + payout */}
@@ -565,7 +614,7 @@ function ParlayCard({
         </div>
 
         {/* Center: EV bar */}
-        <div className="flex-1 max-w-xs w-full">
+        <div className="flex-1 max-w-full md:max-w-xs w-full">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
               Expected Value
@@ -593,7 +642,7 @@ function ParlayCard({
         </div>
 
         {/* Right: Confidence ring + copy */}
-        <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center gap-5">
           {/* Confidence ring */}
           <div className="relative w-14 h-14 flex items-center justify-center">
             <svg className="absolute inset-0 w-14 h-14 -rotate-90" viewBox="0 0 56 56">
@@ -676,7 +725,7 @@ function SkeletonCard() {
       }}
     >
       {/* Header skeleton */}
-      <div className="px-8 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="px-4 md:px-8 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="flex items-center gap-4">
           <div className="w-12 h-7 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
           <div className="w-32 h-5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }} />
@@ -685,7 +734,7 @@ function SkeletonCard() {
       </div>
 
       {/* Legs skeleton */}
-      <div className="px-8 py-4 space-y-3">
+      <div className="px-4 md:px-8 py-4 space-y-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-4 py-3 px-4">
             <div className="w-12 h-7 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
@@ -699,7 +748,7 @@ function SkeletonCard() {
       </div>
 
       {/* Bottom skeleton */}
-      <div className="px-8 py-6 flex items-center gap-8" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="px-4 md:px-8 py-6 flex items-center gap-8" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="space-y-2">
           <div className="w-20 h-3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
           <div className="w-24 h-8 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />

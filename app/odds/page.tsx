@@ -108,6 +108,7 @@ export default function OddsPage() {
   const [data, setData] = useState<OddsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mobileNav, setMobileNav] = useState(false);
 
   const fetchOdds = useCallback(async (s: string) => {
     setLoading(true);
@@ -139,11 +140,12 @@ export default function OddsPage() {
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
       {/* ─── Nav ────────────────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0a]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-5 py-4">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-4 md:px-5">
           <Link href="/" className="text-xl font-black tracking-tight">
             BayParlays
           </Link>
-          <div className="flex items-center gap-6 text-sm text-white/50">
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
             <Link href="/" className="transition hover:text-white">
               Home
             </Link>
@@ -160,10 +162,37 @@ export default function OddsPage() {
               Builder
             </Link>
           </div>
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileNav(!mobileNav)}
+            className="md:hidden flex flex-col items-center justify-center gap-1.5 p-2"
+            aria-label="Toggle menu"
+          >
+            <span className={`block h-0.5 w-5 bg-white/70 transition-transform ${mobileNav ? "translate-y-[4px] rotate-45" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-white/70 transition-opacity ${mobileNav ? "opacity-0" : ""}`} />
+            <span className={`block h-0.5 w-5 bg-white/70 transition-transform ${mobileNav ? "-translate-y-[4px] -rotate-45" : ""}`} />
+          </button>
         </div>
+        {/* Mobile dropdown */}
+        {mobileNav && (
+          <div className="md:hidden border-t border-white/[0.06] px-4 pb-4 pt-2 flex flex-col gap-3 text-sm text-white/50">
+            <Link href="/" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
+              Home
+            </Link>
+            <Link href="/parlays" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
+              Parlays
+            </Link>
+            <Link href="/odds" className="text-[#00D4AA] font-medium" onClick={() => setMobileNav(false)}>
+              Odds
+            </Link>
+            <Link href="/builder" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
+              Builder
+            </Link>
+          </div>
+        )}
       </nav>
 
-      <main className="mx-auto max-w-[1400px] px-5 py-10">
+      <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-5 md:py-10">
         {/* ─── Header ─────────────────────────────────────────────────── */}
         <div className="mb-8">
           <h1
@@ -188,7 +217,7 @@ export default function OddsPage() {
         </div>
 
         {/* ─── Sport Tabs ─────────────────────────────────────────────── */}
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex gap-2 overflow-x-auto scrollbar-hide">
           {SPORTS.map((s) => (
             <button
               key={s.key}
@@ -308,12 +337,12 @@ export default function OddsPage() {
                 className="mb-6 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"
               >
                 {/* Game header */}
-                <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="text-base font-semibold">
+                <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-4 md:px-5">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="min-w-0">
+                      <p className="text-sm sm:text-base font-semibold truncate">
                         {game.awayTeam}{" "}
-                        <span className="text-white/20 mx-2">@</span>{" "}
+                        <span className="text-white/20 mx-1 sm:mx-2">@</span>{" "}
                         {game.homeTeam}
                       </p>
                     </div>
@@ -330,7 +359,7 @@ export default function OddsPage() {
                 </div>
 
                 {/* Best line callout */}
-                <div className="border-b border-white/[0.04] bg-[#00D4AA]/[0.03] px-5 py-3">
+                <div className="border-b border-white/[0.04] bg-[#00D4AA]/[0.03] px-4 py-3 md:px-5">
                   <div className="flex flex-wrap gap-x-8 gap-y-1">
                     {outcomeNames.map((name) => {
                       const b = bestMap.get(name);
@@ -338,7 +367,7 @@ export default function OddsPage() {
                       return (
                         <span
                           key={name}
-                          className="text-xs text-white/50"
+                          className="text-[11px] sm:text-xs text-white/50"
                         >
                           Best {market === "totals" ? name : name}:{" "}
                           <span className="font-semibold text-[#00D4AA]">
@@ -358,7 +387,7 @@ export default function OddsPage() {
 
                 {/* Odds grid */}
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-[600px] text-sm">
                     <thead>
                       <tr className="border-b border-white/[0.04]">
                         <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/25">
@@ -456,7 +485,7 @@ export default function OddsPage() {
 
         {/* ─── Footer info ────────────────────────────────────────────── */}
         {data && !loading && (
-          <div className="mt-10 flex items-center justify-between text-xs text-white/15">
+          <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white/15">
             <p>
               Powered by The Odds API
               {data.requestsRemaining &&

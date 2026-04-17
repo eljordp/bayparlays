@@ -9,10 +9,12 @@ import {
   ChevronRight,
   Crosshair,
   Gauge,
+  Menu,
   ScanLine,
+  X,
   Zap,
 } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 /* ─── animation helpers ─── */
 const fadeUp = {
@@ -98,6 +100,7 @@ const sports = [
 /* ─────────────────────────────────────────── */
 
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -142,17 +145,55 @@ export default function Home() {
             </Link>
           </div>
 
-          <Link
-            href="/builder"
-            className="bg-[#00D4AA] text-[#0a0a0a] px-5 py-2 text-sm font-semibold rounded-full hover:bg-[#00E8BB] transition-colors duration-200"
-          >
-            Get Started
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/builder"
+              className="bg-[#00D4AA] text-[#0a0a0a] px-5 py-2 text-xs sm:text-sm font-semibold rounded-full hover:bg-[#00E8BB] transition-colors duration-200"
+            >
+              Get Started
+            </Link>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden text-white/60 hover:text-white transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-xl">
+            <div className="px-6 py-4 flex flex-col gap-4">
+              <Link
+                href="/parlays"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
+              >
+                Parlays
+              </Link>
+              <Link
+                href="/odds"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
+              >
+                Odds
+              </Link>
+              <Link
+                href="/builder"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
+              >
+                Builder
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ── HERO ── */}
-      <section ref={heroRef} className="relative pt-32 pb-28 md:pt-44 md:pb-40 overflow-hidden">
+      <section ref={heroRef} className="relative pt-24 pb-16 md:pt-44 md:pb-40 overflow-hidden">
         {/* Background grain / texture */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E")`,
@@ -228,7 +269,7 @@ export default function Home() {
               <motion.div
                 variants={fadeUp}
                 custom={4}
-                className="flex gap-10 md:gap-14"
+                className="flex gap-6 md:gap-14"
               >
                 {[
                   { value: "6", label: "Sports" },
@@ -255,7 +296,7 @@ export default function Home() {
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="relative"
+              className="relative overflow-hidden"
             >
               {/* Glow behind card */}
               <div className="absolute -inset-4 bg-[#00D4AA]/[0.06] rounded-3xl blur-2xl" />
@@ -358,7 +399,7 @@ export default function Home() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="py-28 md:py-40 border-t border-white/[0.04]">
+      <section className="py-16 md:py-40 border-t border-white/[0.04]">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <motion.div
             initial="hidden"
@@ -435,7 +476,7 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section className="py-28 md:py-40 bg-white/[0.015] border-t border-b border-white/[0.04]">
+      <section className="py-16 md:py-40 bg-white/[0.015] border-t border-b border-white/[0.04]">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <motion.div
             initial="hidden"
@@ -538,7 +579,7 @@ export default function Home() {
       </section>
 
       {/* ── SAMPLE PARLAYS ── */}
-      <section className="py-28 md:py-40">
+      <section className="py-16 md:py-40">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <motion.div
             initial="hidden"
@@ -666,7 +707,7 @@ export default function Home() {
       </section>
 
       {/* ── BOTTOM CTA ── */}
-      <section className="py-28 md:py-40 border-t border-white/[0.04] relative overflow-hidden">
+      <section className="py-16 md:py-40 border-t border-white/[0.04] relative overflow-hidden">
         {/* Background glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#00D4AA]/[0.03] rounded-full blur-[100px] pointer-events-none" />
 
@@ -712,7 +753,7 @@ export default function Home() {
       {/* ── FOOTER ── */}
       <footer className="border-t border-white/[0.04] py-16 md:py-20">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-8 mb-16">
             {/* Brand */}
             <div className="md:col-span-2">
               <span

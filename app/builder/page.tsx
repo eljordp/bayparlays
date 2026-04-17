@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -125,6 +125,8 @@ export default function BuilderPage() {
   const [legs, setLegs] = useState<ParlayLeg[]>([]);
   const [stake, setStake] = useState<string>("100");
   const [activeMarket, setActiveMarket] = useState<string>("h2h");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const slipRef = useRef<HTMLDivElement>(null);
 
   // Fetch games when sport changes
   useEffect(() => {
@@ -309,7 +311,8 @@ export default function BuilderPage() {
           >
             BayParlays
           </Link>
-          <div className="flex items-center gap-6 text-sm text-white/50">
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
             <Link href="/" className="hover:text-white transition-colors">
               Home
             </Link>
@@ -329,19 +332,61 @@ export default function BuilderPage() {
               Builder
             </Link>
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileNavOpen((v) => !v)}
+            className="md:hidden flex items-center justify-center w-8 h-8 text-white/60 hover:text-white transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              {mobileNavOpen ? (
+                <>
+                  <path d="M4 4l12 12" />
+                  <path d="M16 4L4 16" />
+                </>
+              ) : (
+                <>
+                  <path d="M3 5h14" />
+                  <path d="M3 10h14" />
+                  <path d="M3 15h14" />
+                </>
+              )}
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile dropdown menu */}
+        <AnimatePresence>
+          {mobileNavOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden overflow-hidden border-t border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-md"
+            >
+              <div className="flex flex-col px-6 py-3 gap-1 text-sm">
+                <Link href="/" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Home</Link>
+                <Link href="/parlays" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Parlays</Link>
+                <Link href="/odds" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Odds</Link>
+                <Link href="/builder" onClick={() => setMobileNavOpen(false)} className="py-2 text-[#00D4AA] font-medium">Builder</Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* ── Main ─────────────────────────────────────────────────── */}
       <main className="pt-14">
         {/* Header */}
         <div className="border-b border-white/[0.06]">
-          <div className="max-w-[1600px] mx-auto px-6 py-8">
+          <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-5 md:py-8">
             <motion.h1
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="text-3xl md:text-4xl font-black tracking-tight"
+              className="text-2xl md:text-4xl font-black tracking-tight"
               style={{ fontFamily: "'DM Serif Display', serif" }}
             >
               Parlay Builder
@@ -359,8 +404,8 @@ export default function BuilderPage() {
         </div>
 
         {/* Two-column layout */}
-        <div className="max-w-[1600px] mx-auto px-6 py-8">
-          <div className="flex flex-col lg:flex-row gap-8">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-6 md:py-8">
+          <div className="flex flex-col lg:flex-row gap-6 md:gap-8">
             {/* ── Left: Game Browser ─────────────────────────────── */}
             <div className="flex-1 min-w-0">
               {/* Sport Tabs */}
@@ -485,7 +530,7 @@ export default function BuilderPage() {
 
                         {/* Bet options */}
                         <div className="px-4 pb-3">
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                             {outcomes.map((outcome) => {
                               const selected = isSelected(
                                 game.id,
@@ -568,7 +613,7 @@ export default function BuilderPage() {
             </div>
 
             {/* ── Right: Parlay Slip ─────────────────────────────── */}
-            <div className="lg:w-[400px] shrink-0">
+            <div id="parlay-slip" ref={slipRef} className="lg:w-[400px] shrink-0">
               <div className="lg:sticky lg:top-[72px]">
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
@@ -834,6 +879,40 @@ export default function BuilderPage() {
           </div>
         </div>
       </main>
+
+      {/* ── Floating mobile slip indicator ──────────────────────── */}
+      <AnimatePresence>
+        {legs.length > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0a0a0a] border-t border-white/[0.08] px-4 py-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-white">
+                  Your Parlay — {legs.length} leg{legs.length !== 1 ? "s" : ""}
+                </div>
+                {calculations && legs.length >= 2 && (
+                  <div className="text-xs text-[#00D4AA] font-semibold tabular-nums mt-0.5">
+                    {formatOdds(calculations.parlayAmerican)} ({calculations.parlayDecimal.toFixed(2)}x)
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  slipRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className="shrink-0 bg-[#00D4AA] text-[#0a0a0a] text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#00D4AA]/90 transition-colors"
+              >
+                View Slip
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
