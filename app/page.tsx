@@ -1,45 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { Menu, X, ChevronRight, ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/app/components/Logo";
+import { ProcessAnimation } from "@/app/components/ProcessAnimation";
+import { BettingSlip } from "@/app/components/BettingSlip";
 
 /* ─── Types ─── */
-
-interface ParlayLeg {
-  sport: string;
-  game: string;
-  pick: string;
-  market: string;
-  odds: number;
-  book: string;
-  impliedProb: number;
-  edgeScore: number;
-}
-
-interface Parlay {
-  id: string;
-  legs: ParlayLeg[];
-  combinedOdds: string;
-  combinedDecimal: number;
-  ev: number;
-  evPercent: number;
-  confidence: number;
-  payout: number;
-  timestamp: string;
-}
-
-interface ParlayResponse {
-  parlays: Parlay[];
-  meta: {
-    sportsScanned: string[];
-    gamesAnalyzed: number;
-    legsEvaluated: number;
-    generatedAt: string;
-  };
-}
 
 interface OddsGame {
   id: string;
@@ -56,16 +25,64 @@ interface OddsResponse {
   games: OddsGame[];
 }
 
-/* ─── Animation ─── */
+/* ─── Animation Variants ─── */
 
-const fade = {
-  hidden: { opacity: 0, y: 20 },
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.08, duration: 0.5, ease: [0.25, 0.1, 0.25, 1] as const },
+    transition: {
+      delay: i * 0.1,
+      duration: 0.6,
+      ease: [0.25, 0.1, 0.25, 1] as const,
+    },
   }),
 };
+
+/* ─── Animated Counter ─── */
+
+function AnimatedCounter({
+  value,
+  prefix = "",
+  suffix = "",
+}: {
+  value: number;
+  prefix?: string;
+  suffix?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!isInView) return;
+
+    let start = 0;
+    const duration = 2000;
+    const startTime = performance.now();
+
+    function tick(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutQuart
+      const eased = 1 - Math.pow(1 - progress, 4);
+      start = Math.floor(eased * value);
+      setCount(start);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+
+    requestAnimationFrame(tick);
+  }, [isInView, value]);
+
+  return (
+    <span ref={ref}>
+      {prefix}
+      {count.toLocaleString()}
+      {suffix}
+    </span>
+  );
+}
 
 /* ─── Helpers ─── */
 
@@ -86,42 +103,24 @@ function formatDate(): string {
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [parlays, setParlays] = useState<Parlay[]>([]);
-  const [meta, setMeta] = useState<ParlayResponse["meta"] | null>(null);
   const [odds, setOdds] = useState<OddsGame[]>([]);
-  const [loading, setLoading] = useState(true);
   const oddsScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchOdds() {
       try {
-        const [parlayRes, oddsRes] = await Promise.allSettled([
-          fetch("/api/parlays?count=3&legs=3"),
-          fetch("/api/odds?sport=nba"),
-        ]);
-
-        if (parlayRes.status === "fulfilled" && parlayRes.value.ok) {
-          const data: ParlayResponse = await parlayRes.value.json();
-          setParlays(data.parlays);
-          setMeta(data.meta);
-        }
-
-        if (oddsRes.status === "fulfilled" && oddsRes.value.ok) {
-          const data: OddsResponse = await oddsRes.value.json();
+        const res = await fetch("/api/odds?sport=nba");
+        if (res.ok) {
+          const data: OddsResponse = await res.json();
           setOdds(data.games?.slice(0, 8) || []);
         }
       } catch {
-        // Silently fail — sections will show fallback states
-      } finally {
-        setLoading(false);
+        // Silently fail — section won't render
       }
     }
 
-    fetchData();
+    fetchOdds();
   }, []);
-
-  const topParlay = parlays[0] || null;
-  const moreParlays = parlays.slice(1, 3);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
@@ -155,10 +154,10 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/parlays"
+              href="/subscribe"
               className="bg-[#FF3B3B] text-[#0a0a0a] px-5 py-2 text-xs sm:text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
             >
-              See All Parlays
+              Start Free Trial
             </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -204,195 +203,221 @@ export default function Home() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="pt-28 pb-16 md:pt-36 md:pb-28">
+      <section className="pt-28 pb-20 md:pt-36 md:pb-32">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-            {/* Left — headline */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left — Copy */}
             <motion.div
               initial="hidden"
               animate="visible"
-              className="pt-4 md:pt-10"
+              className="pt-4 md:pt-0"
             >
-              <motion.h1
-                variants={fade}
-                custom={0}
-                className="text-6xl sm:text-7xl md:text-8xl tracking-tight leading-[0.9] mb-5"
-                style={{ fontFamily: "'DM Serif Display', serif" }}
-              >
-                Today&apos;s
-                <br />
-                Edge
-              </motion.h1>
-
               <motion.p
-                variants={fade}
-                custom={1}
-                className="text-sm text-white/30 mb-8"
+                variants={fadeUp}
+                custom={0}
+                className="text-sm text-white/30 mb-6"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
                 {formatDate()}
               </motion.p>
 
-              <motion.p
-                variants={fade}
-                custom={2}
-                className="text-base text-white/40 mb-10"
-                style={{ fontFamily: "var(--font-geist-mono)" }}
+              <motion.h1
+                variants={fadeUp}
+                custom={1}
+                className="text-5xl sm:text-6xl md:text-7xl tracking-tight leading-[0.95] mb-6"
+                style={{ fontFamily: "'DM Serif Display', serif" }}
               >
-                {meta
-                  ? `${meta.gamesAnalyzed} games scanned across ${meta.sportsScanned.length} sports`
-                  : "Scanning live odds across 12+ sportsbooks"}
+                The AI finds
+                <br />
+                the edge.
+                <br />
+                <span className="text-[#FF3B3B]">You place the bet.</span>
+              </motion.h1>
+
+              <motion.p
+                variants={fadeUp}
+                custom={2}
+                className="text-base md:text-lg text-white/40 mb-10 max-w-md leading-relaxed"
+              >
+                Scanning odds across 12+ sportsbooks in real time.
               </motion.p>
 
-              <motion.div variants={fade} custom={3}>
+              <motion.div
+                variants={fadeUp}
+                custom={3}
+                className="flex flex-wrap items-center gap-4"
+              >
                 <Link
-                  href="/parlays"
+                  href="/subscribe"
                   className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-7 py-3.5 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
                 >
-                  See All Parlays
+                  Start Free Trial
                   <ChevronRight className="w-4 h-4" />
                 </Link>
+                <a
+                  href="#how-it-pays"
+                  className="inline-flex items-center gap-2 border border-white/20 text-white/60 px-7 py-3.5 text-sm font-medium rounded-full hover:border-white/40 hover:text-white transition-all duration-200"
+                >
+                  See How It Works
+                </a>
               </motion.div>
             </motion.div>
 
-            {/* Right — top parlay card */}
+            {/* Right — Process Animation */}
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                delay: 0.3,
+                duration: 0.7,
+                ease: [0.25, 0.1, 0.25, 1],
+              }}
             >
-              {loading ? (
-                <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 min-h-[360px] flex items-center justify-center">
-                  <div className="text-sm text-white/20" style={{ fontFamily: "var(--font-geist-mono)" }}>
-                    Loading live data...
-                  </div>
-                </div>
-              ) : topParlay ? (
-                <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 md:p-8">
-                  {/* Card header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <span className="text-xs font-medium uppercase tracking-widest text-white/30">
-                      Top Pick
-                    </span>
-                    <span
-                      className="text-xs text-white/20"
-                      style={{ fontFamily: "var(--font-geist-mono)" }}
-                    >
-                      {topParlay.legs.length}-Leg Parlay
-                    </span>
-                  </div>
-
-                  {/* Legs */}
-                  <div className="space-y-3 mb-6">
-                    {topParlay.legs.map((leg, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="text-[10px] font-bold uppercase tracking-wider text-[#FF3B3B]/80 bg-[#FF3B3B]/[0.1] px-2 py-0.5 rounded"
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                          >
-                            {leg.sport}
-                          </span>
-                          <div>
-                            <div className="text-sm text-white/80 font-medium">
-                              {leg.pick}
-                            </div>
-                            <div className="text-[11px] text-white/25 mt-0.5">
-                              {leg.game}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div
-                            className="text-sm font-semibold text-white/90"
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                          >
-                            {formatOdds(leg.odds)}
-                          </div>
-                          <div className="text-[10px] text-white/20 mt-0.5 uppercase">
-                            {leg.book}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Combined odds + EV */}
-                  <div className="flex items-end justify-between pt-2">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-widest text-white/25 mb-1">
-                        Combined Odds
-                      </div>
-                      <div
-                        className="text-3xl font-bold text-[#FF3B3B] tracking-tight"
-                        style={{ fontFamily: "var(--font-geist-mono)" }}
-                      >
-                        {topParlay.combinedOdds}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] uppercase tracking-widest text-white/25 mb-2">
-                        Expected Value
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-24 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                          <motion.div
-                            className="h-full rounded-full bg-[#FF3B3B]"
-                            initial={{ width: 0 }}
-                            animate={{
-                              width: `${Math.min(100, Math.max(10, topParlay.evPercent * 5))}%`,
-                            }}
-                            transition={{ delay: 0.8, duration: 0.8, ease: "easeOut" }}
-                          />
-                        </div>
-                        <span
-                          className="text-sm font-bold text-[#FF3B3B]"
-                          style={{ fontFamily: "var(--font-geist-mono)" }}
-                        >
-                          {topParlay.evPercent > 0 ? "+" : ""}
-                          {topParlay.evPercent.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Share link */}
-                  <div className="mt-6 pt-4 border-t border-white/[0.04]">
-                    <Link
-                      href="/parlays"
-                      className="text-xs text-white/30 hover:text-[#FF3B3B] transition-colors duration-200 flex items-center gap-1"
-                    >
-                      View full details
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-8 min-h-[300px] flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-sm text-white/30 mb-4">
-                      No parlays available right now
-                    </p>
-                    <Link
-                      href="/builder"
-                      className="text-sm text-[#FF3B3B] hover:underline"
-                    >
-                      Build your own
-                    </Link>
-                  </div>
-                </div>
-              )}
+              <ProcessAnimation />
             </motion.div>
           </div>
         </div>
       </section>
 
+      {/* ── SOCIAL PROOF STRIP ── */}
+      <section className="py-10 md:py-14 bg-[#111111] border-y border-white/[0.06]">
+        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
+            {[
+              { value: 47291, label: "Parlays Generated", prefix: "", suffix: "" },
+              { value: 12, label: "Sportsbooks Scanned", prefix: "", suffix: "+" },
+              { value: 8, label: "Sports Covered", prefix: "", suffix: "" },
+              { value: 2400000, label: "In Tracked Wins", prefix: "$", suffix: "" },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                variants={fadeUp}
+                custom={i}
+                className="text-center"
+              >
+                <div
+                  className="text-2xl md:text-3xl font-bold text-white mb-1"
+                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                >
+                  <AnimatedCounter
+                    value={stat.value}
+                    prefix={stat.prefix}
+                    suffix={stat.suffix}
+                  />
+                </div>
+                <div className="text-xs text-white/30 uppercase tracking-widest">
+                  {stat.label}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURED WINNING SLIP ── */}
+      <section className="py-24 md:py-36">
+        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+          >
+            <motion.h2
+              variants={fadeUp}
+              custom={0}
+              className="text-3xl md:text-5xl tracking-tight mb-4"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
+              Today&apos;s Winner
+            </motion.h2>
+            <motion.div
+              variants={fadeUp}
+              custom={1}
+              className="w-16 h-0.5 bg-[#FF3B3B] mb-14"
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              {/* Slip */}
+              <motion.div variants={fadeUp} custom={2}>
+                <BettingSlip
+                  legs={[
+                    {
+                      sport: "NBA",
+                      pick: "Celtics ML",
+                      odds: -145,
+                      result: "win",
+                      book: "FanDuel",
+                    },
+                    {
+                      sport: "MLB",
+                      pick: "Dodgers -1.5",
+                      odds: 110,
+                      result: "win",
+                      book: "DraftKings",
+                    },
+                    {
+                      sport: "NHL",
+                      pick: "Over 5.5",
+                      odds: 105,
+                      result: "win",
+                      book: "BetMGM",
+                    },
+                  ]}
+                  stake={100}
+                  payout={587}
+                  status="won"
+                  animated={true}
+                />
+              </motion.div>
+
+              {/* Context */}
+              <motion.div variants={fadeUp} custom={3}>
+                <p
+                  className="text-sm text-[#FF3B3B]/60 uppercase tracking-[0.2em] mb-4 font-medium"
+                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                >
+                  How It Happened
+                </p>
+                <p className="text-xl md:text-2xl text-white/80 leading-relaxed mb-6">
+                  Our AI found this parlay at{" "}
+                  <span
+                    className="text-[#FF3B3B] font-semibold"
+                    style={{ fontFamily: "var(--font-geist-mono)" }}
+                  >
+                    6:42 AM
+                  </span>
+                  .
+                </p>
+                <p className="text-base text-white/40 leading-relaxed mb-8">
+                  Best odds pulled across FanDuel, DraftKings, and BetMGM.
+                  Expected value:{" "}
+                  <span
+                    className="text-white/70 font-semibold"
+                    style={{ fontFamily: "var(--font-geist-mono)" }}
+                  >
+                    +7.2%
+                  </span>
+                  . Every leg confirmed by 10:15 PM.
+                </p>
+                <Link
+                  href="/parlays"
+                  className="inline-flex items-center gap-2 text-sm text-[#FF3B3B]/70 hover:text-[#FF3B3B] transition-colors"
+                >
+                  See all winning picks
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── LIVE ODDS STRIP ── */}
       {odds.length > 0 && (
-        <section className="py-10 md:py-14 border-t border-white/[0.04]">
+        <section className="py-14 md:py-20 border-y border-white/[0.04] bg-[#0d0d0d]">
           <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
             <motion.div
               initial="hidden"
@@ -400,16 +425,19 @@ export default function Home() {
               viewport={{ once: true, margin: "-60px" }}
             >
               <motion.div
-                variants={fade}
+                variants={fadeUp}
                 custom={0}
-                className="flex items-center justify-between mb-6"
+                className="flex items-center justify-between mb-8"
               >
-                <h2
-                  className="text-xs font-medium uppercase tracking-[0.2em] text-white/30"
-                  style={{ fontFamily: "var(--font-geist-mono)" }}
-                >
-                  Live Odds -- NBA
-                </h2>
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 bg-[#FF3B3B] rounded-full glow-pulse" />
+                  <h2
+                    className="text-xs font-medium uppercase tracking-[0.2em] text-white/30"
+                    style={{ fontFamily: "var(--font-geist-mono)" }}
+                  >
+                    Live Odds &mdash; NBA
+                  </h2>
+                </div>
                 <Link
                   href="/odds"
                   className="text-xs text-white/25 hover:text-[#FF3B3B] transition-colors flex items-center gap-1"
@@ -420,7 +448,7 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                variants={fade}
+                variants={fadeUp}
                 custom={1}
                 ref={oddsScrollRef}
                 className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-1 px-1"
@@ -433,16 +461,19 @@ export default function Home() {
                   const awayLine = h2hOdds?.find(
                     (o) => o.outcomeName === game.awayTeam
                   );
-                  const bestLine = homeLine && awayLine
-                    ? (homeLine.bestPrice > awayLine.bestPrice ? homeLine : awayLine)
-                    : homeLine || awayLine;
+                  const bestLine =
+                    homeLine && awayLine
+                      ? homeLine.bestPrice > awayLine.bestPrice
+                        ? homeLine
+                        : awayLine
+                      : homeLine || awayLine;
 
                   return (
                     <div
                       key={game.id}
-                      className="flex-shrink-0 w-[220px] py-4 px-5 bg-white/[0.02] rounded-xl hover:bg-white/[0.04] transition-colors duration-300"
+                      className="flex-shrink-0 w-[220px] py-4 px-5 bg-white/[0.02] border border-white/[0.04] rounded-xl hover:bg-white/[0.05] hover:border-white/[0.08] transition-all duration-300"
                     >
-                      <div className="text-[11px] text-white/30 mb-2 truncate">
+                      <div className="text-[11px] text-white/30 mb-3 truncate">
                         {game.awayTeam} @ {game.homeTeam}
                       </div>
                       {bestLine && (
@@ -467,162 +498,153 @@ export default function Home() {
         </section>
       )}
 
-      {/* ── MORE PARLAYS ── */}
-      {moreParlays.length > 0 && (
-        <section className="py-16 md:py-24 border-t border-white/[0.04]">
-          <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-60px" }}
-            >
-              <motion.h2
-                variants={fade}
-                custom={0}
-                className="text-3xl md:text-4xl tracking-tight mb-12"
-                style={{ fontFamily: "'DM Serif Display', serif" }}
-              >
-                More Picks
-              </motion.h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {moreParlays.map((parlay, idx) => (
-                  <motion.div
-                    key={parlay.id}
-                    variants={fade}
-                    custom={idx + 1}
-                    className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-6 hover:border-white/[0.1] transition-colors duration-300"
-                  >
-                    <div className="flex items-center justify-between mb-5">
-                      <span
-                        className="text-xs text-white/25"
-                        style={{ fontFamily: "var(--font-geist-mono)" }}
-                      >
-                        Parlay #{idx + 2}
-                      </span>
-                      <span
-                        className="text-xs text-white/20"
-                        style={{ fontFamily: "var(--font-geist-mono)" }}
-                      >
-                        {parlay.legs.length} legs
-                      </span>
-                    </div>
-
-                    {/* Legs — simple list */}
-                    <div className="space-y-2.5 mb-5">
-                      {parlay.legs.map((leg, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between text-sm"
-                        >
-                          <span className="text-white/50">{leg.pick}</span>
-                          <span
-                            className="text-white/40"
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                          >
-                            {formatOdds(leg.odds)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="h-px bg-white/[0.04] mb-4" />
-
-                    {/* Combined + EV */}
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-widest text-white/20 mb-1">
-                          Combined
-                        </div>
-                        <div
-                          className="text-xl font-bold text-white"
-                          style={{ fontFamily: "var(--font-geist-mono)" }}
-                        >
-                          {parlay.combinedOdds}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[10px] uppercase tracking-widest text-white/20 mb-1">
-                          EV
-                        </div>
-                        <div
-                          className="text-lg font-bold text-[#FF3B3B]"
-                          style={{ fontFamily: "var(--font-geist-mono)" }}
-                        >
-                          {parlay.evPercent > 0 ? "+" : ""}
-                          {parlay.evPercent.toFixed(1)}%
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-              <motion.div variants={fade} custom={3} className="mt-10">
-                <Link
-                  href="/parlays"
-                  className="text-sm text-[#FF3B3B]/70 hover:text-[#FF3B3B] transition-colors flex items-center gap-1"
-                >
-                  Unlock all parlays
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-      )}
-
-      {/* ── PRICING CTA ── */}
-      <section className="py-20 md:py-32 border-t border-white/[0.04]">
+      {/* ── HOW IT PAYS ── */}
+      <section id="how-it-pays" className="py-24 md:py-36">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-60px" }}
-            className="max-w-xl"
+            viewport={{ once: true, margin: "-80px" }}
           >
             <motion.h2
-              variants={fade}
+              variants={fadeUp}
               custom={0}
-              className="text-3xl md:text-5xl tracking-tight mb-6"
+              className="text-3xl md:text-5xl tracking-tight mb-4 text-center"
               style={{ fontFamily: "'DM Serif Display', serif" }}
             >
-              Plans that
-              <br />
-              <span className="text-[#FF3B3B]">pay for themselves.</span>
+              How It Pays
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              custom={1}
+              className="text-base text-white/30 text-center mb-16 max-w-lg mx-auto"
+            >
+              Same sport. Same day. Different approach. Different result.
+            </motion.p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-20">
+              {/* Without */}
+              <motion.div variants={fadeUp} custom={2}>
+                <p
+                  className="text-xs uppercase tracking-[0.2em] text-white/25 mb-5 text-center"
+                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                >
+                  Without BayParlays
+                </p>
+                <div className="opacity-60">
+                  <BettingSlip
+                    legs={[
+                      {
+                        sport: "NBA",
+                        pick: "Lakers ML",
+                        odds: 220,
+                        result: "loss",
+                        book: "FanDuel",
+                      },
+                      {
+                        sport: "NFL",
+                        pick: "Cowboys -3.5",
+                        odds: -110,
+                        result: "loss",
+                        book: "FanDuel",
+                      },
+                      {
+                        sport: "MLB",
+                        pick: "Yankees ML",
+                        odds: -150,
+                        result: "win",
+                        book: "FanDuel",
+                      },
+                    ]}
+                    stake={100}
+                    payout={0}
+                    status="lost"
+                    animated={false}
+                  />
+                </div>
+              </motion.div>
+
+              {/* With */}
+              <motion.div variants={fadeUp} custom={3}>
+                <p
+                  className="text-xs uppercase tracking-[0.2em] text-[#FF3B3B]/50 mb-5 text-center font-medium"
+                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                >
+                  With BayParlays
+                </p>
+                <BettingSlip
+                  legs={[
+                    {
+                      sport: "NBA",
+                      pick: "Celtics -4.5",
+                      odds: -110,
+                      result: "win",
+                      book: "DraftKings",
+                    },
+                    {
+                      sport: "NFL",
+                      pick: "49ers ML",
+                      odds: 135,
+                      result: "win",
+                      book: "BetMGM",
+                    },
+                    {
+                      sport: "MLB",
+                      pick: "Braves -1.5",
+                      odds: 120,
+                      result: "win",
+                      book: "FanDuel",
+                    },
+                  ]}
+                  stake={100}
+                  payout={743}
+                  status="won"
+                  animated={true}
+                />
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── PRICING CTA ── */}
+      <section className="py-24 md:py-36 bg-[#111111] border-y border-white/[0.06]">
+        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10 text-center">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            <motion.h2
+              variants={fadeUp}
+              custom={0}
+              className="text-4xl md:text-6xl tracking-tight mb-6"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
+              <span
+                className="text-7xl md:text-8xl text-[#FF3B3B] block mb-2"
+                style={{ fontFamily: "var(--font-geist-mono)" }}
+              >
+                $49
+              </span>
+              per month.
             </motion.h2>
 
-            <motion.div
-              variants={fade}
+            <motion.p
+              variants={fadeUp}
               custom={1}
-              className="space-y-4 mb-10"
+              className="text-base md:text-lg text-white/40 mb-10"
             >
-              <p className="text-base text-white/40 leading-relaxed">
-                Unlimited AI parlays, full builder access, and every edge calculated.
-                Start with a free 7-day trial on Sharp.
-              </p>
-              <div className="flex items-baseline gap-4">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-white/40" style={{ fontFamily: "var(--font-geist-mono)" }}>$49</span>
-                </div>
-                <span className="text-white/15">/</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>$149</span>
-                </div>
-                <span className="text-sm text-white/20">/mo</span>
-              </div>
-              <p className="text-xs text-white/20">
-                7-day free trial. Cancel anytime.
-              </p>
-            </motion.div>
+              7-day free trial. Cancel anytime. One winning parlay pays for a year.
+            </motion.p>
 
-            <motion.div variants={fade} custom={2}>
+            <motion.div variants={fadeUp} custom={2}>
               <Link
                 href="/subscribe"
-                className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-7 py-3.5 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
+                className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-10 py-4 text-base font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
               >
-                See Plans
-                <ChevronRight className="w-4 h-4" />
+                Start Free Trial
+                <ChevronRight className="w-5 h-5" />
               </Link>
             </motion.div>
           </motion.div>
