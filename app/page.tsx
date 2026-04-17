@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Menu, X, ChevronRight, ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Logo } from "@/app/components/Logo";
 
 /* ─── Types ─── */
 
@@ -128,13 +129,7 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-white/[0.06]">
         <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-16">
           <Link href="/" className="flex items-center gap-2">
-            <span
-              className="text-xl font-black tracking-tight"
-              style={{ fontFamily: "var(--font-geist-sans)" }}
-            >
-              Bay
-              <span className="text-[#FF3B3B]">Parlays</span>
-            </span>
+            <Logo />
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm text-white/50">
@@ -638,13 +633,7 @@ export default function Home() {
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-12">
             <div>
-              <span
-                className="text-lg font-black tracking-tight"
-                style={{ fontFamily: "var(--font-geist-sans)" }}
-              >
-                Bay
-                <span className="text-[#FF3B3B]">Parlays</span>
-              </span>
+              <Logo size="sm" />
             </div>
 
             <div className="flex gap-10 text-sm text-white/30">

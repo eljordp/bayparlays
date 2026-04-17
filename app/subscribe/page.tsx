@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronDown, Menu, X, Loader2 } from "lucide-react";
+import { Logo } from "@/app/components/Logo";
 
 /* ─── animation helpers ─── */
 const fadeUp = {
@@ -85,13 +86,7 @@ function SubscribeContent() {
       <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-white/[0.06]">
         <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-16">
           <Link href="/" className="flex items-center gap-2">
-            <span
-              className="text-xl font-black tracking-tight"
-              style={{ fontFamily: "var(--font-geist-sans)" }}
-            >
-              Bay
-              <span className="text-[#FF3B3B]">Parlays</span>
-            </span>
+            <Logo />
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm text-white/50">
@@ -400,13 +395,7 @@ function SubscribeContent() {
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-8 mb-16">
             <div className="md:col-span-2">
-              <span
-                className="text-lg font-black tracking-tight"
-                style={{ fontFamily: "var(--font-geist-sans)" }}
-              >
-                Bay
-                <span className="text-[#FF3B3B]">Parlays</span>
-              </span>
+              <Logo size="sm" />
               <p className="text-sm text-white/30 mt-3 max-w-sm leading-relaxed">
                 AI-powered parlay optimization. We find the best odds across
                 every sportsbook so you can bet with a mathematical edge.

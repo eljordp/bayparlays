@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight, Menu, X, Share2, ExternalLink } from "lucide-react";
+import { Logo } from "@/app/components/Logo";
 import { ParlayPlayer } from "../components/ParlayPlayer";
 import type { ParlayLeg } from "../components/ParlayVideo";
 
@@ -97,10 +98,9 @@ export default function SharePage() {
           <div className="flex items-center gap-10">
             <Link
               href="/"
-              className="text-xl font-black tracking-tight"
-              style={{ color: "#ededed" }}
+              className="flex items-center"
             >
-              Bay<span style={{ color: "#FF3B3B" }}>Parlays</span>
+              <Logo />
             </Link>
             <div className="hidden md:flex items-center gap-8">
               {[

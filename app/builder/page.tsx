@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { Logo } from "@/app/components/Logo";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -307,9 +308,9 @@ export default function BuilderPage() {
         <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
           <Link
             href="/"
-            className="text-lg font-black tracking-tight text-white"
+            className="flex items-center"
           >
-            BayParlays
+            <Logo />
           </Link>
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">

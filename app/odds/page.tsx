@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { Logo } from "@/app/components/Logo";
 
 // ─── Types (mirrors API route) ───────────────────────────────────────────────
 
@@ -164,8 +165,8 @@ export default function OddsPage() {
       {/* ─── Nav ────────────────────────────────────────────────────────── */}
       <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0a]/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-4 md:px-5">
-          <Link href="/" className="text-xl font-black tracking-tight">
-            BayParlays
+          <Link href="/" className="flex items-center">
+            <Logo />
           </Link>
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-6 text-sm text-white/50">

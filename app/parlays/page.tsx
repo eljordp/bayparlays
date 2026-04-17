@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { Logo } from "@/app/components/Logo";
 import {
   TrendingUp,
   TrendingDown,
@@ -156,8 +157,8 @@ export default function ParlaysPage() {
       <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: "rgba(10,10,10,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
-            <Link href="/" className="text-xl font-black tracking-tight" style={{ color: "#ededed" }}>
-              Bay<span style={{ color: "#FF3B3B" }}>Parlays</span>
+            <Link href="/" className="flex items-center">
+              <Logo />
             </Link>
             <div className="hidden md:flex items-center gap-8">
               {[
