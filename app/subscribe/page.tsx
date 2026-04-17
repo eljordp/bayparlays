@@ -54,29 +54,86 @@ export default function SubscribePage() {
   );
 }
 
+const plans = [
+  {
+    id: "sharp",
+    name: "Sharp",
+    price: "$49",
+    period: "/mo",
+    desc: "For bettors who want the edge.",
+    features: [
+      "Unlimited AI parlays",
+      "Full parlay builder",
+      "All 8 sports + markets",
+      "Best odds across 12+ books",
+      "Real-time line updates",
+    ],
+    highlight: false,
+    cta: "Start Sharp",
+  },
+  {
+    id: "vip",
+    name: "VIP",
+    price: "$149",
+    period: "/mo",
+    desc: "For serious bettors. Full access, full edge.",
+    features: [
+      "Everything in Sharp",
+      "Priority parlay generation",
+      "Shareable Remotion video cards",
+      "Private Discord channel",
+      "Advanced EV analytics",
+      "Early access to new features",
+    ],
+    highlight: true,
+    cta: "Go VIP",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: "Custom",
+    period: "",
+    desc: "For high-volume bettors and syndicates.",
+    features: [
+      "Everything in VIP",
+      "Custom parlays built for your bankroll",
+      "1-on-1 strategy sessions",
+      "API access for automation",
+      "Dedicated support line",
+    ],
+    highlight: false,
+    cta: "Contact Us",
+    isInquiry: true,
+  },
+];
+
 function SubscribeContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   const success = searchParams.get("success") === "true";
   const canceled = searchParams.get("canceled") === "true";
 
-  const handleCheckout = async () => {
-    setCheckoutLoading(true);
+  const handleCheckout = async (tier: string) => {
+    setCheckoutLoading(tier);
     try {
-      const res = await fetch("/api/checkout", { method: "POST" });
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier }),
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
         alert(data.error || "Something went wrong. Try again.");
-        setCheckoutLoading(false);
+        setCheckoutLoading(null);
       }
     } catch {
       alert("Unable to start checkout. Please try again.");
-      setCheckoutLoading(false);
+      setCheckoutLoading(null);
     }
   };
 
@@ -199,127 +256,117 @@ function SubscribeContent() {
         </div>
       </section>
 
-      {/* ── PRICING COMPARISON ── */}
+      {/* ── PRICING TIERS ── */}
       <section className="py-12 md:py-24">
-        <div className="w-full max-w-[1000px] mx-auto px-6 md:px-10">
+        <div className="w-full max-w-[1200px] mx-auto px-4 md:px-10">
+          {/* Free note */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-center text-sm text-white/30 mb-10"
+          >
+            Free users get 2 AI parlays per day + live odds. Upgrade for unlimited access.
+          </motion.p>
+
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
             variants={stagger}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8"
+            className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6"
           >
-            {/* ── FREE COLUMN ── */}
-            <motion.div
-              variants={fadeUp}
-              custom={2}
-              className="border border-white/[0.06] rounded-2xl p-8 md:p-10 bg-white/[0.015]"
-            >
-              <div className="mb-8">
-                <span className="text-xs font-medium uppercase tracking-[0.2em] text-white/30">
-                  Free
-                </span>
-              </div>
-
-              <div className="mb-8">
-                <span
-                  className="text-5xl font-bold tracking-tight text-white/60"
-                  style={{ fontFamily: "var(--font-geist-mono)" }}
-                >
-                  $0
-                </span>
-                <span className="text-sm text-white/20 ml-2">/mo</span>
-              </div>
-
-              <div className="space-y-4 mb-10">
-                {[
-                  "2 AI parlays per day",
-                  "Live odds comparison",
-                  "Basic stats",
-                ].map((item) => (
-                  <div key={item} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Check className="w-3 h-3 text-white/30" />
-                    </div>
-                    <span className="text-sm text-white/40 leading-relaxed">{item}</span>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                disabled
-                className="w-full py-3.5 rounded-full text-sm font-semibold bg-white/[0.04] text-white/20 border border-white/[0.06] cursor-not-allowed"
+            {plans.map((plan, i) => (
+              <motion.div
+                key={plan.id}
+                variants={fadeUp}
+                custom={i + 2}
+                className={`relative rounded-2xl p-7 md:p-8 ${
+                  plan.highlight
+                    ? "border-2 border-[#FF3B3B]/30 bg-[#FF3B3B]/[0.04]"
+                    : "border border-white/[0.06] bg-white/[0.015]"
+                }`}
               >
-                Current Plan
-              </button>
-            </motion.div>
-
-            {/* ── PRO COLUMN ── */}
-            <motion.div
-              variants={fadeUp}
-              custom={3}
-              className="relative border border-[#FF3B3B]/20 rounded-2xl p-8 md:p-10 bg-[#FF3B3B]/[0.03]"
-            >
-              {/* Glow */}
-              <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-[#FF3B3B]/[0.08] to-transparent pointer-events-none" />
-
-              <div className="relative">
-                <div className="mb-8 flex items-center gap-3">
-                  <span className="text-xs font-medium uppercase tracking-[0.2em] text-[#FF3B3B]">
-                    Pro
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#FF3B3B]/10 text-[#FF3B3B] px-2.5 py-1 rounded-full border border-[#FF3B3B]/20">
-                    Recommended
-                  </span>
-                </div>
-
-                <div className="mb-8">
-                  <span
-                    className="text-5xl font-bold tracking-tight text-white"
-                    style={{ fontFamily: "var(--font-geist-mono)" }}
-                  >
-                    $14.99
-                  </span>
-                  <span className="text-sm text-white/30 ml-2">/mo</span>
-                </div>
-
-                <div className="space-y-4 mb-10">
-                  {[
-                    "Unlimited AI parlays",
-                    "Full parlay builder",
-                    "All sports + markets",
-                    "Priority odds updates",
-                    "Shareable parlay cards",
-                  ].map((item) => (
-                    <div key={item} className="flex items-start gap-3">
-                      <div className="w-5 h-5 rounded-full bg-[#FF3B3B]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <Check className="w-3 h-3 text-[#FF3B3B]" />
-                      </div>
-                      <span className="text-sm text-white/70 leading-relaxed">{item}</span>
+                {plan.highlight && (
+                  <>
+                    <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-[#FF3B3B]/[0.1] to-transparent pointer-events-none" />
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B] text-[#0a0a0a] px-4 py-1.5 rounded-full">
+                        Most Popular
+                      </span>
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
 
-                <button
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
-                  className="w-full py-3.5 rounded-full text-sm font-semibold bg-[#FF3B3B] text-[#0a0a0a] hover:bg-[#FF5252] transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {checkoutLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Loading...
-                    </>
+                <div className="relative">
+                  <div className="mb-6">
+                    <span className={`text-xs font-bold uppercase tracking-[0.2em] ${
+                      plan.highlight ? "text-[#FF3B3B]" : "text-white/40"
+                    }`}>
+                      {plan.name}
+                    </span>
+                  </div>
+
+                  <div className="mb-2">
+                    <span
+                      className="text-5xl font-black tracking-tight text-white"
+                      style={{ fontFamily: "var(--font-geist-mono)" }}
+                    >
+                      {plan.price}
+                    </span>
+                    <span className="text-sm text-white/30 ml-1">{plan.period}</span>
+                  </div>
+                  <p className="text-sm text-white/35 mb-8">{plan.desc}</p>
+
+                  <div className="space-y-3 mb-8">
+                    {plan.features.map((item) => (
+                      <div key={item} className="flex items-start gap-3">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                          plan.highlight ? "bg-[#FF3B3B]/15" : "bg-white/[0.06]"
+                        }`}>
+                          <Check className={`w-3 h-3 ${
+                            plan.highlight ? "text-[#FF3B3B]" : "text-white/40"
+                          }`} />
+                        </div>
+                        <span className="text-sm text-white/60 leading-relaxed">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {"isInquiry" in plan && plan.isInquiry ? (
+                    <a
+                      href="mailto:eljordp@gmail.com?subject=BayParlays Enterprise Inquiry"
+                      className="w-full py-3.5 rounded-full text-sm font-semibold bg-white/[0.06] text-white/80 hover:bg-white/[0.1] border border-white/[0.08] transition-colors duration-200 flex items-center justify-center gap-2"
+                    >
+                      {plan.cta}
+                    </a>
                   ) : (
-                    "Start Pro"
+                    <button
+                      onClick={() => handleCheckout(plan.id)}
+                      disabled={checkoutLoading === plan.id}
+                      className={`w-full py-3.5 rounded-full text-sm font-semibold transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
+                        plan.highlight
+                          ? "bg-[#FF3B3B] text-[#0a0a0a] hover:bg-[#FF5252]"
+                          : "bg-white/[0.06] text-white/80 hover:bg-white/[0.1] border border-white/[0.08]"
+                      }`}
+                    >
+                      {checkoutLoading === plan.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        plan.cta
+                      )}
+                    </button>
                   )}
-                </button>
 
-                <p className="text-xs text-white/25 text-center mt-4 leading-relaxed">
-                  Cancel anytime. 7-day free trial.
-                </p>
-              </div>
-            </motion.div>
+                  <p className="text-xs text-white/20 text-center mt-4">
+                    7-day free trial. Cancel anytime.
+                  </p>
+                </div>
+              </motion.div>
+            ))}
           </motion.div>
         </div>
       </section>

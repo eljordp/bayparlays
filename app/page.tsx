@@ -587,9 +587,9 @@ export default function Home() {
               className="text-3xl md:text-5xl tracking-tight mb-6"
               style={{ fontFamily: "'DM Serif Display', serif" }}
             >
-              Free to start.
+              Plans that
               <br />
-              <span className="text-[#FF3B3B]">Pro when you&apos;re ready.</span>
+              <span className="text-[#FF3B3B]">pay for themselves.</span>
             </motion.h2>
 
             <motion.div
@@ -598,20 +598,21 @@ export default function Home() {
               className="space-y-4 mb-10"
             >
               <p className="text-base text-white/40 leading-relaxed">
-                Free: 2 parlays per day. Pro: unlimited parlays, all sports,
-                full odds comparison.
+                Free gets you 2 parlays a day. Upgrade for unlimited AI parlays,
+                full builder access, and every edge calculated.
               </p>
-              <div className="flex items-baseline gap-2">
-                <span
-                  className="text-4xl font-bold text-white tracking-tight"
-                  style={{ fontFamily: "var(--font-geist-mono)" }}
-                >
-                  $14.99
-                </span>
-                <span className="text-sm text-white/30">/mo</span>
+              <div className="flex items-baseline gap-4">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-white/40" style={{ fontFamily: "var(--font-geist-mono)" }}>$49</span>
+                </div>
+                <span className="text-white/15">/</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>$149</span>
+                </div>
+                <span className="text-sm text-white/20">/mo</span>
               </div>
               <p className="text-xs text-white/20">
-                Cancel anytime. No contracts.
+                7-day free trial. Cancel anytime.
               </p>
             </motion.div>
 
@@ -620,7 +621,7 @@ export default function Home() {
                 href="/subscribe"
                 className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-7 py-3.5 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
               >
-                Go Pro
+                See Plans
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </motion.div>
