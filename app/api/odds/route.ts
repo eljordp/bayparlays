@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
     // Single API call with all markets — saves quota (1 call instead of 3)
     const url = new URL(`${BASE_URL}/sports/${sportKey}/odds`);
     url.searchParams.set("apiKey", ODDS_API_KEY!);
-    url.searchParams.set("regions", "us,us2");
+    url.searchParams.set("regions", "us");
     url.searchParams.set("markets", "h2h,spreads,totals");
     url.searchParams.set("oddsFormat", "american");
 
