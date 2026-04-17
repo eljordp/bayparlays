@@ -205,84 +205,39 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch all three markets in parallel for maximum data coverage
-    const marketTypes = ["h2h", "spreads", "totals"];
+    // Single API call with all markets — saves quota (1 call instead of 3)
+    const url = new URL(`${BASE_URL}/sports/${sportKey}/odds`);
+    url.searchParams.set("apiKey", ODDS_API_KEY!);
+    url.searchParams.set("regions", "us,us2");
+    url.searchParams.set("markets", "h2h,spreads,totals");
+    url.searchParams.set("oddsFormat", "american");
 
-    const fetches = marketTypes.map((market) => {
-      const url = new URL(`${BASE_URL}/sports/${sportKey}/odds`);
-      url.searchParams.set("apiKey", ODDS_API_KEY!);
-      url.searchParams.set("regions", "us,us2");
-      url.searchParams.set("markets", market);
-      url.searchParams.set("oddsFormat", "american");
-      return fetch(url.toString(), { next: { revalidate: 300 } });
-    });
+    const res = await fetch(url.toString(), { next: { revalidate: 300 } });
 
-    const responses = await Promise.all(fetches);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`Odds API error (${res.status}):`, errorText);
 
-    // Check for errors
-    for (const res of responses) {
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`Odds API error (${res.status}):`, errorText);
-
-        if (res.status === 401) {
-          return NextResponse.json(
-            { error: "Invalid API key" },
-            { status: 401 }
-          );
-        }
-        if (res.status === 429) {
-          return NextResponse.json(
-            { error: "Rate limit exceeded. Try again shortly." },
-            { status: 429 }
-          );
-        }
+      if (res.status === 401) {
+        return NextResponse.json(
+          { error: "Invalid API key" },
+          { status: 401 }
+        );
       }
+      if (res.status === 429) {
+        return NextResponse.json(
+          { error: "Rate limit exceeded. Try again shortly." },
+          { status: 429 }
+        );
+      }
+      return NextResponse.json(
+        { error: "Failed to fetch odds" },
+        { status: res.status }
+      );
     }
 
-    // Parse all responses
-    const allData = await Promise.all(
-      responses.map((res) => (res.ok ? res.json() : Promise.resolve([])))
-    );
-
-    // Merge market data: the API returns the same game structure for each market,
-    // so we need to merge bookmaker data from each market call into unified game objects
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gameMap = new Map<string, any>();
-
-    for (const games of allData) {
-      for (const game of games) {
-        if (!gameMap.has(game.id)) {
-          gameMap.set(game.id, {
-            ...game,
-            bookmakers: [],
-          });
-        }
-
-        const existing = gameMap.get(game.id)!;
-
-        // Merge bookmaker markets into the unified game
-        for (const bookmaker of game.bookmakers || []) {
-          const existingBook = existing.bookmakers.find(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (b: any) => b.key === bookmaker.key
-          );
-
-          if (existingBook) {
-            // Add new markets to existing bookmaker
-            existingBook.markets = [
-              ...existingBook.markets,
-              ...bookmaker.markets,
-            ];
-          } else {
-            existing.bookmakers.push({ ...bookmaker });
-          }
-        }
-      }
-    }
-
-    const mergedGames = Array.from(gameMap.values());
-    const games = parseApiResponse(mergedGames);
+    const rawGames = await res.json();
+    const games = parseApiResponse(rawGames);
 
     // Sort games by commence time (soonest first)
     games.sort(
@@ -291,15 +246,12 @@ export async function GET(request: NextRequest) {
         new Date(b.commenceTime).getTime()
     );
 
-    // Pull rate limit info from last response headers
-    const lastRes = responses[responses.length - 1];
-
     const response: OddsResponse = {
       games,
       sport,
       bookDisplayNames: BOOK_DISPLAY_NAMES,
-      requestsUsed: lastRes.headers.get("x-requests-used"),
-      requestsRemaining: lastRes.headers.get("x-requests-remaining"),
+      requestsUsed: res.headers.get("x-requests-used"),
+      requestsRemaining: res.headers.get("x-requests-remaining"),
       cachedAt: new Date().toISOString(),
     };
 
