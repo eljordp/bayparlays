@@ -7,9 +7,9 @@
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
-  --accent: #00D4AA;
-  --accent-dim: #00A888;
-  --accent-glow: rgba(0, 212, 170, 0.15);
+  --accent: #FF3B3B;
+  --accent-dim: #CC2F2F;
+  --accent-glow: rgba(255, 59, 59, 0.15);
   --surface: rgba(255, 255, 255, 0.04);
   --border: rgba(255, 255, 255, 0.08);
 }

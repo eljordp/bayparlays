@@ -327,7 +327,7 @@ export default function BuilderPage() {
             </Link>
             <Link
               href="/builder"
-              className="text-[#00D4AA] font-medium"
+              className="text-[#FF3B3B] font-medium"
             >
               Builder
             </Link>
@@ -370,7 +370,7 @@ export default function BuilderPage() {
                 <Link href="/" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Home</Link>
                 <Link href="/parlays" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Parlays</Link>
                 <Link href="/odds" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Odds</Link>
-                <Link href="/builder" onClick={() => setMobileNavOpen(false)} className="py-2 text-[#00D4AA] font-medium">Builder</Link>
+                <Link href="/builder" onClick={() => setMobileNavOpen(false)} className="py-2 text-[#FF3B3B] font-medium">Builder</Link>
               </div>
             </motion.div>
           )}
@@ -418,7 +418,7 @@ export default function BuilderPage() {
                       px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap
                       ${
                         activeSport === sport.key
-                          ? "bg-[#00D4AA] text-[#0a0a0a]"
+                          ? "bg-[#FF3B3B] text-[#0a0a0a]"
                           : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white/80"
                       }
                     `}
@@ -514,8 +514,8 @@ export default function BuilderPage() {
                           <div className="flex items-center gap-2 ml-3 shrink-0">
                             {isLive && (
                               <span className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#00D4AA] glow-pulse" />
-                                <span className="text-[#00D4AA] text-xs font-semibold uppercase">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B] glow-pulse" />
+                                <span className="text-[#FF3B3B] text-xs font-semibold uppercase">
                                   Live
                                 </span>
                               </span>
@@ -551,7 +551,7 @@ export default function BuilderPage() {
                                     relative group rounded-md px-3 py-2.5 text-left transition-all
                                     ${
                                       selected
-                                        ? "bg-[#00D4AA]/10 border border-[#00D4AA]/50 ring-1 ring-[#00D4AA]/20"
+                                        ? "bg-[#FF3B3B]/10 border border-[#FF3B3B]/50 ring-1 ring-[#FF3B3B]/20"
                                         : atMax
                                           ? "bg-white/[0.02] border border-white/[0.04] opacity-40 cursor-not-allowed"
                                           : "bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.12] cursor-pointer"
@@ -560,7 +560,7 @@ export default function BuilderPage() {
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <span
-                                      className={`text-xs font-medium truncate ${selected ? "text-[#00D4AA]" : "text-white/60"}`}
+                                      className={`text-xs font-medium truncate ${selected ? "text-[#FF3B3B]" : "text-white/60"}`}
                                     >
                                       {formatOutcomeLabel(
                                         outcome,
@@ -569,20 +569,20 @@ export default function BuilderPage() {
                                       )}
                                     </span>
                                     <span
-                                      className={`text-sm font-bold tabular-nums whitespace-nowrap ${selected ? "text-[#00D4AA]" : "text-white"}`}
+                                      className={`text-sm font-bold tabular-nums whitespace-nowrap ${selected ? "text-[#FF3B3B]" : "text-white"}`}
                                     >
                                       {formatOdds(outcome.bestPrice)}
                                     </span>
                                   </div>
                                   <div
-                                    className={`text-[10px] mt-0.5 ${selected ? "text-[#00D4AA]/50" : "text-white/25"}`}
+                                    className={`text-[10px] mt-0.5 ${selected ? "text-[#FF3B3B]/50" : "text-white/25"}`}
                                   >
                                     {outcome.bestBook}
                                   </div>
                                   {selected && (
                                     <motion.div
                                       layoutId="check"
-                                      className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#00D4AA] flex items-center justify-center"
+                                      className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-[#FF3B3B] flex items-center justify-center"
                                     >
                                       <svg
                                         width="10"
@@ -628,7 +628,7 @@ export default function BuilderPage() {
                         Your Parlay
                       </h2>
                       {legs.length > 0 && (
-                        <span className="text-xs font-bold bg-[#00D4AA] text-[#0a0a0a] px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-bold bg-[#FF3B3B] text-[#0a0a0a] px-2 py-0.5 rounded-full">
                           {legs.length} leg{legs.length !== 1 ? "s" : ""}
                         </span>
                       )}
@@ -695,7 +695,7 @@ export default function BuilderPage() {
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 <div className="text-right">
-                                  <div className="text-sm font-bold text-[#00D4AA] tabular-nums">
+                                  <div className="text-sm font-bold text-[#FF3B3B] tabular-nums">
                                     {formatOdds(leg.odds)}
                                   </div>
                                   <div className="text-[10px] text-white/25">
@@ -749,7 +749,7 @@ export default function BuilderPage() {
                           Parlay Odds
                         </div>
                         <div className="flex items-baseline gap-3">
-                          <span className="text-3xl font-black text-[#00D4AA] tabular-nums tracking-tight">
+                          <span className="text-3xl font-black text-[#FF3B3B] tabular-nums tracking-tight">
                             {formatOdds(calculations.parlayAmerican)}
                           </span>
                           <span className="text-sm text-white/30 tabular-nums">
@@ -775,7 +775,7 @@ export default function BuilderPage() {
                           <div
                             className={`text-sm font-semibold tabular-nums ${
                               calculations.ev >= 0
-                                ? "text-[#00D4AA]"
+                                ? "text-[#FF3B3B]"
                                 : "text-red-400"
                             }`}
                           >
@@ -796,7 +796,7 @@ export default function BuilderPage() {
                             transition={{ duration: 0.6, ease: "easeOut" }}
                             className={`h-full rounded-full ${
                               calculations.ev >= 0
-                                ? "bg-gradient-to-r from-[#00D4AA]/60 to-[#00D4AA]"
+                                ? "bg-gradient-to-r from-[#FF3B3B]/60 to-[#FF3B3B]"
                                 : "bg-gradient-to-r from-red-500/60 to-red-400"
                             }`}
                           />
@@ -823,13 +823,13 @@ export default function BuilderPage() {
                               min="1"
                               value={stake}
                               onChange={(e) => setStake(e.target.value)}
-                              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-7 pr-4 py-2.5 text-white text-sm font-semibold tabular-nums focus:outline-none focus:border-[#00D4AA]/40 focus:ring-1 focus:ring-[#00D4AA]/20 transition-all"
+                              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg pl-7 pr-4 py-2.5 text-white text-sm font-semibold tabular-nums focus:outline-none focus:border-[#FF3B3B]/40 focus:ring-1 focus:ring-[#FF3B3B]/20 transition-all"
                             />
                           </div>
                         </div>
 
                         {/* Payout */}
-                        <div className="rounded-lg bg-[#00D4AA]/[0.06] border border-[#00D4AA]/[0.12] px-4 py-4">
+                        <div className="rounded-lg bg-[#FF3B3B]/[0.06] border border-[#FF3B3B]/[0.12] px-4 py-4">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs text-white/40">
                               Potential Payout
@@ -839,10 +839,10 @@ export default function BuilderPage() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-[#00D4AA]">
+                            <span className="text-sm font-bold text-[#FF3B3B]">
                               To Win
                             </span>
-                            <span className="text-2xl font-black text-[#00D4AA] tabular-nums tracking-tight">
+                            <span className="text-2xl font-black text-[#FF3B3B] tabular-nums tracking-tight">
                               {formatMoney(calculations.toWin)}
                             </span>
                           </div>
@@ -868,7 +868,7 @@ export default function BuilderPage() {
                             width: `${(legs.length / MAX_LEGS) * 100}%`,
                           }}
                           transition={{ duration: 0.3 }}
-                          className="h-full rounded-full bg-[#00D4AA]/40"
+                          className="h-full rounded-full bg-[#FF3B3B]/40"
                         />
                       </div>
                     </div>
@@ -896,7 +896,7 @@ export default function BuilderPage() {
                   Your Parlay — {legs.length} leg{legs.length !== 1 ? "s" : ""}
                 </div>
                 {calculations && legs.length >= 2 && (
-                  <div className="text-xs text-[#00D4AA] font-semibold tabular-nums mt-0.5">
+                  <div className="text-xs text-[#FF3B3B] font-semibold tabular-nums mt-0.5">
                     {formatOdds(calculations.parlayAmerican)} ({calculations.parlayDecimal.toFixed(2)}x)
                   </div>
                 )}
@@ -905,7 +905,7 @@ export default function BuilderPage() {
                 onClick={() => {
                   slipRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="shrink-0 bg-[#00D4AA] text-[#0a0a0a] text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#00D4AA]/90 transition-colors"
+                className="shrink-0 bg-[#FF3B3B] text-[#0a0a0a] text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#FF3B3B]/90 transition-colors"
               >
                 View Slip
               </button>

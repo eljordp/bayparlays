@@ -9,12 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@remotion/cli": "^4.0.448",
+    "@remotion/player": "^4.0.448",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
+    "remotion": "^4.0.448",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

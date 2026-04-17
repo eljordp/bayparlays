@@ -69,6 +69,29 @@ const MARKETS = [
   { key: "totals", label: "Totals" },
 ];
 
+const BOOK_URLS: Record<string, string> = {
+  draftkings: "https://sportsbook.draftkings.com",
+  fanduel: "https://sportsbook.fanduel.com",
+  betmgm: "https://sports.betmgm.com",
+  caesars: "https://www.caesars.com/sportsbook-and-casino",
+  pointsbetus: "https://www.pointsbet.com",
+  betrivers: "https://www.betrivers.com",
+  bovada: "https://www.bovada.lv",
+  betonlineag: "https://www.betonline.ag",
+  lowvig: "https://www.lowvig.ag",
+  mybookieag: "https://www.mybookie.ag",
+  betus: "https://www.betus.com.pa",
+  espnbet: "https://espnbet.com",
+  fanatics: "https://sportsbook.fanatics.com",
+  hardrockbet: "https://www.hardrocksportsbook.com",
+  williamhill_us: "https://www.williamhill.com",
+  unibet_us: "https://www.unibet.com",
+  wynnbet: "https://www.wynnbet.com",
+  superbook: "https://www.superbook.com",
+  twinspires: "https://www.twinspires.com",
+  fliff: "https://www.getfliff.com",
+};
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatOdds(price: number): string {
@@ -154,7 +177,7 @@ export default function OddsPage() {
             </Link>
             <Link
               href="/odds"
-              className="text-[#00D4AA] font-medium"
+              className="text-[#FF3B3B] font-medium"
             >
               Odds
             </Link>
@@ -182,7 +205,7 @@ export default function OddsPage() {
             <Link href="/parlays" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
               Parlays
             </Link>
-            <Link href="/odds" className="text-[#00D4AA] font-medium" onClick={() => setMobileNav(false)}>
+            <Link href="/odds" className="text-[#FF3B3B] font-medium" onClick={() => setMobileNav(false)}>
               Odds
             </Link>
             <Link href="/builder" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
@@ -224,7 +247,7 @@ export default function OddsPage() {
               onClick={() => setSport(s.key)}
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 sport === s.key
-                  ? "bg-[#00D4AA] text-[#0a0a0a]"
+                  ? "bg-[#FF3B3B] text-[#0a0a0a]"
                   : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white"
               }`}
             >
@@ -253,7 +276,7 @@ export default function OddsPage() {
         {/* ─── Loading State ──────────────────────────────────────────── */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-32">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[#00D4AA]" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[#FF3B3B]" />
             <p className="mt-4 text-sm text-white/30">
               Fetching odds across all sportsbooks...
             </p>
@@ -359,7 +382,7 @@ export default function OddsPage() {
                 </div>
 
                 {/* Best line callout */}
-                <div className="border-b border-white/[0.04] bg-[#00D4AA]/[0.03] px-4 py-3 md:px-5">
+                <div className="border-b border-white/[0.04] bg-[#FF3B3B]/[0.03] px-4 py-3 md:px-5">
                   <div className="flex flex-wrap gap-x-8 gap-y-1">
                     {outcomeNames.map((name) => {
                       const b = bestMap.get(name);
@@ -370,14 +393,25 @@ export default function OddsPage() {
                           className="text-[11px] sm:text-xs text-white/50"
                         >
                           Best {market === "totals" ? name : name}:{" "}
-                          <span className="font-semibold text-[#00D4AA]">
+                          <span className="font-semibold text-[#FF3B3B]">
                             {b.bestPoint !== undefined && (
                               <>{market === "totals" ? `${b.bestPoint} ` : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint} `}</>
                             )}
                             {formatOdds(b.bestPrice)}
                           </span>{" "}
                           <span className="text-white/25">
-                            ({b.bestBook})
+                            ({BOOK_URLS[b.bestBookKey] ? (
+                              <a
+                                href={BOOK_URLS[b.bestBookKey]}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline decoration-white/10 hover:decoration-white/40 hover:text-white/40 transition"
+                              >
+                                {b.bestBook}
+                              </a>
+                            ) : (
+                              b.bestBook
+                            )})
                           </span>
                         </span>
                       );
@@ -443,33 +477,64 @@ export default function OddsPage() {
                                 bestForOutcome?.bestBookKey === bookKey &&
                                 bestForOutcome?.bestPrice === outcome.price;
 
+                              const bookUrl = BOOK_URLS[bookKey];
+                              const oddsContent = (
+                                <span
+                                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-sm font-semibold transition ${
+                                    isBest
+                                      ? "bg-[#FF3B3B]/10 text-[#FF3B3B] ring-1 ring-[#FF3B3B]/20"
+                                      : "text-white/70"
+                                  }`}
+                                >
+                                  {outcome.point !== undefined && (
+                                    <span
+                                      className={
+                                        isBest
+                                          ? "text-[#FF3B3B]/70"
+                                          : "text-white/30"
+                                      }
+                                    >
+                                      {market === "totals"
+                                        ? outcome.point
+                                        : `${outcome.point > 0 ? "+" : ""}${outcome.point}`}
+                                    </span>
+                                  )}
+                                  {formatOdds(outcome.price)}
+                                  {bookUrl && (
+                                    <svg
+                                      className="h-3 w-3 opacity-0 group-hover/link:opacity-40 transition-opacity"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                      <polyline points="15 3 21 3 21 9" />
+                                      <line x1="10" y1="14" x2="21" y2="3" />
+                                    </svg>
+                                  )}
+                                </span>
+                              );
+
                               return (
                                 <td
                                   key={name}
                                   className="px-5 py-3 text-center"
                                 >
-                                  <span
-                                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-sm font-semibold transition ${
-                                      isBest
-                                        ? "bg-[#00D4AA]/10 text-[#00D4AA] ring-1 ring-[#00D4AA]/20"
-                                        : "text-white/70"
-                                    }`}
-                                  >
-                                    {outcome.point !== undefined && (
-                                      <span
-                                        className={
-                                          isBest
-                                            ? "text-[#00D4AA]/70"
-                                            : "text-white/30"
-                                        }
-                                      >
-                                        {market === "totals"
-                                          ? outcome.point
-                                          : `${outcome.point > 0 ? "+" : ""}${outcome.point}`}
-                                      </span>
-                                    )}
-                                    {formatOdds(outcome.price)}
-                                  </span>
+                                  {bookUrl ? (
+                                    <a
+                                      href={bookUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="group/link inline-block hover:brightness-125 transition"
+                                    >
+                                      {oddsContent}
+                                    </a>
+                                  ) : (
+                                    oddsContent
+                                  )}
                                 </td>
                               );
                             })}
@@ -485,13 +550,18 @@ export default function OddsPage() {
 
         {/* ─── Footer info ────────────────────────────────────────────── */}
         {data && !loading && (
-          <div className="mt-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white/15">
-            <p>
-              Powered by The Odds API
-              {data.requestsRemaining &&
-                ` | ${data.requestsRemaining} requests remaining`}
+          <div className="mt-10 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white/15">
+              <p>
+                Powered by The Odds API
+                {data.requestsRemaining &&
+                  ` | ${data.requestsRemaining} requests remaining`}
+              </p>
+              <p>Odds refresh every 5 minutes. Not financial advice.</p>
+            </div>
+            <p className="text-[10px] text-white/10 text-center">
+              Links to sportsbooks may be affiliate links. BayParlays may earn a commission at no cost to you.
             </p>
-            <p>Odds refresh every 5 minutes. Not financial advice.</p>
           </div>
         )}
       </main>

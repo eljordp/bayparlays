@@ -86,7 +86,7 @@ function formatOdds(odds: number): string {
 }
 
 function confidenceLabel(c: number): { text: string; color: string; bg: string } {
-  if (c >= 75) return { text: "High", color: "#00D4AA", bg: "rgba(0,212,170,0.12)" };
+  if (c >= 75) return { text: "High", color: "#FF3B3B", bg: "rgba(255,59,59,0.12)" };
   if (c >= 50) return { text: "Medium", color: "#FFB800", bg: "rgba(255,184,0,0.12)" };
   return { text: "Low", color: "#FF4D4D", bg: "rgba(255,77,77,0.12)" };
 }
@@ -157,7 +157,7 @@ export default function ParlaysPage() {
         <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <Link href="/" className="text-xl font-black tracking-tight" style={{ color: "#ededed" }}>
-              Bay<span style={{ color: "#00D4AA" }}>Parlays</span>
+              Bay<span style={{ color: "#FF3B3B" }}>Parlays</span>
             </Link>
             <div className="hidden md:flex items-center gap-8">
               {[
@@ -171,7 +171,7 @@ export default function ParlaysPage() {
                   href={link.href}
                   className="text-sm transition-colors duration-200"
                   style={{
-                    color: link.href === "/parlays" ? "#00D4AA" : "rgba(255,255,255,0.5)",
+                    color: link.href === "/parlays" ? "#FF3B3B" : "rgba(255,255,255,0.5)",
                     fontWeight: link.href === "/parlays" ? 600 : 400,
                   }}
                   onMouseEnter={(e) => { if (link.href !== "/parlays") e.currentTarget.style.color = "rgba(255,255,255,0.9)"; }}
@@ -187,11 +187,11 @@ export default function ParlaysPage() {
               href="/builder"
               className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300"
               style={{
-                background: "#00D4AA",
+                background: "#FF3B3B",
                 color: "#0a0a0a",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "#00E8BC"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#00D4AA"; e.currentTarget.style.transform = "translateY(0)"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
             >
               Build Your Own
               <ArrowUpRight size={14} strokeWidth={2.5} />
@@ -231,8 +231,8 @@ export default function ParlaysPage() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-150"
                     style={{
-                      color: link.href === "/parlays" ? "#00D4AA" : "rgba(255,255,255,0.6)",
-                      background: link.href === "/parlays" ? "rgba(0,212,170,0.08)" : "transparent",
+                      color: link.href === "/parlays" ? "#FF3B3B" : "rgba(255,255,255,0.6)",
+                      background: link.href === "/parlays" ? "rgba(255,59,59,0.08)" : "transparent",
                     }}
                   >
                     {link.label}
@@ -255,9 +255,9 @@ export default function ParlaysPage() {
             <div className="flex items-center gap-3 mb-6">
               <div
                 className="w-2.5 h-2.5 rounded-full glow-pulse"
-                style={{ background: "#00D4AA" }}
+                style={{ background: "#FF3B3B" }}
               />
-              <span className="text-xs font-medium tracking-widest uppercase" style={{ color: "#00D4AA" }}>
+              <span className="text-xs font-medium tracking-widest uppercase" style={{ color: "#FF3B3B" }}>
                 Live &middot; Updated every 5 minutes
               </span>
             </div>
@@ -289,9 +289,9 @@ export default function ParlaysPage() {
                 <div key={stat.label} className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ background: "rgba(0,212,170,0.08)", border: "1px solid rgba(0,212,170,0.15)" }}
+                    style={{ background: "rgba(255,59,59,0.08)", border: "1px solid rgba(255,59,59,0.15)" }}
                   >
-                    <stat.icon size={18} style={{ color: "#00D4AA" }} />
+                    <stat.icon size={18} style={{ color: "#FF3B3B" }} />
                   </div>
                   <div>
                     <div className="text-xl font-semibold" style={{ color: "#ededed" }}>{stat.value}</div>
@@ -318,9 +318,9 @@ export default function ParlaysPage() {
                 onClick={() => setSelectedSport(sport)}
                 className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
                 style={{
-                  background: selectedSport === sport ? "#00D4AA" : "rgba(255,255,255,0.05)",
+                  background: selectedSport === sport ? "#FF3B3B" : "rgba(255,255,255,0.05)",
                   color: selectedSport === sport ? "#0a0a0a" : "rgba(255,255,255,0.5)",
-                  border: selectedSport === sport ? "1px solid #00D4AA" : "1px solid rgba(255,255,255,0.08)",
+                  border: selectedSport === sport ? "1px solid #FF3B3B" : "1px solid rgba(255,255,255,0.08)",
                 }}
               >
                 {sport}
@@ -340,9 +340,9 @@ export default function ParlaysPage() {
                   onClick={() => setSelectedLegs(selectedLegs === count ? null : count)}
                   className="w-10 h-10 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center"
                   style={{
-                    background: selectedLegs === count ? "rgba(0,212,170,0.15)" : "rgba(255,255,255,0.04)",
-                    color: selectedLegs === count ? "#00D4AA" : "rgba(255,255,255,0.45)",
-                    border: selectedLegs === count ? "1px solid rgba(0,212,170,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                    background: selectedLegs === count ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.04)",
+                    color: selectedLegs === count ? "#FF3B3B" : "rgba(255,255,255,0.45)",
+                    border: selectedLegs === count ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
                   {count}
@@ -362,8 +362,8 @@ export default function ParlaysPage() {
                   onClick={() => setSortBy(opt.value)}
                   className="px-4 py-2 rounded-lg text-sm transition-all duration-200"
                   style={{
-                    background: sortBy === opt.value ? "rgba(0,212,170,0.1)" : "transparent",
-                    color: sortBy === opt.value ? "#00D4AA" : "rgba(255,255,255,0.4)",
+                    background: sortBy === opt.value ? "rgba(255,59,59,0.1)" : "transparent",
+                    color: sortBy === opt.value ? "#FF3B3B" : "rgba(255,255,255,0.4)",
                     fontWeight: sortBy === opt.value ? 600 : 400,
                   }}
                 >
@@ -418,7 +418,7 @@ export default function ParlaysPage() {
                 <button
                   onClick={fetchParlays}
                   className="mt-8 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200"
-                  style={{ background: "rgba(0,212,170,0.1)", color: "#00D4AA", border: "1px solid rgba(0,212,170,0.2)" }}
+                  style={{ background: "rgba(255,59,59,0.1)", color: "#FF3B3B", border: "1px solid rgba(255,59,59,0.2)" }}
                 >
                   Retry
                 </button>
@@ -434,15 +434,87 @@ export default function ParlaysPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                {parlays.map((parlay, idx) => (
-                  <ParlayCard
-                    key={parlay.id}
-                    parlay={parlay}
-                    index={idx}
-                    copiedId={copiedId}
-                    onCopy={handleCopy}
-                  />
-                ))}
+                {parlays.map((parlay, idx) =>
+                  idx < 2 ? (
+                    <ParlayCard
+                      key={parlay.id}
+                      parlay={parlay}
+                      index={idx}
+                      copiedId={copiedId}
+                      onCopy={handleCopy}
+                    />
+                  ) : (
+                    <div key={parlay.id} className="relative">
+                      <ParlayCard
+                        parlay={parlay}
+                        index={idx}
+                        copiedId={copiedId}
+                        onCopy={handleCopy}
+                      />
+                      {/* Paywall overlay */}
+                      <div className="absolute inset-0 z-10 backdrop-blur-sm bg-[#0a0a0a]/70 rounded-2xl flex flex-col items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="32"
+                          height="32"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="rgba(255,255,255,0.35)"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <p className="mt-4 text-lg font-semibold" style={{ color: "#ededed" }}>
+                          Unlock all parlays
+                        </p>
+                        <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+                          $14.99/mo &mdash; Start free trial
+                        </p>
+                        <Link
+                          href="/subscribe"
+                          className="mt-5 px-8 py-3 rounded-full text-sm font-bold transition-all duration-200"
+                          style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
+                        >
+                          Go Pro
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {/* CTA Banner */}
+                {parlays.length > 2 && (
+                  <div
+                    className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14 flex flex-col md:flex-row items-center justify-between gap-6"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
+                      border: "1px solid rgba(255,59,59,0.15)",
+                    }}
+                  >
+                    <div>
+                      <p className="text-xl md:text-2xl font-semibold" style={{ color: "#ededed" }}>
+                        You&apos;re seeing 2 of {parlays.length} parlays.
+                      </p>
+                      <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        Go Pro for unlimited access to every AI-optimized parlay, daily.
+                      </p>
+                    </div>
+                    <Link
+                      href="/subscribe"
+                      className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
+                      style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
+                    >
+                      Go Pro
+                    </Link>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -553,7 +625,7 @@ function ParlayCard({
 
               {/* Odds + book */}
               <div className="text-right flex-shrink-0">
-                <div className="text-sm font-bold" style={{ color: "#00D4AA" }}>
+                <div className="text-sm font-bold" style={{ color: "#FF3B3B" }}>
                   {formatOdds(leg.odds)}
                 </div>
                 <div className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
@@ -564,13 +636,13 @@ function ParlayCard({
               {/* Edge */}
               <div className="hidden md:flex items-center gap-1.5 flex-shrink-0 w-20 justify-end">
                 {leg.edgeScore > 0 ? (
-                  <TrendingUp size={13} style={{ color: "#00D4AA" }} />
+                  <TrendingUp size={13} style={{ color: "#FF3B3B" }} />
                 ) : (
                   <TrendingDown size={13} style={{ color: "#FF4D4D" }} />
                 )}
                 <span
                   className="text-xs font-semibold"
-                  style={{ color: leg.edgeScore > 0 ? "#00D4AA" : "#FF4D4D" }}
+                  style={{ color: leg.edgeScore > 0 ? "#FF3B3B" : "#FF4D4D" }}
                 >
                   {leg.edgeScore > 0 ? "+" : ""}{leg.edgeScore.toFixed(1)}%
                 </span>
@@ -583,7 +655,7 @@ function ParlayCard({
       {/* Bottom section */}
       <div
         className="px-4 md:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,212,170,0.02)" }}
+        style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,59,59,0.02)" }}
       >
         {/* Left: Combined odds + payout */}
         <div className="flex items-center gap-8">
@@ -593,7 +665,7 @@ function ParlayCard({
             </div>
             <div
               className="text-3xl font-black tracking-tight"
-              style={{ color: "#00D4AA", fontVariantNumeric: "tabular-nums" }}
+              style={{ color: "#FF3B3B", fontVariantNumeric: "tabular-nums" }}
             >
               {parlay.combinedOdds.startsWith("+") || parlay.combinedOdds.startsWith("-")
                 ? parlay.combinedOdds
@@ -621,7 +693,7 @@ function ParlayCard({
             </span>
             <span
               className="text-sm font-bold"
-              style={{ color: evPositive ? "#00D4AA" : "#FF4D4D" }}
+              style={{ color: evPositive ? "#FF3B3B" : "#FF4D4D" }}
             >
               {evPositive ? "+" : ""}{parlay.evPercent.toFixed(1)}% EV
             </span>
@@ -634,7 +706,7 @@ function ParlayCard({
               transition={{ duration: 1, delay: 0.3 + index * 0.08, ease: "easeOut" }}
               style={{
                 background: evPositive
-                  ? "linear-gradient(90deg, #00D4AA, #00E8BC)"
+                  ? "linear-gradient(90deg, #FF3B3B, #FF5252)"
                   : "linear-gradient(90deg, #FF4D4D, #FF6666)",
               }}
             />
@@ -678,9 +750,9 @@ function ParlayCard({
             onClick={() => onCopy(parlay)}
             className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
             style={{
-              background: copiedId === parlay.id ? "rgba(0,212,170,0.15)" : "rgba(255,255,255,0.05)",
-              color: copiedId === parlay.id ? "#00D4AA" : "rgba(255,255,255,0.6)",
-              border: copiedId === parlay.id ? "1px solid rgba(0,212,170,0.3)" : "1px solid rgba(255,255,255,0.08)",
+              background: copiedId === parlay.id ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.05)",
+              color: copiedId === parlay.id ? "#FF3B3B" : "rgba(255,255,255,0.6)",
+              border: copiedId === parlay.id ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.08)",
             }}
             onMouseEnter={(e) => {
               if (copiedId !== parlay.id) {
