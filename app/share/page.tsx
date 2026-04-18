@@ -94,7 +94,7 @@ export default function SharePage() {
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <Link
               href="/"

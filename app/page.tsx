@@ -126,8 +126,8 @@ export default function Home() {
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
       {/* ── NAV ── */}
       <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-white/[0.06]">
-        <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-16">
-          <Link href="/" className="flex items-center gap-2">
+        <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-20">
+          <Link href="/" className="flex items-center gap-2 -mb-2">
             <Logo />
           </Link>
 

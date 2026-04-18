@@ -155,7 +155,7 @@ export default function ParlaysPage() {
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
       {/* ─── Nav ─── */}
       <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: "rgba(10,10,10,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-10">
             <Link href="/" className="flex items-center">
               <Logo />

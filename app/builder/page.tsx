@@ -305,7 +305,7 @@ export default function BuilderPage() {
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
       {/* ── Nav ──────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/[0.06]">
-        <div className="max-w-[1600px] mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
           <Link
             href="/"
             className="flex items-center"
