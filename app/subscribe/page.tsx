@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronDown, Menu, X, Loader2 } from "lucide-react";
+import { NavUser } from "@/app/components/NavUser";
 import { Logo } from "@/app/components/Logo";
 
 /* ─── animation helpers ─── */
@@ -160,12 +161,7 @@ function SubscribeContent() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/subscribe"
-              className="bg-[#FF3B3B] text-[#0a0a0a] px-5 py-2 text-xs sm:text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
-            >
-              Go Pro
-            </Link>
+            <NavUser />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden text-white/60 hover:text-white transition-colors"

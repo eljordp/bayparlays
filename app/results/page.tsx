@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/app/components/Logo";
+import { NavUser } from "@/app/components/NavUser";
 import {
   ChevronDown,
   ChevronUp,
   Menu,
   X,
-  ArrowUpRight,
   BarChart3,
   Trophy,
   DollarSign,
@@ -180,22 +180,7 @@ export default function ResultsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/builder"
-              className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300"
-              style={{ background: "#FF3B3B", color: "#0a0a0a" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#FF5252";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#FF3B3B";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              Build Your Own
-              <ArrowUpRight size={14} strokeWidth={2.5} />
-            </Link>
+            <NavUser />
             <button
               className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200"
               style={{ color: "rgba(255,255,255,0.7)" }}

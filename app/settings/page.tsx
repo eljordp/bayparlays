@@ -19,6 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
+import { NavUser } from "@/app/components/NavUser";
 import { useAuth } from "@/app/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 
@@ -207,21 +208,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {user ? (
-              <Link
-                href="/settings"
-                className="text-xs text-white/40 hover:text-white transition-colors"
-              >
-                Settings
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="text-xs sm:text-sm text-white/50 hover:text-white transition-colors"
-              >
-                Sign In
-              </Link>
-            )}
+            <NavUser />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden text-white/60 hover:text-white transition-colors"

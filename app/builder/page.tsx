@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
+import { NavUser } from "@/app/components/NavUser";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -334,6 +335,8 @@ export default function BuilderPage() {
             </Link>
           </div>
 
+          <div className="flex items-center gap-3">
+          <NavUser />
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileNavOpen((v) => !v)}
@@ -355,6 +358,7 @@ export default function BuilderPage() {
               )}
             </svg>
           </button>
+          </div>
         </div>
 
         {/* Mobile dropdown menu */}

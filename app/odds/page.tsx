@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
+import { NavUser } from "@/app/components/NavUser";
 
 // ─── Types (mirrors API route) ───────────────────────────────────────────────
 
@@ -186,6 +187,8 @@ export default function OddsPage() {
               Builder
             </Link>
           </div>
+          <div className="flex items-center gap-3">
+          <NavUser />
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileNav(!mobileNav)}
@@ -196,6 +199,7 @@ export default function OddsPage() {
             <span className={`block h-0.5 w-5 bg-white/70 transition-opacity ${mobileNav ? "opacity-0" : ""}`} />
             <span className={`block h-0.5 w-5 bg-white/70 transition-transform ${mobileNav ? "-translate-y-[4px] -rotate-45" : ""}`} />
           </button>
+          </div>
         </div>
         {/* Mobile dropdown */}
         {mobileNav && (
