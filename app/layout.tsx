@@ -18,12 +18,20 @@ export const metadata: Metadata = {
   title: "BayParlays — AI-Powered Parlay Optimizer",
   description: "Find +EV parlays with the best odds across every sportsbook. AI-driven picks, real math, no guessing.",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.png",
+    apple: "/apple-icon.png",
   },
   openGraph: {
     title: "BayParlays",
     description: "AI-powered parlay optimizer. Best odds. Real edge.",
     siteName: "BayParlays",
+    images: [{ url: "/opengraph-image.png", width: 630, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BayParlays",
+    description: "AI-powered parlay optimizer. Best odds. Real edge.",
+    images: ["/opengraph-image.png"],
   },
 };
 
