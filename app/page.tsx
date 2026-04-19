@@ -105,6 +105,8 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [odds, setOdds] = useState<OddsGame[]>([]);
   const oddsScrollRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [featuredParlay, setFeaturedParlay] = useState<any>(null);
 
   // Track referral clicks from ?ref= param
   useEffect(() => {
@@ -122,6 +124,29 @@ export default function Home() {
       const clean = params.toString();
       window.history.replaceState({}, "", clean ? `?${clean}` : window.location.pathname);
     }
+  }, []);
+
+  // Fetch featured parlay from track record
+  useEffect(() => {
+    async function fetchFeatured() {
+      try {
+        const res = await fetch("/api/track/results");
+        if (res.ok) {
+          const data = await res.json();
+          // Find the best winning parlay, or fall back to most recent
+          const won = data.recentParlays?.filter((p: { status: string }) => p.status === "won");
+          if (won?.length > 0) {
+            // Best winner by payout
+            setFeaturedParlay(won.reduce((best: { payout: number }, p: { payout: number }) => p.payout > best.payout ? p : best, won[0]));
+          } else if (data.recentParlays?.length > 0) {
+            // No winners yet — show most recent pending
+            const pending = data.recentParlays.filter((p: { status: string }) => p.status === "pending");
+            if (pending?.length > 0) setFeaturedParlay(pending[0]);
+          }
+        }
+      } catch { /* silent */ }
+    }
+    fetchFeatured();
   }, []);
 
   useEffect(() => {
@@ -335,103 +360,88 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FEATURED WINNING SLIP ── */}
-      <section className="py-24 md:py-36">
-        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            <motion.h2
-              variants={fadeUp}
-              custom={0}
-              className="text-3xl md:text-5xl tracking-tight mb-4"
-              style={{ fontFamily: "'DM Serif Display', serif" }}
-            >
-              Today&apos;s Winner
-            </motion.h2>
+      {/* ── FEATURED PARLAY (LIVE FROM DB) ── */}
+      {featuredParlay && (
+        <section className="py-24 md:py-36">
+          <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
             <motion.div
-              variants={fadeUp}
-              custom={1}
-              className="w-16 h-0.5 bg-[#FF3B3B] mb-14"
-            />
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-80px" }}
+            >
+              <motion.h2
+                variants={fadeUp}
+                custom={0}
+                className="text-3xl md:text-5xl tracking-tight mb-4"
+                style={{ fontFamily: "'DM Serif Display', serif" }}
+              >
+                {featuredParlay.status === "won" ? "Latest Winner" : "Live Pick"}
+              </motion.h2>
+              <motion.div
+                variants={fadeUp}
+                custom={1}
+                className="w-16 h-0.5 bg-[#FF3B3B] mb-14"
+              />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-              {/* Slip */}
-              <motion.div variants={fadeUp} custom={2}>
-                <BettingSlip
-                  legs={[
-                    {
-                      sport: "NBA",
-                      pick: "Celtics ML",
-                      odds: -145,
-                      result: "win",
-                      book: "FanDuel",
-                    },
-                    {
-                      sport: "MLB",
-                      pick: "Dodgers -1.5",
-                      odds: 110,
-                      result: "win",
-                      book: "DraftKings",
-                    },
-                    {
-                      sport: "NHL",
-                      pick: "Over 5.5",
-                      odds: 105,
-                      result: "win",
-                      book: "BetMGM",
-                    },
-                  ]}
-                  stake={100}
-                  payout={587}
-                  status="won"
-                  animated={true}
-                />
-              </motion.div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                <motion.div variants={fadeUp} custom={2}>
+                  <BettingSlip
+                    legs={featuredParlay.legs.map((leg: { sport: string; pick: string; odds: number; book: string }) => ({
+                      sport: leg.sport,
+                      pick: leg.pick,
+                      odds: leg.odds,
+                      result: featuredParlay.status === "won" ? "win" : featuredParlay.status === "lost" ? "loss" : "pending",
+                      book: leg.book,
+                    }))}
+                    stake={100}
+                    payout={featuredParlay.payout}
+                    status={featuredParlay.status === "won" ? "won" : featuredParlay.status === "lost" ? "lost" : "pending"}
+                    animated={true}
+                  />
+                </motion.div>
 
-              {/* Context */}
-              <motion.div variants={fadeUp} custom={3}>
-                <p
-                  className="text-sm text-[#FF3B3B]/60 uppercase tracking-[0.2em] mb-4 font-medium"
-                  style={{ fontFamily: "var(--font-geist-mono)" }}
-                >
-                  How It Happened
-                </p>
-                <p className="text-xl md:text-2xl text-white/80 leading-relaxed mb-6">
-                  Our AI found this parlay at{" "}
-                  <span
-                    className="text-[#FF3B3B] font-semibold"
+                <motion.div variants={fadeUp} custom={3}>
+                  <p
+                    className="text-sm text-[#FF3B3B]/60 uppercase tracking-[0.2em] mb-4 font-medium"
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
-                    6:42 AM
-                  </span>
-                  .
-                </p>
-                <p className="text-base text-white/40 leading-relaxed mb-8">
-                  Best odds pulled across FanDuel, DraftKings, and BetMGM.
-                  Expected value:{" "}
-                  <span
-                    className="text-white/70 font-semibold"
-                    style={{ fontFamily: "var(--font-geist-mono)" }}
+                    {featuredParlay.status === "won" ? "Verified Win" : featuredParlay.status === "pending" ? "In Progress" : "Track Record"}
+                  </p>
+                  <p className="text-xl md:text-2xl text-white/80 leading-relaxed mb-6">
+                    {featuredParlay.status === "won" ? (
+                      <>AI locked this parlay. Every leg hit.</>
+                    ) : featuredParlay.status === "pending" ? (
+                      <>AI locked this parlay. Waiting on results.</>
+                    ) : (
+                      <>AI generated this parlay. Not every pick wins.</>
+                    )}
+                  </p>
+                  <p className="text-base text-white/40 leading-relaxed mb-4">
+                    {featuredParlay.legs.length}-leg parlay at{" "}
+                    <span className="text-white/70 font-semibold" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                      {featuredParlay.combined_odds}
+                    </span>
+                    {" "}odds. Expected value:{" "}
+                    <span className="text-white/70 font-semibold" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                      {featuredParlay.ev_percent > 0 ? "+" : ""}{Number(featuredParlay.ev_percent).toFixed(1)}%
+                    </span>
+                  </p>
+                  <p className="text-sm text-white/25 mb-8" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    Generated {new Date(featuredParlay.created_at).toLocaleString()}
+                  </p>
+                  <Link
+                    href="/results"
+                    className="inline-flex items-center gap-2 text-sm text-[#FF3B3B]/70 hover:text-[#FF3B3B] transition-colors"
                   >
-                    +7.2%
-                  </span>
-                  . Every leg confirmed by 10:15 PM.
-                </p>
-                <Link
-                  href="/parlays"
-                  className="inline-flex items-center gap-2 text-sm text-[#FF3B3B]/70 hover:text-[#FF3B3B] transition-colors"
-                >
-                  See all winning picks
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+                    See full track record
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ── LIVE ODDS STRIP ── */}
       {odds.length > 0 && (
