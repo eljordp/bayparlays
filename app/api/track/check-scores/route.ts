@@ -178,7 +178,16 @@ function didLegWin(
   return null;
 }
 
+// Allow both GET (browser/cron) and POST
+export async function GET() {
+  return checkScores();
+}
+
 export async function POST() {
+  return checkScores();
+}
+
+async function checkScores() {
   try {
     if (!ODDS_API_KEY) {
       return NextResponse.json(
