@@ -48,6 +48,15 @@ export async function GET() {
   }
 
   results.generated = generated;
+
+  // Step 3: Resolve pending sim parlays
+  try {
+    const simRes = await fetch(`${baseUrl}/api/sim/resolve`);
+    results.simResolution = await simRes.json();
+  } catch (e) {
+    results.simResolution = { error: String(e) };
+  }
+
   results.timestamp = new Date().toISOString();
 
   return NextResponse.json(results);
