@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/app/components/Logo";
+import { useAuth } from "@/app/components/AuthProvider";
 import {
   TrendingUp,
   TrendingDown,
@@ -116,6 +117,8 @@ export default function ParlaysPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const { isPro, isAdmin: isAuthAdmin } = useAuth();
+
   // Admin bypass — check for admin key in URL or localStorage
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -123,12 +126,14 @@ export default function ParlaysPage() {
     if (key === "bayparlays2026") {
       localStorage.setItem("bp_admin", "true");
       setIsAdmin(true);
-      // Clean URL
       window.history.replaceState({}, "", "/parlays");
     } else if (localStorage.getItem("bp_admin") === "true") {
       setIsAdmin(true);
     }
   }, []);
+
+  // Also grant access if authenticated as admin or pro subscriber
+  const hasAccess = isAdmin || isAuthAdmin || isPro;
 
   const fetchParlays = useCallback(async () => {
     setLoading(true);
@@ -450,8 +455,8 @@ export default function ParlaysPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                {/* Admins see everything, regular users get 1 free */}
-                {isAdmin ? (
+                {/* Subscribers/admins see everything, regular users get 1 free */}
+                {hasAccess ? (
                   parlays.map((parlay, idx) => (
                     <ParlayCard
                       key={parlay.id}

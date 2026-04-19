@@ -10,6 +10,7 @@ import { ProcessAnimation } from "@/app/components/ProcessAnimation";
 import { ParlayPlayer } from "@/app/components/ParlayPlayer";
 import { HowItWorksPlayer } from "@/app/components/HowItWorksVideo";
 import { BettingSlip } from "@/app/components/BettingSlip";
+import { NavUser } from "@/app/components/NavUser";
 
 /* ─── Types ─── */
 
@@ -235,12 +236,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/subscribe"
-              className="bg-[#FF3B3B] text-[#0a0a0a] px-5 py-2 text-xs sm:text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
-            >
-              Start Free Trial
-            </Link>
+            <NavUser />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden text-white/60 hover:text-white transition-colors"
