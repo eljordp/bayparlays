@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/track/check-scores",
+      "path": "/api/daily",
       "schedule": "0 6 * * *"
     }
   ]

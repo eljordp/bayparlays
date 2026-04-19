@@ -106,6 +106,8 @@ export default function Home() {
   const [odds, setOdds] = useState<OddsGame[]>([]);
   const oddsScrollRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [potd, setPotd] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [featuredParlay, setFeaturedParlay] = useState<any>(null);
 
   // Track referral clicks from ?ref= param
@@ -124,6 +126,22 @@ export default function Home() {
       const clean = params.toString();
       window.history.replaceState({}, "", clean ? `?${clean}` : window.location.pathname);
     }
+  }, []);
+
+  // Fetch Parlay of the Day
+  useEffect(() => {
+    async function fetchPotd() {
+      try {
+        const res = await fetch("/api/potd");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.potd) setPotd(data.potd);
+        }
+      } catch {
+        /* silent */
+      }
+    }
+    fetchPotd();
   }, []);
 
   // Fetch featured parlay from track record
@@ -359,6 +377,94 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── PARLAY OF THE DAY ── */}
+      {potd && (
+        <section className="py-16 md:py-24 border-b border-white/[0.04]">
+          <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
+            {/* Header with flashing POTD badge */}
+            <div className="flex items-center gap-4 mb-10">
+              <div className="flex items-center gap-2 bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 rounded-full px-4 py-2">
+                <span className="w-2 h-2 rounded-full bg-[#FF3B3B] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[#FF3B3B]">
+                  Parlay of the Day
+                </span>
+              </div>
+              <span className="text-sm text-white/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+            </div>
+
+            {/* POTD content */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Main card — takes 2 columns */}
+              <div className="lg:col-span-2 bg-[#111] border border-white/[0.06] rounded-2xl p-6 md:p-8">
+                {/* Legs */}
+                <div className="space-y-4 mb-6">
+                  {potd.legs?.map((leg: { sport: string; pick: string; game: string; odds: number; book: string }, i: number) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-1 rounded">
+                          {leg.sport}
+                        </span>
+                        <div>
+                          <div className="text-sm text-white/80 font-medium">{leg.pick}</div>
+                          <div className="text-xs text-white/30">{leg.game}</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                          {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
+                        </div>
+                        <div className="text-[10px] text-white/25">{leg.book}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="h-px bg-white/[0.06] mb-4" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-white/30 uppercase tracking-wider mb-1">Combined Odds</div>
+                    <div className="text-3xl font-black text-[#FF3B3B]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                      {potd.combinedOdds || potd.combined_odds}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-white/30 uppercase tracking-wider mb-1">$100 Pays</div>
+                    <div className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                      ${potd.payout}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Side panel — stats */}
+              <div className="space-y-4">
+                <div className="bg-[#111] border border-white/[0.06] rounded-2xl p-6">
+                  <div className="text-xs text-white/30 uppercase tracking-wider mb-2">Confidence</div>
+                  <div className="text-4xl font-black text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    {potd.confidence}%
+                  </div>
+                  <div className="mt-3 h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#FF3B3B] rounded-full" style={{ width: `${potd.confidence}%` }} />
+                  </div>
+                </div>
+                <div className="bg-[#111] border border-white/[0.06] rounded-2xl p-6">
+                  <div className="text-xs text-white/30 uppercase tracking-wider mb-2">Expected Value</div>
+                  <div className="text-3xl font-black text-[#22C55E]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    +{(potd.evPercent || potd.ev_percent || 0).toFixed(1)}%
+                  </div>
+                </div>
+                <Link href="/subscribe" className="block bg-[#FF3B3B] text-center text-[#0a0a0a] font-bold py-4 rounded-2xl hover:bg-[#FF5252] transition-colors">
+                  Get All Picks
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── FEATURED PARLAY (LIVE FROM DB) ── */}
       {featuredParlay && (
