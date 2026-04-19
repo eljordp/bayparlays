@@ -9,6 +9,7 @@ interface AuthContext {
   loading: boolean;
   isAdmin: boolean;
   isPro: boolean;
+  tier: string;
   signOut: () => Promise<void>;
 }
 
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContext>({
   loading: true,
   isAdmin: false,
   isPro: false,
+  tier: "free",
   signOut: async () => {},
 });
 
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPro, setIsPro] = useState(false);
+  const [tier, setTier] = useState("free");
 
   useEffect(() => {
     // Get initial session
@@ -57,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if admin
     if (ADMIN_EMAILS.includes(email)) {
       setIsPro(true);
+      setTier("admin");
       return;
     }
     // Check users table for subscription status
@@ -66,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq("email", email)
       .single();
 
+    setTier(data?.subscription_tier || "free");
     setIsPro(
       data?.subscription_status === "active" ||
         data?.subscription_status === "trialing"
@@ -81,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, isPro, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isPro, tier, signOut }}>
       {children}
     </AuthContext.Provider>
   );

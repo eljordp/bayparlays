@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 
 export function NavUser() {
-  const { user, isPro, signOut } = useAuth();
+  const { user, isPro, tier, signOut } = useAuth();
+
+  const tierLabel: Record<string, string> = {
+    admin: "ADMIN",
+    vip: "VIP",
+    sharp: "SHARP",
+    enterprise: "ENT",
+  };
 
   if (user) {
     const truncatedEmail = user.email
@@ -17,14 +24,18 @@ export function NavUser() {
       <div className="flex items-center gap-3">
         <Link
           href="/settings"
-          className="text-xs text-white/40 hover:text-white transition-colors"
+          className="text-xs text-white/40 hover:text-white transition-colors hidden sm:block"
           style={{ fontFamily: "var(--font-geist-mono)" }}
         >
           {truncatedEmail}
         </Link>
         {isPro && (
-          <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-1 rounded-full">
-            PRO
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+            tier === "admin" ? "bg-[#FF3B3B]/25 text-[#FF3B3B]" :
+            tier === "vip" ? "bg-yellow-500/15 text-yellow-400" :
+            "bg-[#FF3B3B]/15 text-[#FF3B3B]"
+          }`}>
+            {tierLabel[tier] || "PRO"}
           </span>
         )}
         <button
