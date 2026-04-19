@@ -625,7 +625,7 @@ export default function Home() {
                 className="text-7xl md:text-8xl text-[#FF3B3B] block mb-2"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
-                $49
+                $50
               </span>
               per month.
             </motion.h2>

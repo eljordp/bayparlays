@@ -58,7 +58,7 @@ const plans = [
   {
     id: "sharp",
     name: "Sharp",
-    price: "$49",
+    price: "$50",
     period: "/mo",
     desc: "For bettors who want the edge.",
     features: [
@@ -74,7 +74,7 @@ const plans = [
   {
     id: "vip",
     name: "VIP",
-    price: "$149",
+    price: "$150",
     period: "/mo",
     desc: "For serious bettors. Full access, full edge.",
     features: [
