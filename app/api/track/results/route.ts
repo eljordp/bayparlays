@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+// Force dynamic — don't prerender this route
+export const dynamic = "force-dynamic";
+
 interface ParlayRow {
   id: string;
   created_at: string;
