@@ -114,6 +114,21 @@ export default function ParlaysPage() {
   const [sortBy, setSortBy] = useState<SortOption>("ev");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Admin bypass — check for admin key in URL or localStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get("admin");
+    if (key === "bayparlays2026") {
+      localStorage.setItem("bp_admin", "true");
+      setIsAdmin(true);
+      // Clean URL
+      window.history.replaceState({}, "", "/parlays");
+    } else if (localStorage.getItem("bp_admin") === "true") {
+      setIsAdmin(true);
+    }
+  }, []);
 
   const fetchParlays = useCallback(async () => {
     setLoading(true);
@@ -435,7 +450,19 @@ export default function ParlaysPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                {/* Show first parlay as a teaser, lock everything */}
+                {/* Admins see everything, regular users get 1 free */}
+                {isAdmin ? (
+                  parlays.map((parlay, idx) => (
+                    <ParlayCard
+                      key={parlay.id}
+                      parlay={parlay}
+                      index={idx}
+                      copiedId={copiedId}
+                      onCopy={handleCopy}
+                    />
+                  ))
+                ) : (
+                  <>
                 {parlays.length > 0 && (
                   <ParlayCard
                     key={parlays[0].id}
@@ -517,6 +544,8 @@ export default function ParlaysPage() {
                         Start Free Trial
                       </Link>
                     </div>
+                  </>
+                )}
                   </>
                 )}
               </motion.div>
