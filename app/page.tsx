@@ -109,6 +109,8 @@ export default function Home() {
   const [potd, setPotd] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [featuredParlay, setFeaturedParlay] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [crazy, setCrazy] = useState<any>(null);
 
   // Track referral clicks from ?ref= param
   useEffect(() => {
@@ -142,6 +144,22 @@ export default function Home() {
       }
     }
     fetchPotd();
+  }, []);
+
+  // Fetch Craziest Parlay of the Day
+  useEffect(() => {
+    async function fetchCrazy() {
+      try {
+        const res = await fetch("/api/crazy");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.crazy) setCrazy(data.crazy);
+        }
+      } catch {
+        /* silent */
+      }
+    }
+    fetchCrazy();
   }, []);
 
   // Fetch featured parlay from track record
@@ -460,6 +478,78 @@ export default function Home() {
                 <Link href="/subscribe" className="block bg-[#FF3B3B] text-center text-[#0a0a0a] font-bold py-4 rounded-2xl hover:bg-[#FF5252] transition-colors">
                   Get All Picks
                 </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── CRAZIEST PARLAY OF THE DAY ── */}
+      {crazy && (
+        <section className="py-16 md:py-24 bg-gradient-to-b from-[#FF3B3B]/[0.03] to-transparent border-y border-[#FF3B3B]/[0.08]">
+          <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
+            <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-[#FF3B3B]/20 border border-[#FF3B3B]/30 rounded-full px-4 py-2">
+                  <span className="text-lg">🎰</span>
+                  <span className="text-xs font-black uppercase tracking-wider text-[#FF3B3B]">
+                    Craziest Parlay
+                  </span>
+                </div>
+                <span className="text-sm text-white/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  Today&apos;s long shot
+                </span>
+              </div>
+              <Link href="/crazy" className="text-sm text-[#FF3B3B]/60 hover:text-[#FF3B3B] transition-colors flex items-center gap-1">
+                History &rarr;
+              </Link>
+            </div>
+
+            <div className="bg-[#0d0d0d] border border-[#FF3B3B]/10 rounded-2xl p-6 md:p-10">
+              {/* Big odds display */}
+              <div className="text-center mb-8">
+                <div className="text-xs text-white/30 uppercase tracking-widest mb-3">If this hits...</div>
+                <div className="text-6xl md:text-8xl font-black text-[#FF3B3B]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  {crazy.combined_odds}
+                </div>
+                <div className="text-xl md:text-2xl text-white/60 mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  $100 &rarr; ${crazy.payout?.toLocaleString()}
+                </div>
+              </div>
+
+              {/* Legs in a grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number }, i: number) => (
+                  <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-0.5 rounded">
+                        {leg.sport}
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-white/80">{leg.pick}</div>
+                    <div className="text-xs text-white/30 mt-1">{leg.game}</div>
+                    <div className="text-lg font-bold text-white mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                      {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Status */}
+              <div className="text-center mt-8">
+                {crazy.status === "won" ? (
+                  <span className="inline-flex items-center gap-2 bg-green-500/15 text-green-400 font-bold px-6 py-2 rounded-full text-sm">
+                    THIS HIT
+                  </span>
+                ) : crazy.status === "lost" ? (
+                  <span className="inline-flex items-center gap-2 bg-white/[0.04] text-white/30 font-medium px-6 py-2 rounded-full text-sm">
+                    Didn&apos;t hit this time
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 bg-[#FF3B3B]/10 text-[#FF3B3B] font-bold px-6 py-2 rounded-full text-sm animate-pulse">
+                    IN PLAY
+                  </span>
+                )}
               </div>
             </div>
           </div>
