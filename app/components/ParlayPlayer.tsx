@@ -11,6 +11,8 @@ interface ParlayPlayerProps {
   confidence: number;
   payout: number;
   format?: "square" | "story";
+  showControls?: boolean;
+  maxWidth?: number;
 }
 
 export function ParlayPlayer({
@@ -20,8 +22,11 @@ export function ParlayPlayer({
   confidence,
   payout,
   format = "square",
+  showControls,
+  maxWidth,
 }: ParlayPlayerProps) {
   const isStory = format === "story";
+  const defaultMax = isStory ? 300 : 400;
 
   return (
     <Player
@@ -33,12 +38,12 @@ export function ParlayPlayer({
       compositionHeight={isStory ? 1920 : 1080}
       style={{
         width: "100%",
-        maxWidth: isStory ? 300 : 400,
+        maxWidth: maxWidth ?? defaultMax,
         borderRadius: 12,
         overflow: "hidden",
         border: "1px solid rgba(255,255,255,0.08)",
       }}
-      controls
+      controls={showControls ?? false}
       autoPlay
       loop
     />

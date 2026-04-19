@@ -249,21 +249,25 @@ export default function SharePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="flex items-center justify-center gap-2 mb-10"
+            className="flex items-center justify-center gap-3 mb-10"
           >
             {(["square", "story"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFormat(f)}
-                className="px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200"
+                className="px-7 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-200"
                 style={{
                   background:
-                    format === f ? "#FF3B3B" : "rgba(255,255,255,0.05)",
-                  color: format === f ? "#0a0a0a" : "rgba(255,255,255,0.5)",
+                    format === f ? "#FF3B3B" : "rgba(255,255,255,0.06)",
+                  color: format === f ? "#0a0a0a" : "rgba(255,255,255,0.6)",
                   border:
                     format === f
-                      ? "1px solid #FF3B3B"
-                      : "1px solid rgba(255,255,255,0.08)",
+                      ? "2px solid #FF3B3B"
+                      : "2px solid rgba(255,255,255,0.12)",
+                  boxShadow:
+                    format === f
+                      ? "0 0 20px rgba(255,59,59,0.25)"
+                      : "none",
                 }}
               >
                 {f === "square" ? "Square (Feed)" : "Vertical (Story)"}
@@ -338,6 +342,8 @@ export default function SharePage() {
                 confidence={parlay.confidence}
                 payout={parlay.payout}
                 format={format}
+                showControls={true}
+                maxWidth={format === "story" ? 340 : 500}
               />
             )}
           </motion.div>

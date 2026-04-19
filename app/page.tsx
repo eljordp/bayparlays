@@ -5,7 +5,10 @@ import { motion, useInView } from "framer-motion";
 import { Menu, X, ChevronRight, ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/app/components/Logo";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ProcessAnimation } from "@/app/components/ProcessAnimation";
+import { ParlayPlayer } from "@/app/components/ParlayPlayer";
+import { HowItWorksPlayer } from "@/app/components/HowItWorksVideo";
 import { BettingSlip } from "@/app/components/BettingSlip";
 
 /* ─── Types ─── */
@@ -342,7 +345,7 @@ export default function Home() {
               </motion.div>
             </motion.div>
 
-            {/* Right — Process Animation */}
+            {/* Right — Remotion Video */}
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -352,7 +355,17 @@ export default function Home() {
                 ease: [0.25, 0.1, 0.25, 1],
               }}
             >
-              <ProcessAnimation />
+              <ParlayPlayer
+                legs={[
+                  { sport: "NBA", pick: "Celtics ML", odds: -145, book: "FanDuel", game: "PHI @ BOS" },
+                  { sport: "MLB", pick: "Dodgers -1.5", odds: 110, book: "DraftKings", game: "LAD @ COL" },
+                  { sport: "NHL", pick: "Over 5.5", odds: 105, book: "BetMGM", game: "STL @ UTA" },
+                ]}
+                combinedOdds="+487"
+                evPercent={7.2}
+                confidence={82}
+                payout={587}
+              />
             </motion.div>
           </div>
         </div>
@@ -484,6 +497,46 @@ export default function Home() {
         </section>
       )}
 
+      {/* ── WATCH IT WORK (How The AI Works Video) ── */}
+      <section className="py-20 md:py-32 border-b border-white/[0.04]">
+        <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            className="text-center"
+          >
+            <motion.h2
+              variants={fadeUp}
+              custom={0}
+              className="text-3xl md:text-5xl tracking-tight mb-4"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
+              Watch It Work
+            </motion.h2>
+            <motion.div
+              variants={fadeUp}
+              custom={1}
+              className="w-16 h-0.5 bg-[#FF3B3B] mx-auto mb-10"
+            />
+            <motion.div
+              variants={fadeUp}
+              custom={2}
+              className="flex justify-center mb-8"
+            >
+              <HowItWorksPlayer />
+            </motion.div>
+            <motion.p
+              variants={fadeUp}
+              custom={3}
+              className="text-base md:text-lg text-white/40 max-w-lg mx-auto leading-relaxed"
+            >
+              Our AI scans odds, finds the edge, and builds your parlay in seconds.
+            </motion.p>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── CRAZIEST PARLAY OF THE DAY ── */}
       {crazy && (
         <section className="py-16 md:py-24 bg-gradient-to-b from-[#FF3B3B]/[0.03] to-transparent border-y border-[#FF3B3B]/[0.08]">
@@ -506,33 +559,56 @@ export default function Home() {
             </div>
 
             <div className="bg-[#0d0d0d] border border-[#FF3B3B]/10 rounded-2xl p-6 md:p-10">
-              {/* Big odds display */}
-              <div className="text-center mb-8">
-                <div className="text-xs text-white/30 uppercase tracking-widest mb-3">If this hits...</div>
-                <div className="text-6xl md:text-8xl font-black text-[#FF3B3B]" style={{ fontFamily: "var(--font-geist-mono)" }}>
-                  {crazy.combined_odds}
-                </div>
-                <div className="text-xl md:text-2xl text-white/60 mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
-                  $100 &rarr; ${crazy.payout?.toLocaleString()}
-                </div>
-              </div>
-
-              {/* Legs in a grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number }, i: number) => (
-                  <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-0.5 rounded">
-                        {leg.sport}
-                      </span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                {/* Left: Big odds display + legs */}
+                <div>
+                  {/* Big odds display */}
+                  <div className="text-center lg:text-left mb-8">
+                    <div className="text-xs text-white/30 uppercase tracking-widest mb-3">If this hits...</div>
+                    <div className="text-6xl md:text-8xl font-black text-[#FF3B3B]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                      {crazy.combined_odds}
                     </div>
-                    <div className="text-sm font-medium text-white/80">{leg.pick}</div>
-                    <div className="text-xs text-white/30 mt-1">{leg.game}</div>
-                    <div className="text-lg font-bold text-white mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
-                      {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
+                    <div className="text-xl md:text-2xl text-white/60 mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                      $100 &rarr; ${crazy.payout?.toLocaleString()}
                     </div>
                   </div>
-                ))}
+
+                  {/* Legs */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-1 gap-3">
+                    {crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number }, i: number) => (
+                      <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-0.5 rounded">
+                            {leg.sport}
+                          </span>
+                        </div>
+                        <div className="text-sm font-medium text-white/80">{leg.pick}</div>
+                        <div className="text-xs text-white/30 mt-1">{leg.game}</div>
+                        <div className="text-lg font-bold text-white mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                          {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right: Remotion video preview of the crazy parlay */}
+                <div className="flex justify-center">
+                  <ParlayPlayer
+                    legs={crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number; book?: string }) => ({
+                      sport: leg.sport,
+                      pick: leg.pick,
+                      odds: leg.odds,
+                      book: leg.book || "Best Line",
+                      game: leg.game,
+                    })) || []}
+                    combinedOdds={crazy.combined_odds || ""}
+                    evPercent={0}
+                    confidence={0}
+                    payout={crazy.payout || 0}
+                    maxWidth={340}
+                  />
+                </div>
               </div>
 
               {/* Status */}
