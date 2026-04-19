@@ -186,6 +186,12 @@ export default function OddsPage() {
             <Link href="/builder" className="transition hover:text-white">
               Builder
             </Link>
+            <Link href="/results" className="transition hover:text-white">
+              Results
+            </Link>
+            <Link href="/simulator" className="transition hover:text-white">
+              Simulator
+            </Link>
           </div>
           <div className="flex items-center gap-3">
           <NavUser />
@@ -215,6 +221,12 @@ export default function OddsPage() {
             </Link>
             <Link href="/builder" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
               Builder
+            </Link>
+            <Link href="/results" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
+              Results
+            </Link>
+            <Link href="/simulator" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
+              Simulator
             </Link>
           </div>
         )}

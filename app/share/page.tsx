@@ -109,6 +109,8 @@ export default function SharePage() {
                 { href: "/parlays", label: "AI Parlays" },
                 { href: "/odds", label: "Odds" },
                 { href: "/builder", label: "Builder" },
+                { href: "/results", label: "Results" },
+                { href: "/simulator", label: "Simulator" },
                 { href: "/share", label: "Share" },
               ].map((link) => (
                 <Link
@@ -166,6 +168,8 @@ export default function SharePage() {
                   { href: "/parlays", label: "AI Parlays" },
                   { href: "/odds", label: "Odds" },
                   { href: "/builder", label: "Builder" },
+                  { href: "/results", label: "Results" },
+                  { href: "/simulator", label: "Simulator" },
                   { href: "/share", label: "Share" },
                 ].map((link) => (
                   <Link

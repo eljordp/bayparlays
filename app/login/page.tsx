@@ -74,6 +74,13 @@ export default function LoginPage() {
           <Link href="/" className="flex items-center gap-2 -mb-2">
             <Logo />
           </Link>
+          <div className="hidden md:flex items-center gap-8 text-sm text-white/50">
+            <Link href="/parlays" className="hover:text-white transition-colors duration-200">Parlays</Link>
+            <Link href="/odds" className="hover:text-white transition-colors duration-200">Odds</Link>
+            <Link href="/builder" className="hover:text-white transition-colors duration-200">Builder</Link>
+            <Link href="/results" className="hover:text-white transition-colors duration-200">Results</Link>
+            <Link href="/simulator" className="hover:text-white transition-colors duration-200">Simulator</Link>
+          </div>
         </div>
       </nav>
 

@@ -391,6 +391,50 @@ export default function SimulatorPage() {
               animate="visible"
               className="mb-16"
             >
+              <div className="flex items-center justify-between mb-6">
+                <h2
+                  className="text-xl md:text-2xl tracking-tight"
+                  style={{ fontFamily: "'DM Serif Display', serif" }}
+                >
+                  Bankroll
+                </h2>
+                <button
+                  onClick={async () => {
+                    if (!user || !bankroll) return;
+                    const confirmed = window.confirm(
+                      "Reset your bankroll? This will delete all sim history and reset your balance to the starting amount."
+                    );
+                    if (!confirmed) return;
+
+                    // Reset bankroll
+                    await supabase
+                      .from("sim_bankroll")
+                      .update({
+                        balance: bankroll.starting_balance,
+                        total_wagered: 0,
+                        total_won: 0,
+                        total_lost: 0,
+                        wins: 0,
+                        losses: 0,
+                      })
+                      .eq("user_id", user.id);
+
+                    // Delete all sim parlays
+                    await supabase
+                      .from("sim_parlays")
+                      .delete()
+                      .eq("user_id", user.id);
+
+                    // Reload
+                    await loadData();
+                    setConfirmation("Bankroll reset");
+                    setTimeout(() => setConfirmation(null), 2500);
+                  }}
+                  className="text-xs text-white/30 hover:text-[#FF3B3B] transition-colors border border-white/[0.06] hover:border-[#FF3B3B]/30 px-4 py-2 rounded-lg"
+                >
+                  Reset Bankroll
+                </button>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6">
                 {/* Balance — large */}
                 <motion.div
@@ -894,6 +938,9 @@ function Nav({
           <Link href="/builder" className="hover:text-white transition-colors duration-200">
             Builder
           </Link>
+          <Link href="/results" className="hover:text-white transition-colors duration-200">
+            Results
+          </Link>
           <Link
             href="/simulator"
             className="text-[#FF3B3B] hover:text-[#FF5252] transition-colors duration-200"
@@ -925,6 +972,9 @@ function Nav({
             </Link>
             <Link href="/builder" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
               Builder
+            </Link>
+            <Link href="/results" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
+              Results
             </Link>
             <Link href="/simulator" onClick={() => setMobileMenuOpen(false)} className="text-sm text-[#FF3B3B] hover:text-[#FF5252] transition-colors">
               Simulator

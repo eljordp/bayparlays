@@ -115,6 +115,9 @@ export default function Home() {
   const [featuredParlay, setFeaturedParlay] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [crazy, setCrazy] = useState<any>(null);
+  const [captureEmail, setCaptureEmail] = useState("");
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
 
   // Track referral clicks from ?ref= param
   useEffect(() => {
@@ -233,6 +236,18 @@ export default function Home() {
             >
               Builder
             </Link>
+            <Link
+              href="/results"
+              className="hover:text-white transition-colors duration-200"
+            >
+              Results
+            </Link>
+            <Link
+              href="/simulator"
+              className="hover:text-white transition-colors duration-200"
+            >
+              Simulator
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -274,6 +289,20 @@ export default function Home() {
                 className="text-sm text-white/50 hover:text-white transition-colors duration-200"
               >
                 Builder
+              </Link>
+              <Link
+                href="/results"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
+              >
+                Results
+              </Link>
+              <Link
+                href="/simulator"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
+              >
+                Simulator
               </Link>
             </div>
           </div>
@@ -900,6 +929,53 @@ export default function Home() {
               </motion.div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* ── EMAIL CAPTURE ── */}
+      <section className="py-16 md:py-24 border-t border-white/[0.04]">
+        <div className="w-full max-w-[600px] mx-auto px-6 md:px-10 text-center">
+          <h2 className="text-2xl md:text-3xl tracking-tight mb-4" style={{ fontFamily: "'DM Serif Display', serif" }}>
+            Not ready to subscribe?
+          </h2>
+          <p className="text-white/40 mb-8">
+            Drop your email. We&apos;ll send you our best pick of the week — free.
+          </p>
+
+          {emailSubmitted ? (
+            <div className="text-[#22C55E] font-semibold">You&apos;re in. Watch your inbox.</div>
+          ) : (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!captureEmail) return;
+              setEmailLoading(true);
+              try {
+                await fetch("/api/email-capture", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email: captureEmail }),
+                });
+                setEmailSubmitted(true);
+              } catch {}
+              setEmailLoading(false);
+            }} className="flex gap-3 max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={captureEmail}
+                onChange={(e) => setCaptureEmail(e.target.value)}
+                required
+                className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-full px-5 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#FF3B3B]/40"
+              />
+              <button
+                type="submit"
+                disabled={emailLoading}
+                className="bg-[#FF3B3B] text-[#0a0a0a] px-6 py-3 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors disabled:opacity-50"
+              >
+                {emailLoading ? "..." : "Send"}
+              </button>
+            </form>
+          )}
         </div>
       </section>
 

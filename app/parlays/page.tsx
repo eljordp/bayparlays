@@ -186,6 +186,8 @@ export default function ParlaysPage() {
                 { href: "/parlays", label: "AI Parlays" },
                 { href: "/odds", label: "Odds" },
                 { href: "/builder", label: "Builder" },
+                { href: "/results", label: "Results" },
+                { href: "/simulator", label: "Simulator" },
               ].map((link) => (
                 <Link
                   key={link.href}
@@ -233,6 +235,8 @@ export default function ParlaysPage() {
                   { href: "/parlays", label: "AI Parlays" },
                   { href: "/odds", label: "Odds" },
                   { href: "/builder", label: "Builder" },
+                  { href: "/results", label: "Results" },
+                  { href: "/simulator", label: "Simulator" },
                 ].map((link) => (
                   <Link
                     key={link.href}

@@ -205,6 +205,12 @@ export default function SettingsPage() {
             <Link href="/builder" className="hover:text-white transition-colors duration-200">
               Builder
             </Link>
+            <Link href="/results" className="hover:text-white transition-colors duration-200">
+              Results
+            </Link>
+            <Link href="/simulator" className="hover:text-white transition-colors duration-200">
+              Simulator
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -230,6 +236,12 @@ export default function SettingsPage() {
               </Link>
               <Link href="/builder" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
                 Builder
+              </Link>
+              <Link href="/results" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
+                Results
+              </Link>
+              <Link href="/simulator" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
+                Simulator
               </Link>
               {user && (
                 <Link href="/settings" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">

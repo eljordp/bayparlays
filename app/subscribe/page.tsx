@@ -68,6 +68,7 @@ const plans = [
       "All 8 sports + markets",
       "Best odds across 12+ books",
       "Real-time line updates",
+      "Betting simulator ($1K bankroll)",
     ],
     highlight: false,
     cta: "Start Sharp",
@@ -85,6 +86,7 @@ const plans = [
       "Private Discord channel",
       "Advanced EV analytics",
       "Early access to new features",
+      "Betting simulator ($10K bankroll)",
     ],
     highlight: true,
     cta: "Go VIP",
@@ -158,6 +160,12 @@ function SubscribeContent() {
             <Link href="/builder" className="hover:text-white transition-colors duration-200">
               Builder
             </Link>
+            <Link href="/results" className="hover:text-white transition-colors duration-200">
+              Results
+            </Link>
+            <Link href="/simulator" className="hover:text-white transition-colors duration-200">
+              Simulator
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -183,6 +191,12 @@ function SubscribeContent() {
               </Link>
               <Link href="/builder" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
                 Builder
+              </Link>
+              <Link href="/results" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
+                Results
+              </Link>
+              <Link href="/simulator" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
+                Simulator
               </Link>
             </div>
           </div>
