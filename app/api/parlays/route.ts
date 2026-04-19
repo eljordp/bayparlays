@@ -753,6 +753,35 @@ export async function GET(request: NextRequest) {
     // Cache the response
     setCachedResponse(response, sports, numLegs, count);
 
+    // Save parlays to tracking database (fire and forget, skip if recent insert)
+    try {
+      const { supabase } = await import("@/lib/supabase");
+
+      // Check if we inserted parlays in the last 5 minutes to avoid duplicates
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("parlays")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", fiveMinAgo);
+
+      if (!count || count === 0) {
+        const rows = parlays.map((p) => ({
+          legs: p.legs,
+          combined_odds: p.combinedOdds,
+          combined_decimal: p.combinedDecimal,
+          ev: p.ev,
+          ev_percent: p.evPercent,
+          confidence: p.confidence,
+          payout: p.payout,
+          legs_total: p.legs.length,
+          sports: [...new Set(p.legs.map((l) => l.sport))],
+        }));
+        await supabase.from("parlays").insert(rows);
+      }
+    } catch (e) {
+      console.error("Failed to track parlays:", e);
+    }
+
     return NextResponse.json(response, {
       headers: {
         "X-Cache": "MISS",
