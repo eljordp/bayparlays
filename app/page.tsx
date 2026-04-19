@@ -106,6 +106,24 @@ export default function Home() {
   const [odds, setOdds] = useState<OddsGame[]>([]);
   const oddsScrollRef = useRef<HTMLDivElement>(null);
 
+  // Track referral clicks from ?ref= param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      localStorage.setItem("bp_ref", ref);
+      fetch("/api/referral/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: ref, event: "click" }),
+      }).catch(() => {});
+      // Clean URL
+      params.delete("ref");
+      const clean = params.toString();
+      window.history.replaceState({}, "", clean ? `?${clean}` : window.location.pathname);
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchOdds() {
       try {

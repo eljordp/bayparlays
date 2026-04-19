@@ -19,10 +19,14 @@ export async function POST(request: NextRequest) {
   }
 
   let tier = "vip"; // default
+  let ref: string | null = null;
   try {
     const body = await request.json();
     if (body.tier && PRICE_MAP[body.tier]) {
       tier = body.tier;
+    }
+    if (body.ref) {
+      ref = body.ref;
     }
   } catch {
     // no body or invalid JSON — use default tier
@@ -52,6 +56,8 @@ export async function POST(request: NextRequest) {
         "cancel_url": `${BASE_URL}/subscribe?canceled=true`,
         // Only Sharp tier gets a 7-day free trial
         ...(tier === "sharp" ? { "subscription_data[trial_period_days]": "7" } : {}),
+        // Attach referral code as metadata if present
+        ...(ref ? { "metadata[referral_code]": ref } : {}),
       }),
     });
 
@@ -62,6 +68,20 @@ export async function POST(request: NextRequest) {
         { error: session.error?.message || "Failed to create checkout session" },
         { status: 400 }
       );
+    }
+
+    // Track referral signup event
+    if (ref) {
+      try {
+        const trackUrl = `${BASE_URL}/api/referral/track`;
+        await fetch(trackUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: ref, event: "signup" }),
+        });
+      } catch {
+        // Don't block checkout if referral tracking fails
+      }
     }
 
     return NextResponse.json({ url: session.url });

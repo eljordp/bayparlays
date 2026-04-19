@@ -119,10 +119,11 @@ function SubscribeContent() {
   const handleCheckout = async (tier: string) => {
     setCheckoutLoading(tier);
     try {
+      const ref = typeof window !== "undefined" ? localStorage.getItem("bp_ref") : null;
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, ...(ref ? { ref } : {}) }),
       });
       const data = await res.json();
       if (data.url) {
