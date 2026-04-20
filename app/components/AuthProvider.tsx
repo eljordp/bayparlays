@@ -66,15 +66,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check users table for subscription status
     const { data } = await supabase
       .from("users")
-      .select("subscription_status, subscription_tier")
+      .select("subscription_status, subscription_tier, trial_ends_at")
       .eq("email", email)
       .single();
 
-    setTier(data?.subscription_tier || "free");
-    setIsPro(
-      data?.subscription_status === "active" ||
-        data?.subscription_status === "trialing"
-    );
+    let status = data?.subscription_status;
+    let currentTier = data?.subscription_tier || "free";
+
+    // Check if trial has expired
+    if (status === "trialing" && data?.trial_ends_at) {
+      const trialEnd = new Date(data.trial_ends_at);
+      if (trialEnd < new Date()) {
+        // Trial expired — downgrade
+        status = "none";
+        currentTier = "free";
+        // Update in DB
+        supabase.from("users").update({
+          subscription_status: "none",
+          subscription_tier: "free",
+        }).eq("email", email).then(() => {});
+      }
+    }
+
+    setTier(currentTier);
+    setIsPro(status === "active" || status === "trialing");
   }
 
   const isAdmin = ADMIN_EMAILS.includes(user?.email ?? "");

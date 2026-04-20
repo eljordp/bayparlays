@@ -91,8 +91,13 @@ export default function LoginPage() {
             className="text-3xl md:text-4xl tracking-tight mb-10 text-center"
             style={{ fontFamily: "'DM Serif Display', serif" }}
           >
-            {mode === "signin" ? "Welcome back" : "Create account"}
+            {mode === "signin" ? "Welcome back" : "Start your free trial"}
           </h1>
+          {mode === "signup" && (
+            <p className="text-center text-white/40 text-sm -mt-6 mb-6">
+              7 days of Sharp access. No card required.
+            </p>
+          )}
 
           {/* Tab Toggle */}
           <div className="flex mb-8 bg-white/[0.04] rounded-full p-1">
