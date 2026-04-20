@@ -338,34 +338,38 @@ export default function OddsPage() {
 
             if (!marketData || marketData.bookmakers.length === 0) return null;
 
-            // Determine outcome columns (team names for h2h/spreads, Over/Under for totals)
+            // Determine outcome sides
             const outcomeNames =
               market === "totals"
                 ? ["Over", "Under"]
                 : [game.awayTeam, game.homeTeam];
 
-            // Build a map: bookKey -> outcomeName -> outcome
-            const bookOddsMap = new Map<
-              string,
-              Map<string, OddsOutcome>
-            >();
-            const bookKeys: string[] = [];
-
-            for (const bm of marketData.bookmakers) {
-              if (!bookOddsMap.has(bm.key)) {
-                bookKeys.push(bm.key);
-              }
-              const outMap = new Map<string, OddsOutcome>();
-              for (const o of bm.outcomes) {
-                outMap.set(o.name, o);
-              }
-              bookOddsMap.set(bm.key, outMap);
-            }
-
-            // Best odds lookup: outcomeName -> BestOdds
+            // Best odds lookup
             const bestMap = new Map<string, BestOdds>();
             for (const b of best) {
               bestMap.set(b.outcomeName, b);
+            }
+
+            // Build runner-up books per outcome (sorted by best price, excluding the best)
+            const runnerUps = new Map<string, { book: string; bookKey: string; price: number; point?: number }[]>();
+            for (const name of outcomeNames) {
+              const bestForOutcome = bestMap.get(name);
+              const runners: { book: string; bookKey: string; price: number; point?: number }[] = [];
+              for (const bm of marketData.bookmakers) {
+                if (bestForOutcome && bm.key === bestForOutcome.bestBookKey) continue;
+                const outcome = bm.outcomes.find((o) => o.name === name);
+                if (outcome) {
+                  runners.push({
+                    book: data?.bookDisplayNames?.[bm.key] || bm.title,
+                    bookKey: bm.key,
+                    price: outcome.price,
+                    point: outcome.point,
+                  });
+                }
+              }
+              // Sort by best price (higher is better for positive, less negative is better for negative)
+              runners.sort((a, b) => b.price - a.price);
+              runnerUps.set(name, runners);
             }
 
             const timeLabel = formatTime(game.commenceTime);
@@ -374,20 +378,16 @@ export default function OddsPage() {
             return (
               <div
                 key={game.id}
-                className="mb-6 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"
+                className="mb-5 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"
               >
                 {/* Game header */}
-                <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-4 md:px-5">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="min-w-0">
-                      <p className="text-sm sm:text-base font-semibold truncate">
-                        {game.awayTeam}{" "}
-                        <span className="text-white/20 mx-1 sm:mx-2">@</span>{" "}
-                        {game.homeTeam}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between px-5 py-4 md:px-6">
+                  <p className="text-sm sm:text-base font-semibold truncate">
+                    {game.awayTeam}{" "}
+                    <span className="text-white/20 mx-1 sm:mx-2">@</span>{" "}
+                    {game.homeTeam}
+                  </p>
+                  <div className="flex items-center gap-3 shrink-0 ml-3">
                     {isLive && (
                       <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400">
                         <span className="h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
@@ -398,168 +398,93 @@ export default function OddsPage() {
                   </div>
                 </div>
 
-                {/* Best line callout */}
-                <div className="border-b border-white/[0.04] bg-[#FF3B3B]/[0.03] px-4 py-3 md:px-5">
-                  <div className="flex flex-wrap gap-x-8 gap-y-1">
-                    {outcomeNames.map((name) => {
-                      const b = bestMap.get(name);
-                      if (!b) return null;
-                      return (
-                        <span
-                          key={name}
-                          className="text-[11px] sm:text-xs text-white/50"
-                        >
-                          Best {market === "totals" ? name : name}:{" "}
-                          <span className="font-semibold text-[#FF3B3B]">
-                            {b.bestPoint !== undefined && (
-                              <>{market === "totals" ? `${b.bestPoint} ` : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint} `}</>
-                            )}
-                            {formatOdds(b.bestPrice)}
-                          </span>{" "}
-                          <span className="text-white/25">
-                            ({BOOK_URLS[b.bestBookKey] ? (
-                              <a
-                                href={BOOK_URLS[b.bestBookKey]}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="underline decoration-white/10 hover:decoration-white/40 hover:text-white/40 transition"
+                {/* Best odds per side */}
+                <div className="px-5 pb-5 md:px-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {outcomeNames.map((name) => {
+                    const b = bestMap.get(name);
+                    if (!b) return null;
+                    const runners = runnerUps.get(name) || [];
+                    const top3 = runners.slice(0, 3);
+                    const remaining = runners.length - 3;
+                    const bookUrl = BOOK_URLS[b.bestBookKey];
+
+                    return (
+                      <div key={name} className="rounded-lg bg-white/[0.02] border border-white/[0.05] px-4 py-4">
+                        {/* Side label */}
+                        <div className="text-[11px] uppercase tracking-wider text-white/30 font-medium mb-3">
+                          {name}
+                        </div>
+
+                        {/* Best line — big and prominent */}
+                        <div className="mb-3">
+                          {bookUrl ? (
+                            <a
+                              href={bookUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group inline-flex items-baseline gap-2 hover:opacity-80 transition"
+                            >
+                              <span className="text-2xl sm:text-3xl font-black font-mono text-[#FF3B3B] tracking-tight tabular-nums">
+                                {b.bestPoint !== undefined && (
+                                  <span className="text-[#FF3B3B]/70 mr-1">
+                                    {market === "totals" ? b.bestPoint : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint}`}
+                                  </span>
+                                )}
+                                {formatOdds(b.bestPrice)}
+                              </span>
+                              <svg
+                                className="h-3 w-3 text-[#FF3B3B]/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
                               >
-                                {b.bestBook}
-                              </a>
-                            ) : (
-                              b.bestBook
-                            )})
-                          </span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Odds grid */}
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[600px] text-sm">
-                    <thead>
-                      <tr className="border-b border-white/[0.04]">
-                        <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-white/25">
-                          Sportsbook
-                        </th>
-                        {outcomeNames.map((name) => (
-                          <th
-                            key={name}
-                            className="whitespace-nowrap px-5 py-3 text-center text-xs font-medium uppercase tracking-wider text-white/25"
-                          >
-                            {name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bookKeys.map((bookKey, idx) => {
-                        const outMap = bookOddsMap.get(bookKey);
-                        const displayName =
-                          data?.bookDisplayNames?.[bookKey] ||
-                          marketData.bookmakers.find(
-                            (b) => b.key === bookKey
-                          )?.title ||
-                          bookKey;
-
-                        return (
-                          <tr
-                            key={bookKey}
-                            className={`border-b border-white/[0.03] transition hover:bg-white/[0.02] ${
-                              idx % 2 === 0
-                                ? "bg-transparent"
-                                : "bg-white/[0.01]"
-                            }`}
-                          >
-                            <td className="whitespace-nowrap px-5 py-3 text-white/60 font-medium">
-                              {displayName}
-                            </td>
-                            {outcomeNames.map((name) => {
-                              const outcome = outMap?.get(name);
-                              if (!outcome) {
-                                return (
-                                  <td
-                                    key={name}
-                                    className="px-5 py-3 text-center text-white/10"
-                                  >
-                                    --
-                                  </td>
-                                );
-                              }
-
-                              const bestForOutcome = bestMap.get(name);
-                              const isBest =
-                                bestForOutcome?.bestBookKey === bookKey &&
-                                bestForOutcome?.bestPrice === outcome.price;
-
-                              const bookUrl = BOOK_URLS[bookKey];
-                              const oddsContent = (
-                                <span
-                                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-sm font-semibold transition ${
-                                    isBest
-                                      ? "bg-[#FF3B3B]/10 text-[#FF3B3B] ring-1 ring-[#FF3B3B]/20"
-                                      : "text-white/70"
-                                  }`}
-                                >
-                                  {outcome.point !== undefined && (
-                                    <span
-                                      className={
-                                        isBest
-                                          ? "text-[#FF3B3B]/70"
-                                          : "text-white/30"
-                                      }
-                                    >
-                                      {market === "totals"
-                                        ? outcome.point
-                                        : `${outcome.point > 0 ? "+" : ""}${outcome.point}`}
-                                    </span>
-                                  )}
-                                  {formatOdds(outcome.price)}
-                                  {bookUrl && (
-                                    <svg
-                                      className="h-3 w-3 opacity-0 group-hover/link:opacity-40 transition-opacity"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                                      <polyline points="15 3 21 3 21 9" />
-                                      <line x1="10" y1="14" x2="21" y2="3" />
-                                    </svg>
-                                  )}
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                            </a>
+                          ) : (
+                            <span className="text-2xl sm:text-3xl font-black font-mono text-[#FF3B3B] tracking-tight tabular-nums">
+                              {b.bestPoint !== undefined && (
+                                <span className="text-[#FF3B3B]/70 mr-1">
+                                  {market === "totals" ? b.bestPoint : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint}`}
                                 </span>
-                              );
+                              )}
+                              {formatOdds(b.bestPrice)}
+                            </span>
+                          )}
+                          <div className="text-xs text-[#FF3B3B]/60 font-medium mt-1">
+                            {b.bestBook}
+                          </div>
+                        </div>
 
-                              return (
-                                <td
-                                  key={name}
-                                  className="px-5 py-3 text-center"
-                                >
-                                  {bookUrl ? (
-                                    <a
-                                      href={bookUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="group/link inline-block hover:brightness-125 transition"
-                                    >
-                                      {oddsContent}
-                                    </a>
-                                  ) : (
-                                    oddsContent
-                                  )}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                        {/* Runner-up pills */}
+                        {top3.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {top3.map((r) => (
+                              <span
+                                key={r.bookKey}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/40"
+                              >
+                                <span className="text-white/25">{r.book}</span>
+                                <span className="font-mono font-semibold text-white/50">
+                                  {formatOdds(r.price)}
+                                </span>
+                              </span>
+                            ))}
+                            {remaining > 0 && (
+                              <span className="text-[11px] text-white/20 px-1">
+                                +{remaining} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

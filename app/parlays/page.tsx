@@ -117,7 +117,7 @@ export default function ParlaysPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const { isPro, isAdmin: isAuthAdmin } = useAuth();
+  const { isPro, isAdmin: isAuthAdmin, tier } = useAuth();
 
   // Admin bypass — check for admin key in URL or localStorage
   useEffect(() => {
@@ -132,8 +132,9 @@ export default function ParlaysPage() {
     }
   }, []);
 
-  // Also grant access if authenticated as admin or pro subscriber
-  const hasAccess = isAdmin || isAuthAdmin || isPro;
+  // Tier-based access
+  const isVipAccess = isAdmin || isAuthAdmin || tier === "vip" || tier === "admin";
+  const isSharpAccess = isPro || isVipAccess; // includes sharp + vip + admin
 
   const fetchParlays = useCallback(async () => {
     setLoading(true);
@@ -447,8 +448,8 @@ export default function ParlaysPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
-                {/* Subscribers/admins see everything, regular users get 1 free */}
-                {hasAccess ? (
+                {/* VIP/Admin: see everything */}
+                {isVipAccess ? (
                   parlays.map((parlay, idx) => (
                     <ParlayCard
                       key={parlay.id}
@@ -458,53 +459,141 @@ export default function ParlaysPage() {
                       onCopy={handleCopy}
                     />
                   ))
+                ) : isSharpAccess ? (
+                  <>
+                    {/* Sharp: first 5 visible, rest locked */}
+                    {parlays.slice(0, 5).map((parlay, idx) => (
+                      <ParlayCard
+                        key={parlay.id}
+                        parlay={parlay}
+                        index={idx}
+                        copiedId={copiedId}
+                        onCopy={handleCopy}
+                      />
+                    ))}
+
+                    {parlays.length > 5 && (
+                      <>
+                        {parlays.slice(5).map((parlay, idx) => (
+                          <div key={parlay.id} className="relative">
+                            <ParlayCard
+                              parlay={parlay}
+                              index={idx + 5}
+                              copiedId={copiedId}
+                              onCopy={handleCopy}
+                            />
+                            <div className="absolute inset-0 z-10 backdrop-blur-sm bg-[#0a0a0a]/70 rounded-2xl flex flex-col items-center justify-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="32"
+                                height="32"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.35)"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                              <p className="mt-4 text-lg font-semibold" style={{ color: "#ededed" }}>
+                                Upgrade to VIP
+                              </p>
+                              <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+                                Unlimited parlays, full builder, advanced analytics
+                              </p>
+                              <Link
+                                href="/subscribe"
+                                className="mt-5 px-8 py-3 rounded-full text-sm font-bold transition-all duration-200"
+                                style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
+                              >
+                                Upgrade to VIP
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </>
                 ) : (
                   <>
-                {parlays.length > 0 && (
-                  <ParlayCard
-                    key={parlays[0].id}
-                    parlay={parlays[0]}
-                    index={0}
-                    copiedId={copiedId}
-                    onCopy={handleCopy}
-                  />
-                )}
+                    {/* Free: first 1 visible, rest locked */}
+                    {parlays.length > 0 && (
+                      <ParlayCard
+                        key={parlays[0].id}
+                        parlay={parlays[0]}
+                        index={0}
+                        copiedId={copiedId}
+                        onCopy={handleCopy}
+                      />
+                    )}
 
-                {/* Paywall — everything else locked */}
-                {parlays.length > 1 && (
-                  <>
-                    {parlays.slice(1).map((parlay, idx) => (
-                      <div key={parlay.id} className="relative">
-                        <ParlayCard
-                          parlay={parlay}
-                          index={idx + 1}
-                          copiedId={copiedId}
-                          onCopy={handleCopy}
-                        />
-                        <div className="absolute inset-0 z-10 backdrop-blur-sm bg-[#0a0a0a]/70 rounded-2xl flex flex-col items-center justify-center">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="32"
-                            height="32"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="rgba(255,255,255,0.35)"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                          </svg>
-                          <p className="mt-4 text-lg font-semibold" style={{ color: "#ededed" }}>
-                            Unlock all parlays
-                          </p>
-                          <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-                            Starting at $49/mo &mdash; 1 week free trial
-                          </p>
+                    {parlays.length > 1 && (
+                      <>
+                        {parlays.slice(1).map((parlay, idx) => (
+                          <div key={parlay.id} className="relative">
+                            <ParlayCard
+                              parlay={parlay}
+                              index={idx + 1}
+                              copiedId={copiedId}
+                              onCopy={handleCopy}
+                            />
+                            <div className="absolute inset-0 z-10 backdrop-blur-sm bg-[#0a0a0a]/70 rounded-2xl flex flex-col items-center justify-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="32"
+                                height="32"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.35)"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                              <p className="mt-4 text-lg font-semibold" style={{ color: "#ededed" }}>
+                                Unlock all parlays
+                              </p>
+                              <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+                                Starting at $50/mo &mdash; 7-day free trial
+                              </p>
+                              <Link
+                                href="/subscribe"
+                                className="mt-5 px-8 py-3 rounded-full text-sm font-bold transition-all duration-200"
+                                style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
+                              >
+                                Start Free Trial
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* CTA Banner */}
+                        <div
+                          className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14 flex flex-col md:flex-row items-center justify-between gap-6"
+                          style={{
+                            background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
+                            border: "1px solid rgba(255,59,59,0.15)",
+                          }}
+                        >
+                          <div>
+                            <p className="text-xl md:text-2xl font-semibold" style={{ color: "#ededed" }}>
+                              {parlays.length} parlays found today.
+                            </p>
+                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.45)" }}>
+                              Subscribe to unlock every AI-optimized parlay. Try free for 7 days.
+                            </p>
+                          </div>
                           <Link
                             href="/subscribe"
-                            className="mt-5 px-8 py-3 rounded-full text-sm font-bold transition-all duration-200"
+                            className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
                             style={{ background: "#FF3B3B", color: "#0a0a0a" }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
@@ -512,37 +601,8 @@ export default function ParlaysPage() {
                             Start Free Trial
                           </Link>
                         </div>
-                      </div>
-                    ))}
-
-                    {/* CTA Banner */}
-                    <div
-                      className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14 flex flex-col md:flex-row items-center justify-between gap-6"
-                      style={{
-                        background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
-                        border: "1px solid rgba(255,59,59,0.15)",
-                      }}
-                    >
-                      <div>
-                        <p className="text-xl md:text-2xl font-semibold" style={{ color: "#ededed" }}>
-                          {parlays.length} parlays found today.
-                        </p>
-                        <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.45)" }}>
-                          Subscribe to unlock every AI-optimized parlay. Try free for 7 days.
-                        </p>
-                      </div>
-                      <Link
-                        href="/subscribe"
-                        className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
-                        style={{ background: "#FF3B3B", color: "#0a0a0a" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
-                      >
-                        Start Free Trial
-                      </Link>
-                    </div>
-                  </>
-                )}
+                      </>
+                    )}
                   </>
                 )}
               </motion.div>

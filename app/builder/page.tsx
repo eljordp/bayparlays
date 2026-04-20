@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
 import { NavUser } from "@/app/components/NavUser";
+import { useAuth } from "@/app/components/AuthProvider";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,10 @@ export default function BuilderPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const slipRef = useRef<HTMLDivElement>(null);
 
+  // Auth — builder is VIP/Admin only
+  const { isAdmin: isAuthAdmin, tier } = useAuth();
+  const isVipAccess = isAuthAdmin || tier === "vip" || tier === "admin";
+
   // Fetch games when sport changes
   useEffect(() => {
     let cancelled = false;
@@ -173,9 +178,10 @@ export default function BuilderPage() {
     [legs, makeLegId]
   );
 
-  // Toggle a leg in/out of the slip
+  // Toggle a leg in/out of the slip (VIP only)
   const toggleLeg = useCallback(
     (game: GameOdds, market: string, outcome: BestOdds) => {
+      if (!isVipAccess) return; // Only VIP/Admin can add legs
       const legId = makeLegId(game.id, market, outcome.outcomeName);
 
       setLegs((prev) => {
@@ -201,7 +207,7 @@ export default function BuilderPage() {
         ];
       });
     },
-    [activeSport, makeLegId]
+    [activeSport, makeLegId, isVipAccess]
   );
 
   const removeLeg = useCallback((legId: string) => {
@@ -627,7 +633,28 @@ export default function BuilderPage() {
 
             {/* ── Right: Parlay Slip ─────────────────────────────── */}
             <div id="parlay-slip" ref={slipRef} className="lg:w-[400px] shrink-0">
-              <div className="lg:sticky lg:top-[72px]">
+              <div className="lg:sticky lg:top-[72px] relative">
+                {/* VIP gate overlay */}
+                {!isVipAccess && (
+                  <div className="absolute inset-0 z-20 backdrop-blur-sm bg-[#0a0a0a]/80 rounded-xl flex flex-col items-center justify-center text-center px-6">
+                    <div className="w-16 h-16 rounded-2xl bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 flex items-center justify-center mb-5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF3B3B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    </div>
+                    <p className="text-lg font-bold text-white mb-2">VIP Only</p>
+                    <p className="text-sm text-white/40 mb-6 max-w-[260px]">
+                      The full parlay builder is available for VIP members. Browse games and odds, then upgrade to build custom parlays.
+                    </p>
+                    <Link
+                      href="/subscribe"
+                      className="px-8 py-3 rounded-full text-sm font-bold bg-[#FF3B3B] text-[#0a0a0a] hover:bg-[#FF5252] transition-colors"
+                    >
+                      Upgrade to VIP
+                    </Link>
+                  </div>
+                )}
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
