@@ -25,23 +25,23 @@ export function ParlayPlayer({
   showControls,
   maxWidth,
 }: ParlayPlayerProps) {
-  const isStory = format === "story";
-  const defaultMax = isStory ? 300 : 400;
+  const defaultMax = 520;
 
   return (
     <Player
       component={ParlayVideoComposition}
       inputProps={{ legs, combinedOdds, evPercent, confidence, payout, format }}
-      durationInFrames={150}
+      durationInFrames={180}
       fps={30}
-      compositionWidth={1080}
-      compositionHeight={isStory ? 1920 : 1080}
+      compositionWidth={720}
+      compositionHeight={720}
       style={{
         width: "100%",
         maxWidth: maxWidth ?? defaultMax,
         borderRadius: 12,
         overflow: "hidden",
         border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 0 60px rgba(255,59,59,0.1)",
       }}
       controls={showControls ?? false}
       autoPlay
