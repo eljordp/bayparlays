@@ -11,38 +11,27 @@ import { Player } from "@remotion/player";
 
 /* ─── Constants ─── */
 
-const SPORTSBOOKS = [
-  "DraftKings",
-  "FanDuel",
-  "BetMGM",
-  "Caesars",
-  "PointsBet",
-  "BetRivers",
-  "Hard Rock",
-  "ESPNBet",
-  "Bet365",
-  "BetUS",
-  "Bovada",
-  "WynnBet",
+const W = 720;
+const H = 720;
+
+const BOOKS = ["DK", "FD", "MGM", "CZR", "BR", "ESPN"];
+
+const ODDS_DATA = [
+  { book: "DK", odds: "-110" },
+  { book: "FD", odds: "-115" },
+  { book: "MGM", odds: "-105" },
+  { book: "CZR", odds: "-120" },
+  { book: "BR", odds: "+100" },
+  { book: "ESPN", odds: "-108" },
 ];
 
-const SAMPLE_ODDS = [
-  { book: "DraftKings", odds: -110 },
-  { book: "FanDuel", odds: -115 },
-  { book: "BetMGM", odds: -105 },
-  { book: "Caesars", odds: -120 },
-  { book: "PointsBet", odds: +100 },
-  { book: "BetRivers", odds: -108 },
-  { book: "Hard Rock", odds: -112 },
-  { book: "ESPNBet", odds: -110 },
-  { book: "Bet365", odds: -103 },
-  { book: "BetUS", odds: -115 },
-  { book: "Bovada", odds: -110 },
-  { book: "WynnBet", odds: -118 },
-];
+const BEST_INDEX = 4; // BR +100
 
-/* Best odds index (PointsBet at +100) */
-const BEST_ODDS_INDEX = 4;
+const PARLAY_LEGS = [
+  { sport: "NBA", pick: "Celtics ML", odds: "+100" },
+  { sport: "MLB", pick: "Dodgers -1.5", odds: "+110" },
+  { sport: "NHL", pick: "Over 5.5", odds: "+105" },
+];
 
 /* ─── Composition ─── */
 
@@ -50,62 +39,130 @@ export function HowItWorksComposition() {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  /* ═══ ACT 1: "12 SPORTSBOOKS" + grid appear (frames 0-30) ═══ */
+  const cx = W / 2;
 
-  const titleOpacity = interpolate(frame, [0, 8], [0, 1], {
+  /* ═══════════════════════════════════════════════════
+     ACT 1: THE SCAN (frames 0-40)
+     ═══════════════════════════════════════════════════ */
+
+  // Red pulse line sweeping top to bottom (frame 0-5)
+  const scanLineY = interpolate(frame, [0, 5], [0, H], {
+    extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const titleScale = spring({
-    frame,
+  const scanLineOpacity = interpolate(frame, [0, 1, 3, 5], [0, 1, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // "SCANNING" text (frame 5-15)
+  const scanningOpacity = interpolate(frame, [5, 8, 30, 35], [0, 1, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const scanningGlow = 0.4 + 0.6 * Math.sin(frame * 0.3);
+
+  // "12 SPORTSBOOKS" subtitle
+  const subtitleOpacity = interpolate(frame, [8, 12, 30, 35], [0, 0.5, 0.5, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // Sync flash (frame 35-37)
+  const syncFlash = interpolate(frame, [35, 36, 37, 38], [0, 1, 0.5, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // Entire Act 1 fade out
+  const act1Fade = interpolate(frame, [35, 40], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  /* ═══════════════════════════════════════════════════
+     ACT 2: THE COMPARE (frames 40-85)
+     ═══════════════════════════════════════════════════ */
+
+  // "COMPARING LINES" slam
+  const compareTitleScale = spring({
+    frame: frame - 40,
     fps,
-    config: { damping: 12, stiffness: 180, mass: 0.8 },
+    config: { damping: 8, stiffness: 220, mass: 1.0 },
   });
-  const titleFadeOut = interpolate(frame, [25, 30], [1, 0], {
+  const compareTitleOpacity = interpolate(frame, [40, 42, 70, 75], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  /* ═══ ACT 2: Numbers flying, best odds highlighted (frames 30-60) ═══ */
-
-  const scanTitleOpacity = interpolate(frame, [30, 36, 55, 60], [0, 1, 1, 0], {
+  // Red zip line (frame 75-85)
+  const zipLineWidth = interpolate(frame, [75, 80], [0, W], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const zipLineOpacity = interpolate(frame, [75, 77, 82, 85], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  /* ═══ ACT 3: "EDGE FOUND" + parlay card assembling (frames 60-90) ═══ */
-
-  const edgeFoundOpacity = interpolate(frame, [60, 66], [0, 1], {
+  // Act 2 fade
+  const act2Fade = interpolate(frame, [78, 85], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const edgeFoundScale = spring({
-    frame: frame - 60,
+
+  /* ═══════════════════════════════════════════════════
+     ACT 3: THE EDGE (frames 85-150)
+     ═══════════════════════════════════════════════════ */
+
+  // Screen flash (frame 85-88)
+  const edgeFlash = interpolate(frame, [85, 86, 87, 88], [0, 0.8, 0.3, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // "EDGE FOUND" slam
+  const edgeScale = spring({
+    frame: frame - 85,
     fps,
-    config: { damping: 8, stiffness: 200, mass: 0.6 },
+    config: { damping: 6, stiffness: 180, mass: 1.4 },
   });
-
-  const cardOpacity = interpolate(frame, [68, 74], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const cardSlideY = interpolate(frame, [68, 80], [40, 0], {
+  const edgeFinalScale = frame < 85 ? 0 : interpolate(edgeScale, [0, 1], [2.5, 1]);
+  const edgeOpacity = interpolate(frame, [85, 88], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  /* ═══ ACT 4: "+EV" badge animating in (frames 90-120) ═══ */
-
-  const evBadgeScale = spring({
-    frame: frame - 92,
+  // Combined odds slam (frame 110-120)
+  const combinedOddsSpring = spring({
+    frame: frame - 110,
     fps,
-    config: { damping: 6, stiffness: 220, mass: 1.0 },
+    config: { damping: 6, stiffness: 160, mass: 1.4 },
   });
-  const evBadgeOpacity = interpolate(frame, [92, 96], [0, 1], {
+  const combinedScale = frame < 110 ? 0 : interpolate(combinedOddsSpring, [0, 1], [2.5, 1]);
+  const combinedOpacity = interpolate(frame, [110, 113], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  const glowPulse = frame >= 95 ? 0.6 + 0.4 * Math.sin((frame - 95) * 0.15) : 0;
+  // +EV badge (frame 120-135)
+  const evSpring = spring({
+    frame: frame - 120,
+    fps,
+    config: { damping: 6, stiffness: 200, mass: 1.0 },
+  });
+  const evScale = frame < 120 ? 0 : interpolate(evSpring, [0, 1], [0, 1]);
+  const evOpacity = interpolate(frame, [120, 124], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const evGlow = frame >= 124 ? 0.5 + 0.5 * Math.sin((frame - 124) * 0.2) : 0;
+
+  // Watermark (frame 135-150)
+  const watermarkOpacity = interpolate(frame, [135, 145], [0, 0.5], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
   return (
     <AbsoluteFill
@@ -113,28 +170,31 @@ export function HowItWorksComposition() {
         backgroundColor: "#0a0a0a",
         fontFamily: "system-ui, -apple-system, sans-serif",
         overflow: "hidden",
+        width: W,
+        height: H,
       }}
     >
-      {/* Dot grid */}
-      <AbsoluteFill
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)",
-          backgroundSize: "20px 20px",
-        }}
-      />
+      {/* ═══ ACT 1: THE SCAN ═══ */}
 
-      {/* Vignette */}
-      <AbsoluteFill
-        style={{
-          background:
-            "radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%)",
-          pointerEvents: "none",
-        }}
-      />
+      {/* Red scanner pulse line — horizontal, sweeping top to bottom */}
+      {frame < 6 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: scanLineY - 2,
+            width: W,
+            height: 4,
+            background:
+              "linear-gradient(90deg, transparent 5%, #FF3B3B 20%, #FF3B3B 80%, transparent 95%)",
+            opacity: scanLineOpacity,
+            boxShadow: "0 0 40px #FF3B3B, 0 0 80px rgba(255,59,59,0.4)",
+          }}
+        />
+      )}
 
-      {/* ═══ ACT 1: Title + Sportsbook Grid ═══ */}
-      {frame < 30 && (
+      {/* Act 1 content */}
+      {frame < 40 && (
         <div
           style={{
             position: "absolute",
@@ -146,66 +206,109 @@ export function HowItWorksComposition() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            opacity: titleFadeOut,
+            opacity: act1Fade,
           }}
         >
+          {/* "SCANNING" */}
+          <div
+            style={{
+              opacity: scanningOpacity,
+              fontSize: 60,
+              fontWeight: 900,
+              letterSpacing: "0.2em",
+              color: "#FF3B3B",
+              textTransform: "uppercase",
+              textShadow: `0 0 ${30 + scanningGlow * 20}px rgba(255,59,59,${0.3 + scanningGlow * 0.3})`,
+              marginBottom: 12,
+            }}
+          >
+            SCANNING
+          </div>
+
           {/* "12 SPORTSBOOKS" */}
           <div
             style={{
-              opacity: titleOpacity,
-              transform: `scale(${titleScale})`,
-              fontSize: 42,
-              fontWeight: 900,
+              opacity: subtitleOpacity,
+              fontSize: 24,
+              fontWeight: 500,
               letterSpacing: "0.15em",
-              color: "#ededed",
+              color: "rgba(255,255,255,0.4)",
               textTransform: "uppercase",
-              marginBottom: 40,
-              textAlign: "center",
+              marginBottom: 50,
             }}
           >
-            <span style={{ color: "#FF3B3B", fontSize: 56 }}>12</span>{" "}
-            Sportsbooks
+            12 SPORTSBOOKS
           </div>
 
-          {/* Grid of book names appearing one by one */}
+          {/* 2x3 grid of book tiles lighting up */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 12,
-              maxWidth: 700,
-              padding: "0 40px",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 14,
+              width: 380,
             }}
           >
-            {SPORTSBOOKS.map((book, i) => {
-              const bookDelay = 3 + i * 1.5;
-              const bookOpacity = interpolate(
-                frame,
-                [bookDelay, bookDelay + 4],
-                [0, 1],
-                { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-              );
-              const bookScale = spring({
-                frame: frame - bookDelay,
-                fps,
-                config: { damping: 14, stiffness: 200, mass: 0.4 },
-              });
+            {BOOKS.map((book, i) => {
+              const lightUpFrame = 15 + i * 3;
+              const isLit = frame >= lightUpFrame;
+
+              // Bright flash then settle
+              const flashBright = isLit
+                ? interpolate(
+                    frame,
+                    [lightUpFrame, lightUpFrame + 2, lightUpFrame + 6],
+                    [1, 0.9, 0],
+                    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+                  )
+                : 0;
+
+              const settledOpacity = isLit
+                ? interpolate(frame, [lightUpFrame, lightUpFrame + 3], [0, 1], {
+                    extrapolateLeft: "clamp",
+                    extrapolateRight: "clamp",
+                  })
+                : 0.15;
+
+              // Sync flash at frame 35
+              const syncBright = syncFlash;
 
               return (
                 <div
                   key={book}
                   style={{
-                    opacity: bookOpacity,
-                    transform: `scale(${bookScale})`,
-                    backgroundColor: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    opacity: settledOpacity,
+                    padding: "16px 0",
                     borderRadius: 10,
-                    padding: "12px 8px",
                     textAlign: "center",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: "rgba(255,255,255,0.6)",
-                    letterSpacing: "0.02em",
+                    fontSize: 22,
+                    fontWeight: 800,
+                    fontFamily: "monospace",
+                    letterSpacing: "0.05em",
+                    color: isLit
+                      ? flashBright > 0.3
+                        ? "#FFFFFF"
+                        : "rgba(255,255,255,0.7)"
+                      : "rgba(255,255,255,0.2)",
+                    backgroundColor:
+                      flashBright > 0.3
+                        ? `rgba(255,255,255,${0.15 * flashBright})`
+                        : isLit && syncBright > 0.2
+                          ? `rgba(255,59,59,${0.15 * syncBright})`
+                          : "rgba(255,255,255,0.03)",
+                    border: `1.5px solid ${
+                      flashBright > 0.3
+                        ? `rgba(255,255,255,${0.6 * flashBright})`
+                        : isLit
+                          ? `rgba(255,59,59,${0.25 + syncBright * 0.4})`
+                          : "rgba(255,255,255,0.06)"
+                    }`,
+                    boxShadow:
+                      flashBright > 0.3
+                        ? `0 0 30px rgba(255,255,255,${0.4 * flashBright})`
+                        : isLit && syncBright > 0.2
+                          ? `0 0 20px rgba(255,59,59,${0.3 * syncBright})`
+                          : "none",
                   }}
                 >
                   {book}
@@ -216,8 +319,9 @@ export function HowItWorksComposition() {
         </div>
       )}
 
-      {/* ═══ ACT 2: Odds Comparison / Scanning ═══ */}
-      {frame >= 30 && frame < 60 && (
+      {/* ═══ ACT 2: THE COMPARE ═══ */}
+
+      {frame >= 40 && frame < 85 && (
         <div
           style={{
             position: "absolute",
@@ -229,47 +333,79 @@ export function HowItWorksComposition() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            opacity: act2Fade,
           }}
         >
-          {/* "COMPARING ODDS" */}
+          {/* "COMPARING LINES" */}
           <div
             style={{
-              opacity: scanTitleOpacity,
-              fontSize: 20,
-              fontWeight: 700,
-              letterSpacing: "0.2em",
-              color: "rgba(255,255,255,0.4)",
+              opacity: compareTitleOpacity,
+              transform: `scale(${frame < 40 ? 0 : compareTitleScale})`,
+              fontSize: 48,
+              fontWeight: 900,
+              letterSpacing: "0.15em",
+              color: "#ededed",
               textTransform: "uppercase",
-              marginBottom: 30,
+              marginBottom: 40,
+              textShadow: "0 0 30px rgba(255,59,59,0.2)",
             }}
           >
-            COMPARING ODDS
+            COMPARING LINES
           </div>
 
-          {/* Odds table */}
+          {/* Game header */}
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              maxWidth: 500,
-              width: "100%",
-              padding: "0 60px",
+              opacity: interpolate(frame, [44, 46], [0, 1], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              }),
+              fontSize: 28,
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.8)",
+              marginBottom: 28,
+              letterSpacing: "0.08em",
             }}
           >
-            {SAMPLE_ODDS.map((item, i) => {
-              const rowDelay = 30 + i * 1.8;
-              const rowOpacity = interpolate(
-                frame,
-                [rowDelay, rowDelay + 3],
-                [0, 1],
-                { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-              );
+            BOS <span style={{ color: "rgba(255,255,255,0.25)", margin: "0 8px" }}>vs</span> PHI
+          </div>
 
-              // Highlight best odds at the right time
-              const isHighlighted = i === BEST_ODDS_INDEX && frame >= 48;
-              const highlightGlow = isHighlighted
-                ? interpolate(frame, [48, 52], [0, 1], {
+          {/* 3x2 grid of odds cards */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 12,
+              width: 420,
+            }}
+          >
+            {ODDS_DATA.map((item, i) => {
+              const cardFrame = 45 + i * 2;
+              const isVisible = frame >= cardFrame;
+              const isBest = i === BEST_INDEX && frame >= 65;
+
+              const cardOpacity = isVisible
+                ? interpolate(frame, [cardFrame, cardFrame + 2], [0, 1], {
+                    extrapolateLeft: "clamp",
+                    extrapolateRight: "clamp",
+                  })
+                : 0;
+
+              // Dim non-best cards after frame 65
+              const dimmed = frame >= 65 && i !== BEST_INDEX;
+              const finalOpacity = dimmed ? cardOpacity * 0.3 : cardOpacity;
+
+              // Best card glow
+              const bestGlow = isBest
+                ? interpolate(frame, [65, 68], [0, 1], {
+                    extrapolateLeft: "clamp",
+                    extrapolateRight: "clamp",
+                  })
+                : 0;
+
+              // Flash on best card
+              const bestFlash = isBest
+                ? interpolate(frame, [65, 66, 68], [1, 0.6, 0], {
                     extrapolateLeft: "clamp",
                     extrapolateRight: "clamp",
                   })
@@ -279,73 +415,103 @@ export function HowItWorksComposition() {
                 <div
                   key={item.book}
                   style={{
-                    opacity: rowOpacity,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 16px",
-                    backgroundColor: isHighlighted
-                      ? `rgba(255,59,59,${0.12 * highlightGlow})`
-                      : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${
-                      isHighlighted
-                        ? `rgba(255,59,59,${0.4 * highlightGlow})`
-                        : "rgba(255,255,255,0.04)"
+                    opacity: finalOpacity,
+                    padding: "18px 12px",
+                    borderRadius: 12,
+                    textAlign: "center",
+                    backgroundColor: isBest
+                      ? `rgba(255,59,59,${0.12 + bestFlash * 0.3})`
+                      : "rgba(255,255,255,0.03)",
+                    border: `2px solid ${
+                      isBest
+                        ? `rgba(255,59,59,${0.5 + bestGlow * 0.5})`
+                        : "rgba(255,255,255,0.06)"
                     }`,
-                    borderRadius: 8,
-                    transition: "all 0.3s",
+                    boxShadow: isBest
+                      ? `0 0 ${20 + bestGlow * 30}px rgba(255,59,59,${0.2 + bestGlow * 0.3})`
+                      : "none",
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: 13,
-                      color: isHighlighted
-                        ? "rgba(255,255,255,0.9)"
-                        : "rgba(255,255,255,0.4)",
-                      fontWeight: isHighlighted ? 700 : 400,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: isBest ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)",
+                      marginBottom: 6,
+                      letterSpacing: "0.05em",
                     }}
                   >
                     {item.book}
-                  </span>
-                  <span
+                  </div>
+                  <div
                     style={{
-                      fontSize: 16,
+                      fontSize: 28,
+                      fontWeight: 900,
                       fontFamily: "monospace",
-                      fontWeight: 700,
-                      color: isHighlighted ? "#FF3B3B" : "rgba(255,255,255,0.5)",
+                      color: isBest ? "#FF3B3B" : "rgba(255,255,255,0.4)",
                     }}
                   >
-                    {item.odds > 0 ? `+${item.odds}` : item.odds}
-                  </span>
+                    {item.odds}
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          {/* "BEST LINE" indicator */}
-          {frame >= 50 && (
+          {/* "BEST: BetRivers +100" */}
+          {frame >= 68 && (
             <div
               style={{
-                marginTop: 20,
-                opacity: interpolate(frame, [50, 54], [0, 1], {
+                marginTop: 24,
+                opacity: interpolate(frame, [68, 72], [0, 1], {
                   extrapolateLeft: "clamp",
                   extrapolateRight: "clamp",
                 }),
-                fontSize: 12,
+                fontSize: 20,
                 fontWeight: 800,
-                letterSpacing: "0.15em",
+                fontFamily: "monospace",
                 color: "#FF3B3B",
-                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                textShadow: "0 0 20px rgba(255,59,59,0.3)",
               }}
             >
-              BEST LINE FOUND: PointsBet +100
+              BEST: BetRivers +100
             </div>
           )}
         </div>
       )}
 
-      {/* ═══ ACT 3: EDGE FOUND + Parlay Card ═══ */}
-      {frame >= 60 && (
+      {/* Red zip line (frame 75-85) */}
+      {frame >= 75 && frame < 86 && (
+        <div
+          style={{
+            position: "absolute",
+            left: cx - zipLineWidth / 2,
+            top: H / 2 - 1.5,
+            width: zipLineWidth,
+            height: 3,
+            background: "linear-gradient(90deg, transparent, #FF3B3B, transparent)",
+            opacity: zipLineOpacity,
+            boxShadow: "0 0 30px rgba(255,59,59,0.5)",
+            zIndex: 5,
+          }}
+        />
+      )}
+
+      {/* ═══ ACT 3: THE EDGE ═══ */}
+
+      {/* Red/white flash */}
+      {frame >= 85 && frame < 89 && (
+        <AbsoluteFill
+          style={{
+            backgroundColor: "#FF3B3B",
+            opacity: edgeFlash,
+            zIndex: 10,
+          }}
+        />
+      )}
+
+      {frame >= 85 && (
         <div
           style={{
             position: "absolute",
@@ -356,112 +522,100 @@ export function HowItWorksComposition() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "flex-start",
+            paddingTop: 50,
           }}
         >
           {/* "EDGE FOUND" */}
           <div
             style={{
-              opacity: edgeFoundOpacity,
-              transform: `scale(${edgeFoundScale})`,
-              fontSize: 36,
+              opacity: edgeOpacity,
+              transform: `scale(${edgeFinalScale})`,
+              fontSize: 56,
               fontWeight: 900,
-              letterSpacing: "0.18em",
+              letterSpacing: "0.2em",
               color: "#FF3B3B",
               textTransform: "uppercase",
-              marginBottom: 30,
-              textShadow: "0 0 30px rgba(255,59,59,0.3)",
+              textShadow:
+                "0 0 40px rgba(255,59,59,0.5), 0 0 80px rgba(255,59,59,0.2)",
+              marginBottom: 32,
             }}
           >
             EDGE FOUND
           </div>
 
-          {/* Parlay card assembling */}
+          {/* Parlay card legs */}
           <div
             style={{
-              opacity: cardOpacity,
-              transform: `translateY(${cardSlideY}px)`,
-              backgroundColor: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 16,
-              padding: "24px 28px",
-              maxWidth: 460,
-              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              width: 580,
+              paddingLeft: 40,
+              paddingRight: 40,
             }}
           >
-            {/* Parlay legs */}
-            {[
-              { sport: "NBA", pick: "Celtics ML", odds: "+100", game: "PHI @ BOS" },
-              { sport: "MLB", pick: "Dodgers -1.5", odds: "+110", game: "LAD @ COL" },
-              { sport: "NHL", pick: "Over 5.5", odds: "+105", game: "STL @ UTA" },
-            ].map((leg, i) => {
-              const legDelay = 72 + i * 5;
-              const legOpacity = interpolate(
-                frame,
-                [legDelay, legDelay + 4],
-                [0, 1],
-                { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-              );
-              const legSlideX = interpolate(
-                frame,
-                [legDelay, legDelay + 6],
-                [30, 0],
-                { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-              );
+            {PARLAY_LEGS.map((leg, i) => {
+              const legStart = 90 + i * 6;
+
+              const legSpring = spring({
+                frame: frame - legStart,
+                fps,
+                config: { damping: 10, stiffness: 180, mass: 0.8 },
+              });
+              const slideX = frame < legStart ? 400 : interpolate(legSpring, [0, 1], [400, 0]);
+              const legOpacity = interpolate(frame, [legStart, legStart + 4], [0, 1], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              });
 
               return (
                 <div
                   key={i}
                   style={{
                     opacity: legOpacity,
-                    transform: `translateX(${legSlideX}px)`,
+                    transform: `translateX(${slideX}px)`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "10px 0",
-                    borderBottom:
-                      i < 2 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                    backgroundColor: "rgba(255,255,255,0.03)",
+                    borderLeft: "4px solid #FF3B3B",
+                    borderRadius: 8,
+                    padding: "14px 20px",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    {/* Sport badge */}
+                    <div
                       style={{
-                        fontSize: 10,
+                        fontSize: 14,
                         fontWeight: 800,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
                         color: "#FFFFFF",
                         backgroundColor: "#FF3B3B",
-                        padding: "4px 10px",
-                        borderRadius: 5,
+                        padding: "5px 14px",
+                        borderRadius: 6,
                         fontFamily: "monospace",
                       }}
                     >
                       {leg.sport}
-                    </span>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 15,
-                          fontWeight: 600,
-                          color: "rgba(255,255,255,0.85)",
-                        }}
-                      >
-                        {leg.pick}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "rgba(255,255,255,0.3)",
-                        }}
-                      >
-                        {leg.game}
-                      </div>
                     </div>
+                    {/* Pick */}
+                    <span
+                      style={{
+                        fontSize: 22,
+                        fontWeight: 700,
+                        color: "rgba(255,255,255,0.9)",
+                      }}
+                    >
+                      {leg.pick}
+                    </span>
                   </div>
+                  {/* Odds */}
                   <span
                     style={{
-                      fontSize: 17,
+                      fontSize: 24,
                       fontWeight: 700,
                       color: "#FF3B3B",
                       fontFamily: "monospace",
@@ -474,34 +628,52 @@ export function HowItWorksComposition() {
             })}
           </div>
 
-          {/* ═══ ACT 4: +EV Badge ═══ */}
-          {frame >= 92 && (
+          {/* Combined odds slam */}
+          {frame >= 110 && (
             <div
               style={{
-                marginTop: 24,
-                opacity: evBadgeOpacity,
-                transform: `scale(${evBadgeScale})`,
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
+                marginTop: 28,
+                opacity: combinedOpacity,
+                transform: `scale(${combinedScale})`,
+                fontSize: 72,
+                fontWeight: 900,
+                fontFamily: "monospace",
+                color: "#FF3B3B",
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+                textShadow:
+                  "0 0 40px rgba(255,59,59,0.4), 0 4px 20px rgba(0,0,0,0.5)",
+              }}
+            >
+              +487
+            </div>
+          )}
+
+          {/* +EV badge */}
+          {frame >= 120 && (
+            <div
+              style={{
+                marginTop: 20,
+                opacity: evOpacity,
+                transform: `scale(${evScale})`,
               }}
             >
               <div
                 style={{
-                  backgroundColor: "rgba(34,197,94,0.12)",
-                  border: "1px solid rgba(34,197,94,0.3)",
-                  borderRadius: 12,
-                  padding: "12px 24px",
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
                   gap: 10,
-                  boxShadow: `0 0 ${30 * glowPulse}px rgba(34,197,94,${0.15 * glowPulse})`,
+                  backgroundColor: "rgba(34,197,94,0.12)",
+                  border: "1.5px solid rgba(34,197,94,0.4)",
+                  borderRadius: 12,
+                  padding: "12px 28px",
+                  boxShadow: `0 0 ${20 + evGlow * 30}px rgba(34,197,94,${0.15 + evGlow * 0.25})`,
                 }}
               >
                 <span
                   style={{
-                    fontSize: 14,
-                    fontWeight: 800,
+                    fontSize: 18,
+                    fontWeight: 900,
                     letterSpacing: "0.12em",
                     color: "#22C55E",
                     textTransform: "uppercase",
@@ -511,7 +683,7 @@ export function HowItWorksComposition() {
                 </span>
                 <span
                   style={{
-                    fontSize: 28,
+                    fontSize: 32,
                     fontWeight: 900,
                     fontFamily: "monospace",
                     color: "#22C55E",
@@ -525,32 +697,32 @@ export function HowItWorksComposition() {
         </div>
       )}
 
-      {/* ─── Watermark ─── */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 20,
-          left: 0,
-          right: 0,
-          textAlign: "center",
-          opacity: interpolate(frame, [100, 110], [0, 0.15], {
-            extrapolateLeft: "clamp",
-            extrapolateRight: "clamp",
-          }),
-        }}
-      >
-        <span
+      {/* Watermark */}
+      {frame >= 135 && (
+        <div
           style={{
-            fontSize: 12,
-            fontWeight: 500,
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,1)",
+            position: "absolute",
+            bottom: 30,
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            opacity: watermarkOpacity,
+            zIndex: 15,
           }}
         >
-          BayParlays.com
-        </span>
-      </div>
+          <span
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              letterSpacing: "0.25em",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.25)",
+            }}
+          >
+            BayParlays.com
+          </span>
+        </div>
+      )}
     </AbsoluteFill>
   );
 }
@@ -562,16 +734,17 @@ export function HowItWorksPlayer() {
     <Player
       component={HowItWorksComposition}
       inputProps={{}}
-      durationInFrames={120}
+      durationInFrames={150}
       fps={30}
-      compositionWidth={1080}
-      compositionHeight={1080}
+      compositionWidth={720}
+      compositionHeight={720}
       style={{
         width: "100%",
-        maxWidth: 600,
+        maxWidth: 560,
         borderRadius: 12,
         overflow: "hidden",
         border: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 0 60px rgba(255,59,59,0.08)",
       }}
       controls={false}
       autoPlay
