@@ -18,12 +18,9 @@ export async function GET() {
   }
 
   // Step 2: Generate fresh parlays across all active sports
+  // Only 2 combos to conserve API quota (free tier = 500 requests/mo)
   const sportCombos = [
-    { sports: "nba", legs: 2 },
-    { sports: "nba", legs: 3 },
-    { sports: "mlb", legs: 2 },
-    { sports: "mlb", legs: 3 },
-    { sports: "nhl", legs: 2 },
+    { sports: "nba,mlb,nhl", legs: 2 },
     { sports: "nba,mlb,nhl", legs: 3 },
   ];
 

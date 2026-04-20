@@ -459,7 +459,7 @@ function buildParlays(
 async function fetchOddsForSport(sportKey: string): Promise<OddsGame[]> {
   const url = `${BASE_URL}/sports/${sportKey}/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 
-  const res = await fetch(url, { next: { revalidate: 300 } });
+  const res = await fetch(url, { next: { revalidate: 1800 } });
 
   if (!res.ok) {
     console.error(

@@ -569,12 +569,7 @@ export default function OddsPage() {
         {data && !loading && (
           <div className="mt-10 flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white/15">
-              <p>
-                Powered by The Odds API
-                {data.requestsRemaining &&
-                  ` | ${data.requestsRemaining} requests remaining`}
-              </p>
-              <p>Odds refresh every 5 minutes. Not financial advice.</p>
+              <p>Odds data updated regularly. Not financial advice.</p>
             </div>
             <p className="text-[10px] text-white/10 text-center">
               Links to sportsbooks may be affiliate links. BayParlays may earn a commission at no cost to you.

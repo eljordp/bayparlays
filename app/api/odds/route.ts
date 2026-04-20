@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
     url.searchParams.set("markets", "h2h,spreads,totals");
     url.searchParams.set("oddsFormat", "american");
 
-    const res = await fetch(url.toString(), { next: { revalidate: 300 } });
+    const res = await fetch(url.toString(), { next: { revalidate: 1800 } });
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -257,7 +257,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+        "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=300",
       },
     });
   } catch (err) {
