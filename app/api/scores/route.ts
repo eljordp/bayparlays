@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   try {
     const res = await fetch(
       `${BASE}/${sportKey}/scores/?apiKey=${ODDS_API_KEY}&daysFrom=1`,
-      { next: { revalidate: 900 } }
+      { next: { revalidate: 3600 } } // Cache 1 hour
     );
 
     if (!res.ok) return NextResponse.json({ games: [] });

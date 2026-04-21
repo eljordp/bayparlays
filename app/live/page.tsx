@@ -44,7 +44,8 @@ const SPORTS = [
   { key: "nhl", label: "NHL" },
 ] as const;
 
-const POLL_INTERVAL = 15 * 60 * 1000; // 15 minutes
+// Only auto-refresh during game hours (10am - 1am), once per hour
+const POLL_INTERVAL = 60 * 60 * 1000; // 1 hour
 
 /* ─── Animation ─── */
 
@@ -149,9 +150,12 @@ export default function LiveScoreboard() {
     setLoading(true);
     fetchScores();
 
-    // Set up polling
+    // Set up polling — only during game hours (10am-1am)
     if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => fetchScores(), POLL_INTERVAL);
+    timerRef.current = setInterval(() => {
+      const hour = new Date().getHours();
+      if (hour >= 10 || hour < 1) fetchScores(); // 10am to 1am only
+    }, POLL_INTERVAL);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
