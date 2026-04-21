@@ -115,17 +115,18 @@ interface ParlayResponse {
 let cache: { data: ParlayResponse; timestamp: number; key: string } | null =
   null;
 
-function getCacheKey(sports: string[], legs: number, count: number): string {
-  return `${sports.sort().join(",")}_${legs}_${count}`;
+function getCacheKey(sports: string[], legs: number, count: number, sort: string = "ev"): string {
+  return `${sports.sort().join(",")}_${legs}_${count}_${sort}`;
 }
 
 function getCachedResponse(
   sports: string[],
   legs: number,
-  count: number
+  count: number,
+  sort: string = "ev"
 ): ParlayResponse | null {
   if (!cache) return null;
-  const key = getCacheKey(sports, legs, count);
+  const key = getCacheKey(sports, legs, count, sort);
   if (cache.key !== key) return null;
   if (Date.now() - cache.timestamp > CACHE_TTL_MS) {
     cache = null;
@@ -138,12 +139,13 @@ function setCachedResponse(
   data: ParlayResponse,
   sports: string[],
   legs: number,
-  count: number
+  count: number,
+  sort: string = "ev"
 ): void {
   cache = {
     data,
     timestamp: Date.now(),
-    key: getCacheKey(sports, legs, count),
+    key: getCacheKey(sports, legs, count, sort),
   };
 }
 
@@ -774,7 +776,7 @@ export async function GET(request: NextRequest) {
     const sortMode = (searchParams.get("sort") || "ev") as "ev" | "payout" | "confidence";
 
     // Check cache
-    const cached = getCachedResponse(sports, numLegs, count);
+    const cached = getCachedResponse(sports, numLegs, count, sortMode);
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
@@ -855,7 +857,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Cache the response
-    setCachedResponse(response, sports, numLegs, count);
+    setCachedResponse(response, sports, numLegs, count, sortMode);
 
     // Save parlays to tracking database (fire and forget, skip if recent insert)
     try {
