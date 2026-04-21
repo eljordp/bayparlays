@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getTeamRecords,
+  getTeamEdge,
+  type TeamRecord,
+} from "@/lib/sports-data";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -46,6 +51,14 @@ interface OddsGame {
   bookmakers: OddsBookmaker[];
 }
 
+interface TeamRecordInfo {
+  wins: number;
+  losses: number;
+  winRate: number;
+  streak: { type: "W" | "L"; count: number };
+  lastFive: ("W" | "L")[];
+}
+
 interface ScoredLeg {
   sport: string;
   sportKey: string;
@@ -58,6 +71,9 @@ interface ScoredLeg {
   book: string;
   impliedProb: number;
   edgeScore: number;
+  homeTeam: string;
+  awayTeam: string;
+  teamRecord?: TeamRecordInfo;
 }
 
 interface ParlayLeg {
@@ -69,6 +85,7 @@ interface ParlayLeg {
   book: string;
   impliedProb: number;
   edgeScore: number;
+  teamRecord?: TeamRecordInfo;
 }
 
 interface Parlay {
@@ -251,7 +268,8 @@ function calculateEdgeScore(
 
 function extractLegsFromGame(
   game: OddsGame,
-  sportLabel: string
+  sportLabel: string,
+  teamRecords?: Map<string, TeamRecord>
 ): ScoredLeg[] {
   const legs: ScoredLeg[] = [];
   const gameLabel = `${game.away_team} vs ${game.home_team}`;
@@ -292,7 +310,7 @@ function extractLegsFromGame(
       const avgDecimal = americanToDecimal(best.averageOdds);
       const impliedProb = americanToImpliedProb(best.bestOdds);
 
-      const edgeScore = calculateEdgeScore(
+      let edgeScore = calculateEdgeScore(
         bestDecimal,
         avgDecimal,
         best.allOdds.length
@@ -321,6 +339,32 @@ function extractLegsFromGame(
         marketLabel = "total";
       }
 
+      // ── Team Performance Edge ───────────────────────────────────
+      // Add team record data to boost/penalize legs based on actual results.
+      let teamRecordInfo: TeamRecordInfo | undefined;
+
+      if (teamRecords && marketKey !== "totals") {
+        // For h2h and spreads, the outcome name is a team name
+        const isHome = outcomeInfo.name === game.home_team;
+        const teamEdge = getTeamEdge(outcomeInfo.name, teamRecords, isHome);
+        edgeScore += teamEdge;
+
+        // Attach record info for the picked team
+        const rec = teamRecords.get(outcomeInfo.name);
+        if (rec) {
+          teamRecordInfo = {
+            wins: rec.wins,
+            losses: rec.losses,
+            winRate: rec.winRate,
+            streak: rec.streak,
+            lastFive: rec.lastFive,
+          };
+        }
+      }
+
+      // Clamp to 0-100
+      edgeScore = Math.max(0, Math.min(100, edgeScore));
+
       legs.push({
         sport: sportLabel,
         sportKey: game.sport_key,
@@ -333,6 +377,9 @@ function extractLegsFromGame(
         book: best.bestBook,
         impliedProb: Math.round(impliedProb * 10000) / 10000,
         edgeScore,
+        homeTeam: game.home_team,
+        awayTeam: game.away_team,
+        teamRecord: teamRecordInfo,
       });
     }
   }
@@ -435,6 +482,7 @@ function buildParlays(
         book: l.book,
         impliedProb: l.impliedProb,
         edgeScore: l.edgeScore,
+        ...(l.teamRecord ? { teamRecord: l.teamRecord } : {}),
       })),
       combinedOdds: formatAmericanOdds(combinedAmerican),
       combinedDecimal: Math.round(combinedDecimal * 100) / 100,
@@ -694,13 +742,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch odds for all requested sports in parallel
-    const sportFetches = sports.map((sport) =>
-      fetchOddsForSport(SPORT_MAP[sport]).then((games) => ({
-        sport,
-        games,
-      }))
-    );
+    // Fetch odds AND team records for all requested sports in parallel
+    const sportFetches = sports.map((sport) => {
+      const sportKey = SPORT_MAP[sport];
+      return Promise.all([
+        fetchOddsForSport(sportKey).then((games) => ({ sport, games })),
+        getTeamRecords(sportKey),
+      ]);
+    });
 
     const results = await Promise.allSettled(sportFetches);
 
@@ -710,14 +759,15 @@ export async function GET(request: NextRequest) {
 
     for (const result of results) {
       if (result.status !== "fulfilled") continue;
-      const { sport, games } = result.value;
+      const [{ sport, games }, teamRecords] = result.value;
 
       totalGames += games.length;
 
       for (const game of games) {
         const gameLegs = extractLegsFromGame(
           game,
-          sport.toUpperCase()
+          sport.toUpperCase(),
+          teamRecords
         );
         allLegs.push(...gameLegs);
       }
