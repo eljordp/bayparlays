@@ -636,6 +636,39 @@ function ParlayCard({
   copiedId: string | null;
   onCopy: (p: Parlay) => void;
 }) {
+  const { user, isPro } = useAuth();
+  const [simPlacing, setSimPlacing] = useState(false);
+  const [simResult, setSimResult] = useState<string | null>(null);
+
+  async function tryInSim() {
+    if (!user) return;
+    setSimPlacing(true);
+    try {
+      const res = await fetch("/api/sim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          legs: parlay.legs.map(l => ({ sport: l.sport, pick: l.pick, game: l.game, odds: l.odds, book: l.book })),
+          combined_odds: parlay.combinedOdds,
+          combined_decimal: parlay.combinedDecimal,
+          stake: 10,
+          payout: Math.round(10 * parlay.combinedDecimal * 100) / 100,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSimResult("Placed $10 sim bet");
+      } else {
+        setSimResult(data.error || "Failed");
+      }
+    } catch {
+      setSimResult("Error");
+    }
+    setSimPlacing(false);
+    setTimeout(() => setSimResult(null), 3000);
+  }
+
   const conf = confidenceLabel(parlay.confidence);
   const evPositive = parlay.ev > 0;
   const formattedOdds =
@@ -824,6 +857,22 @@ function ParlayCard({
             </>
           )}
         </button>
+
+        {/* Try in Sim */}
+        {user && isPro && (
+          <button
+            onClick={tryInSim}
+            disabled={simPlacing || !!simResult}
+            className="w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 mt-2"
+            style={{
+              background: simResult ? "rgba(34,197,94,0.1)" : "rgba(255,59,59,0.08)",
+              color: simResult ? "#22C55E" : "#FF3B3B",
+              border: simResult ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(255,59,59,0.15)",
+            }}
+          >
+            {simPlacing ? "Placing..." : simResult || "Try $10 in Simulator"}
+          </button>
+        )}
 
         {/* Recommended book */}
         {parlay.recommendedBook && (
