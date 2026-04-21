@@ -362,6 +362,30 @@ function extractLegsFromGame(
         }
       }
 
+      // ── Filter out bad picks ──────────────────────────────────
+      // Don't pick heavy underdogs on moneyline (over +200 = long shot)
+      if (marketKey === "h2h" && best.bestOdds > 200) {
+        edgeScore = Math.max(0, edgeScore - 30); // heavy penalty
+      }
+
+      // Penalize teams with losing records
+      if (teamRecordInfo && teamRecordInfo.winRate < 0.4) {
+        edgeScore = Math.max(0, edgeScore - 20);
+      }
+
+      // Boost favorites and teams on win streaks
+      if (teamRecordInfo && teamRecordInfo.winRate > 0.55) {
+        edgeScore += 10;
+      }
+      if (teamRecordInfo?.streak.type === "W" && teamRecordInfo.streak.count >= 3) {
+        edgeScore += 8;
+      }
+
+      // Penalize teams on losing streaks
+      if (teamRecordInfo?.streak.type === "L" && teamRecordInfo.streak.count >= 3) {
+        edgeScore = Math.max(0, edgeScore - 15);
+      }
+
       // Clamp to 0-100
       edgeScore = Math.max(0, Math.min(100, edgeScore));
 
@@ -397,8 +421,8 @@ function buildParlays(
   // Sort all legs by edge score descending
   const sorted = [...allLegs].sort((a, b) => b.edgeScore - a.edgeScore);
 
-  // Filter out legs with negligible edge
-  const viable = sorted.filter((leg) => leg.edgeScore > 2);
+  // Filter out legs with negligible edge (raised threshold to cut weak picks)
+  const viable = sorted.filter((leg) => leg.edgeScore > 10);
 
   if (viable.length < numLegs) {
     // If not enough high-edge legs, fall back to best available

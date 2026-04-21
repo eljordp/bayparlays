@@ -29,7 +29,8 @@ export async function GET() {
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
   try {
-    const res = await fetch(`${baseUrl}/api/parlays?sports=nba,mlb,nhl&legs=3&count=5`);
+    // Generate 2-leg parlays for POTD — safer, higher hit rate
+    const res = await fetch(`${baseUrl}/api/parlays?sports=nba,mlb,nhl&legs=2&count=5`);
     if (res.ok) {
       const data = await res.json();
       const parlays = data.parlays || [];
