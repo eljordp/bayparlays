@@ -88,6 +88,7 @@ const plans = [
       "Leaderboard access",
       "Advanced EV analytics",
       "Priority parlay generation",
+      "Private Discord channel",
     ],
     highlight: true,
     cta: "Go VIP",

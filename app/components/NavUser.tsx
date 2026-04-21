@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
+import { NotificationBell } from "./NotificationBell";
 
 export function NavUser() {
   const { user, isPro, tier, signOut } = useAuth();
@@ -38,6 +39,7 @@ export function NavUser() {
             {tierLabel[tier] || "PRO"}
           </span>
         )}
+        <NotificationBell />
         <button
           onClick={signOut}
           className="text-xs text-white/40 hover:text-white transition-colors"
