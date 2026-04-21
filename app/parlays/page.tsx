@@ -40,6 +40,7 @@ interface Parlay {
   confidence: number;
   payout: number;
   timestamp: string;
+  recommendedBook?: string;
 }
 
 interface Meta {
@@ -823,6 +824,16 @@ function ParlayCard({
             </>
           )}
         </button>
+
+        {/* Recommended book */}
+        {parlay.recommendedBook && (
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+            <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Place this parlay on{" "}
+              <span className="font-semibold text-[#FF3B3B]">{parlay.recommendedBook}</span>
+            </p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

@@ -98,6 +98,7 @@ interface Parlay {
   confidence: number;
   payout: number;
   timestamp: string;
+  recommendedBook?: string;
 }
 
 interface ParlayResponse {
@@ -526,6 +527,13 @@ function buildParlays(
     // Scale: avg edge of 20+ is high confidence, 5 is moderate
     const confidence = Math.min(100, Math.round(avgEdge * 3));
 
+    // Find the most common book across legs — recommend placing full parlay there
+    const bookCounts = new Map<string, number>();
+    for (const l of selected) {
+      bookCounts.set(l.book, (bookCounts.get(l.book) || 0) + 1);
+    }
+    const recommendedBook = [...bookCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || selected[0]?.book || "DraftKings";
+
     const parlay: Parlay = {
       id: `parlay_${Date.now()}_${parlays.length}`,
       legs: selected.map((l) => ({
@@ -546,13 +554,20 @@ function buildParlays(
       confidence,
       payout,
       timestamp: new Date().toISOString(),
+      recommendedBook,
     };
 
     parlays.push(parlay);
   }
 
-  // Sort by EV descending
-  parlays.sort((a, b) => b.ev - a.ev);
+  // Sort based on mode
+  if (sortMode === "payout") {
+    parlays.sort((a, b) => b.payout - a.payout);
+  } else if (sortMode === "confidence") {
+    parlays.sort((a, b) => b.confidence - a.confidence);
+  } else {
+    parlays.sort((a, b) => b.ev - a.ev);
+  }
 
   return parlays.slice(0, count);
 }
