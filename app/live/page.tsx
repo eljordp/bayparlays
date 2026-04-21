@@ -154,7 +154,7 @@ export default function LiveScoreboard() {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       const hour = new Date().getHours();
-      if (hour >= 10 || hour < 1) fetchScores(); // 10am to 1am only
+      if (hour >= 10 && hour <= 23) fetchScores(); // 10am to 11pm only
     }, POLL_INTERVAL);
 
     return () => {
