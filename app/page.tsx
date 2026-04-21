@@ -1031,7 +1031,7 @@ export default function Home() {
               <Logo size="sm" />
             </div>
 
-            <div className="flex gap-10 text-sm text-white/30">
+            <div className="flex flex-wrap gap-x-10 gap-y-3 text-sm text-white/30">
               <Link
                 href="/parlays"
                 className="hover:text-white/60 transition-colors"
@@ -1055,6 +1055,18 @@ export default function Home() {
                 className="hover:text-white/60 transition-colors"
               >
                 Pricing
+              </Link>
+              <Link
+                href="/achievements"
+                className="hover:text-white/60 transition-colors"
+              >
+                Achievements
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="hover:text-white/60 transition-colors"
+              >
+                Leaderboard
               </Link>
             </div>
           </div>

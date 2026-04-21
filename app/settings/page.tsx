@@ -17,6 +17,10 @@ import {
   MousePointerClick,
   Users,
   Loader2,
+  Trophy,
+  BarChart3,
+  Share2,
+  Gift,
 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { NavUser } from "@/app/components/NavUser";
@@ -529,6 +533,43 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 )}
+              </motion.section>
+
+              {/* ── YOUR FEATURES ── */}
+              <motion.section
+                variants={fadeUp}
+                custom={3.5}
+                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8"
+              >
+                <h2
+                  className="text-xl tracking-tight mb-6"
+                  style={{ fontFamily: "'DM Serif Display', serif" }}
+                >
+                  Your Features
+                </h2>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { href: "/achievements", icon: Trophy, label: "Achievements", desc: "Track your badges" },
+                    { href: "/leaderboard", icon: BarChart3, label: "Leaderboard", desc: "See top bettors" },
+                    { href: "/refer", icon: Gift, label: "Refer a Friend", desc: "Earn rewards" },
+                    { href: "/share", icon: Share2, label: "Share Cards", desc: "Share your wins" },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200"
+                    >
+                      <item.icon className="w-5 h-5 text-white/25 group-hover:text-[#FF3B3B] transition-colors duration-200 mb-3" />
+                      <p className="text-sm font-medium text-white/70 group-hover:text-white transition-colors duration-200">
+                        {item.label}
+                      </p>
+                      <p className="text-xs text-white/25 mt-0.5">
+                        {item.desc}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
               </motion.section>
 
               {/* ── ACCOUNT ACTIONS ── */}

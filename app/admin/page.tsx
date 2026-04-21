@@ -12,6 +12,7 @@ import {
   BarChart3,
   Shield,
   ArrowLeft,
+  Mail,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -35,6 +36,12 @@ interface ReferralRow {
   created_at: string;
 }
 
+interface EmailCaptureRow {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
 interface ParlayStats {
   totalParlays: number;
   winRate: number;
@@ -48,6 +55,7 @@ export default function AdminPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
+  const [emailCaptures, setEmailCaptures] = useState<EmailCaptureRow[]>([]);
   const [parlayStats, setParlayStats] = useState<ParlayStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -60,7 +68,7 @@ export default function AdminPage() {
   async function fetchData() {
     setLoading(true);
 
-    const [usersRes, referralsRes, statsRes] = await Promise.allSettled([
+    const [usersRes, referralsRes, statsRes, emailRes] = await Promise.allSettled([
       supabase
         .from("users")
         .select("*")
@@ -72,6 +80,10 @@ export default function AdminPage() {
       fetch("/api/track/results").then((r) =>
         r.ok ? r.json() : null
       ),
+      supabase
+        .from("email_captures")
+        .select("*")
+        .order("created_at", { ascending: false }),
     ]);
 
     if (usersRes.status === "fulfilled" && usersRes.value.data) {
@@ -82,6 +94,9 @@ export default function AdminPage() {
     }
     if (statsRes.status === "fulfilled" && statsRes.value) {
       setParlayStats(statsRes.value);
+    }
+    if (emailRes.status === "fulfilled" && emailRes.value.data) {
+      setEmailCaptures(emailRes.value.data);
     }
 
     setLoading(false);
@@ -762,6 +777,119 @@ export default function AdminPage() {
                       {totalReferralSignups}
                     </span>
                   </span>
+                </div>
+              </section>
+
+              {/* ─── Email Captures ─── */}
+              <section>
+                <div className="flex items-center gap-3 mb-8">
+                  <Mail size={18} style={{ color: "#FF3B3B" }} />
+                  <h2
+                    className="text-xl font-semibold"
+                    style={{ color: "#ededed" }}
+                  >
+                    Email Captures
+                  </h2>
+                  <span
+                    className="text-xs px-2 py-1 rounded-full"
+                    style={{
+                      background: "rgba(255,59,59,0.1)",
+                      color: "#FF3B3B",
+                    }}
+                  >
+                    {emailCaptures.length}
+                  </span>
+                </div>
+
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[400px]">
+                      <thead>
+                        <tr
+                          style={{
+                            borderBottom:
+                              "1px solid rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          {["Email", "Captured"].map((h) => (
+                            <th
+                              key={h}
+                              className="text-left px-5 py-4 text-xs font-semibold uppercase tracking-wider"
+                              style={{
+                                color: "rgba(255,255,255,0.35)",
+                                background:
+                                  "rgba(255,255,255,0.02)",
+                              }}
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emailCaptures.map((ec) => (
+                          <tr
+                            key={ec.id}
+                            className="transition-colors duration-150"
+                            style={{
+                              borderBottom:
+                                "1px solid rgba(255,255,255,0.04)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background =
+                                "rgba(255,255,255,0.02)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background =
+                                "transparent";
+                            }}
+                          >
+                            <td
+                              className="px-5 py-4 text-sm"
+                              style={{
+                                color: "#ededed",
+                                fontFamily:
+                                  "'Geist Mono', monospace",
+                                fontSize: "13px",
+                              }}
+                            >
+                              {ec.email}
+                            </td>
+                            <td
+                              className="px-5 py-4 text-xs"
+                              style={{
+                                color: "rgba(255,255,255,0.35)",
+                                fontFamily:
+                                  "'Geist Mono', monospace",
+                              }}
+                            >
+                              {new Date(
+                                ec.created_at
+                              ).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
+                        {emailCaptures.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={2}
+                              className="px-5 py-12 text-center text-sm"
+                              style={{
+                                color: "rgba(255,255,255,0.3)",
+                              }}
+                            >
+                              No email captures yet.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </section>
             </div>
