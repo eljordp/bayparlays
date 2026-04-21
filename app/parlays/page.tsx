@@ -7,16 +7,12 @@ import { Logo } from "@/app/components/Logo";
 import { useAuth } from "@/app/components/AuthProvider";
 import { NavUser } from "@/app/components/NavUser";
 import {
-  TrendingUp,
-  TrendingDown,
-  Clock,
   Copy,
   Check,
   Activity,
   BarChart3,
   Target,
   Shield,
-  Flame,
   Menu,
   X,
 } from "lucide-react";
@@ -319,8 +315,8 @@ export default function ParlaysPage() {
       </header>
 
       {/* ─── Filters ─── */}
-      <section className="px-4 md:px-6 pb-12 sticky top-16 z-40" style={{ background: "rgba(10,10,10,0.92)", backdropFilter: "blur(12px)" }}>
-        <div className="max-w-[1400px] mx-auto py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <section className="px-4 md:px-6 pb-6 sticky top-16 z-40" style={{ background: "rgba(10,10,10,0.92)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-[1400px] mx-auto py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           {/* Sport filters */}
           <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mb-5">
             <span className="text-xs font-medium uppercase tracking-wider mr-2 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
@@ -641,6 +637,10 @@ function ParlayCard({
 }) {
   const conf = confidenceLabel(parlay.confidence);
   const evPositive = parlay.ev > 0;
+  const formattedOdds =
+    parlay.combinedOdds.startsWith("+") || parlay.combinedOdds.startsWith("-")
+      ? parlay.combinedOdds
+      : `+${parlay.combinedOdds}`;
 
   return (
     <motion.div
@@ -649,227 +649,180 @@ function ParlayCard({
       transition={{ duration: 0.4, delay: index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="rounded-2xl overflow-hidden"
       style={{
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#111",
+        border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      {/* Card header */}
-      <div className="px-4 md:px-8 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <div className="flex items-center gap-4">
-          <span className="text-2xl font-black" style={{ color: "rgba(255,255,255,0.12)", fontVariantNumeric: "tabular-nums" }}>
+      {/* Header: number + confidence + time */}
+      <div
+        className="px-5 md:px-6 py-4 flex items-center justify-between"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className="text-lg font-black tabular-nums"
+            style={{ color: "rgba(255,255,255,0.15)" }}
+          >
             #{String(index + 1).padStart(2, "0")}
           </span>
-          <div className="flex items-center gap-2">
-            <Flame size={14} style={{ color: conf.color }} />
-            <span
-              className="text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full"
-              style={{ color: conf.color, background: conf.bg }}
-            >
-              {conf.text} Confidence
-            </span>
-          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Clock size={13} style={{ color: "rgba(255,255,255,0.25)" }} />
-          <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+        <div className="flex items-center gap-3">
+          <span
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: conf.color }}
+          >
+            {conf.text}
+          </span>
+          <span
+            className="text-xs tabular-nums"
+            style={{ color: "rgba(255,255,255,0.3)" }}
+          >
             {timeAgo(parlay.timestamp)}
           </span>
         </div>
       </div>
 
-      {/* Legs */}
-      <div className="px-4 md:px-8 py-4">
-        <div className="space-y-1">
-          {parlay.legs.map((leg, i) => (
-            <div
-              key={i}
-              className="flex items-center gap-4 py-3 px-4 rounded-xl transition-colors duration-150"
-              style={{ background: "transparent" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.025)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-            >
-              {/* Sport badge */}
+      {/* Legs — one clean row each */}
+      <div className="px-5 md:px-6 py-3">
+        {parlay.legs.map((leg, i) => (
+          <div key={i}>
+            {i > 0 && (
               <div
-                className="hidden sm:flex items-center justify-center w-12 h-7 rounded text-[10px] font-bold uppercase tracking-wide flex-shrink-0"
+                className="mx-0"
+                style={{ height: 1, background: "rgba(255,255,255,0.06)" }}
+              />
+            )}
+            <div className="flex items-center gap-3 py-3">
+              {/* Sport badge — always visible */}
+              <div
+                className="flex items-center justify-center w-11 sm:w-12 h-6 rounded text-[11px] sm:text-xs font-bold uppercase tracking-wide flex-shrink-0"
                 style={{
-                  background: `${SPORT_COLORS[leg.sport] || "#333"}22`,
+                  background: `${SPORT_COLORS[leg.sport] || "#333"}25`,
                   color: SPORT_COLORS[leg.sport] || "#888",
-                  border: `1px solid ${SPORT_COLORS[leg.sport] || "#333"}33`,
                 }}
               >
                 {leg.sport}
               </div>
 
-              {/* Game matchup */}
+              {/* Pick — the star of the row */}
               <div className="flex-1 min-w-0">
-                <div className="text-sm truncate" style={{ color: "rgba(255,255,255,0.5)" }}>
-                  {leg.game}
-                </div>
-                <div className="text-sm font-semibold mt-0.5" style={{ color: "#ededed" }}>
+                <span className="text-[15px] sm:text-base font-semibold text-white truncate block">
                   {leg.pick}
-                  <span className="font-normal ml-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-                    {leg.market}
-                  </span>
-                </div>
+                </span>
+                <span
+                  className="text-xs truncate block mt-0.5"
+                  style={{ color: "rgba(255,255,255,0.35)" }}
+                >
+                  {leg.game}
+                </span>
               </div>
 
-              {/* Odds + book */}
+              {/* Odds + book — right aligned */}
               <div className="text-right flex-shrink-0">
-                <div className="text-sm font-bold" style={{ color: "#FF3B3B" }}>
+                <div
+                  className="text-[15px] sm:text-base font-bold tabular-nums"
+                  style={{ color: "#FF3B3B", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
+                >
                   {formatOdds(leg.odds)}
                 </div>
-                <div className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <div
+                  className="text-[11px] mt-0.5"
+                  style={{ color: "rgba(255,255,255,0.3)" }}
+                >
                   {leg.book}
                 </div>
               </div>
-
-              {/* Edge */}
-              <div className="hidden md:flex items-center gap-1.5 flex-shrink-0 w-20 justify-end">
-                {leg.edgeScore > 0 ? (
-                  <TrendingUp size={13} style={{ color: "#FF3B3B" }} />
-                ) : (
-                  <TrendingDown size={13} style={{ color: "#FF4D4D" }} />
-                )}
-                <span
-                  className="text-xs font-semibold"
-                  style={{ color: leg.edgeScore > 0 ? "#FF3B3B" : "#FF4D4D" }}
-                >
-                  {leg.edgeScore > 0 ? "+" : ""}{leg.edgeScore.toFixed(1)}%
-                </span>
-              </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
-      {/* Bottom section */}
+      {/* Bottom section — 3 columns + copy button */}
       <div
-        className="px-4 md:px-8 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,59,59,0.02)" }}
+        className="px-5 md:px-6 pt-5 pb-5"
+        style={{ borderTop: "2px solid rgba(255,255,255,0.06)" }}
       >
-        {/* Left: Combined odds + payout */}
-        <div className="flex items-center gap-8">
+        <div className="grid grid-cols-3 gap-4 mb-5">
+          {/* Combined Odds */}
           <div>
-            <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>
-              Combined Odds
+            <div
+              className="text-[11px] uppercase tracking-wider mb-1"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            >
+              Combined
             </div>
             <div
-              className="text-3xl font-black tracking-tight"
-              style={{ color: "#FF3B3B", fontVariantNumeric: "tabular-nums" }}
+              className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums"
+              style={{ color: "#FF3B3B", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
             >
-              {parlay.combinedOdds.startsWith("+") || parlay.combinedOdds.startsWith("-")
-                ? parlay.combinedOdds
-                : `+${parlay.combinedOdds}`}
+              {formattedOdds}
             </div>
           </div>
 
-          <div className="h-12 w-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-
+          {/* Payout */}
           <div>
-            <div className="text-xs uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.3)" }}>
-              $100 Bet Pays
+            <div
+              className="text-[11px] uppercase tracking-wider mb-1"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            >
+              $100 pays
             </div>
-            <div className="text-2xl font-bold" style={{ color: "#ededed" }}>
+            <div className="text-2xl sm:text-3xl font-bold text-white tabular-nums">
               ${parlay.payout.toLocaleString()}
             </div>
           </div>
-        </div>
 
-        {/* Center: EV bar */}
-        <div className="flex-1 max-w-full md:max-w-xs w-full">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
-              Expected Value
-            </span>
-            <span
-              className="text-sm font-bold"
-              style={{ color: evPositive ? "#FF3B3B" : "#FF4D4D" }}
+          {/* Expected Value */}
+          <div>
+            <div
+              className="text-[11px] uppercase tracking-wider mb-1"
+              style={{ color: "rgba(255,255,255,0.3)" }}
             >
-              {evPositive ? "+" : ""}{parlay.evPercent.toFixed(1)}% EV
-            </span>
-          </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <motion.div
-              className="h-full rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(Math.abs(parlay.evPercent) * 3, 100)}%` }}
-              transition={{ duration: 1, delay: 0.3 + index * 0.08, ease: "easeOut" }}
-              style={{
-                background: evPositive
-                  ? "linear-gradient(90deg, #FF3B3B, #FF5252)"
-                  : "linear-gradient(90deg, #FF4D4D, #FF6666)",
-              }}
-            />
+              Expected Value
+            </div>
+            <div
+              className="text-2xl sm:text-3xl font-bold tabular-nums"
+              style={{ color: evPositive ? "#34D399" : "#FF4D4D" }}
+            >
+              {evPositive ? "+" : ""}{parlay.evPercent.toFixed(1)}%
+            </div>
           </div>
         </div>
 
-        {/* Right: Confidence ring + copy */}
-        <div className="flex flex-wrap items-center gap-5">
-          {/* Confidence ring */}
-          <div className="relative w-14 h-14 flex items-center justify-center">
-            <svg className="absolute inset-0 w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-              <circle
-                cx="28"
-                cy="28"
-                r="24"
-                fill="none"
-                stroke="rgba(255,255,255,0.06)"
-                strokeWidth="3"
-              />
-              <motion.circle
-                cx="28"
-                cy="28"
-                r="24"
-                fill="none"
-                stroke={conf.color}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeDasharray={`${2 * Math.PI * 24}`}
-                initial={{ strokeDashoffset: 2 * Math.PI * 24 }}
-                animate={{ strokeDashoffset: 2 * Math.PI * 24 * (1 - parlay.confidence / 100) }}
-                transition={{ duration: 1.2, delay: 0.2 + index * 0.08, ease: "easeOut" }}
-              />
-            </svg>
-            <span className="text-sm font-bold" style={{ color: conf.color }}>
-              {parlay.confidence}
-            </span>
-          </div>
-
-          {/* Copy button */}
-          <button
-            onClick={() => onCopy(parlay)}
-            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
-            style={{
-              background: copiedId === parlay.id ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.05)",
-              color: copiedId === parlay.id ? "#FF3B3B" : "rgba(255,255,255,0.6)",
-              border: copiedId === parlay.id ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.08)",
-            }}
-            onMouseEnter={(e) => {
-              if (copiedId !== parlay.id) {
-                e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                e.currentTarget.style.color = "#ededed";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (copiedId !== parlay.id) {
-                e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-                e.currentTarget.style.color = "rgba(255,255,255,0.6)";
-              }
-            }}
-          >
-            {copiedId === parlay.id ? (
-              <>
-                <Check size={14} />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy size={14} />
-                Copy to Builder
-              </>
-            )}
-          </button>
-        </div>
+        {/* Copy button */}
+        <button
+          onClick={() => onCopy(parlay)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
+          style={{
+            background: copiedId === parlay.id ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.05)",
+            color: copiedId === parlay.id ? "#FF3B3B" : "rgba(255,255,255,0.5)",
+            border: copiedId === parlay.id ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.08)",
+          }}
+          onMouseEnter={(e) => {
+            if (copiedId !== parlay.id) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.color = "#ededed";
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (copiedId !== parlay.id) {
+              e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+              e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+            }
+          }}
+        >
+          {copiedId === parlay.id ? (
+            <>
+              <Check size={14} />
+              Copied
+            </>
+          ) : (
+            <>
+              <Copy size={14} />
+              Copy Picks
+            </>
+          )}
+        </button>
       </div>
     </motion.div>
   );
