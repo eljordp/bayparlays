@@ -513,10 +513,14 @@ function buildParlays(
     );
 
     // Use adjusted probability — boost implied prob based on edge score
-    // Edge score > 20 means we think the real probability is higher than the book's implied prob
+    // The book's implied prob includes their margin (~5%). Our edge score identifies
+    // where we think the true probability is higher than what the book is pricing.
     const adjustedProbs = selected.map((leg) => {
-      const edgeBoost = leg.edgeScore / 200; // edge of 40 = 20% boost to probability
-      const adjusted = Math.min(0.95, leg.impliedProb * (1 + edgeBoost));
+      // Remove the book's ~5% margin (vig) to get closer to true probability
+      const noVigProb = Math.min(0.95, leg.impliedProb * 1.05);
+      // Then boost based on our edge score (team performance, line divergence)
+      const edgeBoost = leg.edgeScore / 100; // edge of 30 = 30% boost
+      const adjusted = Math.min(0.95, noVigProb * (1 + edgeBoost));
       return adjusted;
     });
     const combinedProb = adjustedProbs.reduce((acc, p) => acc * p, 1);
