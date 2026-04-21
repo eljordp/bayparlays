@@ -511,10 +511,16 @@ function buildParlays(
     const combinedDecimal = calculateParlayOdds(
       selected.map((l) => ({ decimalOdds: l.decimalOdds }))
     );
-    const combinedProb = selected.reduce(
-      (acc, leg) => acc * leg.impliedProb,
-      1
-    );
+
+    // Use adjusted probability — boost implied prob based on edge score
+    // Edge score > 20 means we think the real probability is higher than the book's implied prob
+    const adjustedProbs = selected.map((leg) => {
+      const edgeBoost = leg.edgeScore / 200; // edge of 40 = 20% boost to probability
+      const adjusted = Math.min(0.95, leg.impliedProb * (1 + edgeBoost));
+      return adjusted;
+    });
+    const combinedProb = adjustedProbs.reduce((acc, p) => acc * p, 1);
+
     const stake = 100;
     const ev = calculateEV(combinedDecimal, combinedProb, stake);
     const evPercent = (ev / stake) * 100;
