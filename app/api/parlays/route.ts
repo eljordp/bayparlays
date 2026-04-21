@@ -416,13 +416,42 @@ function extractLegsFromGame(
 function buildParlays(
   allLegs: ScoredLeg[],
   numLegs: number,
-  count: number
+  count: number,
+  sortMode: "ev" | "payout" | "confidence" = "ev"
 ): Parlay[] {
-  // Sort all legs by edge score descending
-  const sorted = [...allLegs].sort((a, b) => b.edgeScore - a.edgeScore);
+  let sorted: ScoredLeg[];
+  let viable: ScoredLeg[];
 
-  // Filter out legs with negligible edge (raised threshold to cut weak picks)
-  const viable = sorted.filter((leg) => leg.edgeScore > 10);
+  if (sortMode === "confidence") {
+    // MOST CONFIDENT: only favorites (negative odds on ML), winning teams, high edge
+    sorted = [...allLegs]
+      .filter((leg) => {
+        // For moneyline, only pick favorites (negative odds)
+        if (leg.market === "moneyline" && leg.odds > 0) return false;
+        // Only pick teams with winning records
+        if (leg.teamRecord && leg.teamRecord.winRate < 0.5) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        // Sort by implied probability (higher = safer) then edge
+        const probDiff = b.impliedProb - a.impliedProb;
+        if (Math.abs(probDiff) > 0.05) return probDiff;
+        return b.edgeScore - a.edgeScore;
+      });
+    viable = sorted.filter((leg) => leg.edgeScore > 5);
+  } else if (sortMode === "payout") {
+    // HIGHEST PAYOUT: underdogs welcome, longer odds preferred
+    sorted = [...allLegs].sort((a, b) => {
+      // Prefer higher decimal odds (bigger payout)
+      return b.decimalOdds - a.decimalOdds;
+    });
+    // Lower threshold — let underdogs through for payout mode
+    viable = sorted.filter((leg) => leg.edgeScore > 2);
+  } else {
+    // BEST EV: mathematical edge (default)
+    sorted = [...allLegs].sort((a, b) => b.edgeScore - a.edgeScore);
+    viable = sorted.filter((leg) => leg.edgeScore > 10);
+  }
 
   if (viable.length < numLegs) {
     // If not enough high-edge legs, fall back to best available
@@ -742,6 +771,7 @@ export async function GET(request: NextRequest) {
 
     const numLegs = Math.min(6, Math.max(2, parseInt(searchParams.get("legs") || "3", 10)));
     const count = Math.min(20, Math.max(1, parseInt(searchParams.get("count") || "5", 10)));
+    const sortMode = (searchParams.get("sort") || "ev") as "ev" | "payout" | "confidence";
 
     // Check cache
     const cached = getCachedResponse(sports, numLegs, count);
@@ -812,7 +842,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build optimized parlays
-    const parlays = buildParlays(allLegs, numLegs, count);
+    const parlays = buildParlays(allLegs, numLegs, count, sortMode);
 
     const response: ParlayResponse = {
       parlays,
