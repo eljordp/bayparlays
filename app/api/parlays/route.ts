@@ -13,6 +13,14 @@ import {
   type EloRating,
 } from "@/lib/elo";
 import { getSituationalEdge } from "@/lib/situational";
+import {
+  coverProbability,
+  expectedMargin,
+  expectedTotal,
+  isPlayoffPeriod,
+  playoffDampedEloProb,
+  totalProbability,
+} from "@/lib/game-model";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -460,6 +468,13 @@ function extractLegsFromGame(
       };
       const tune = sportTune[sportLabel] ?? { eloWeight: 0.60, homeBonus: 65 };
 
+      // Detect whether we're in the postseason for this sport — used to
+      // dampen Elo predictions + widen spread/total variance downstream.
+      const inPlayoffs = isPlayoffPeriod(
+        sportLabel,
+        new Date(game.commence_time),
+      );
+
       if (marketKey === "h2h" && teamRecords && eloRatings) {
         const isHome = outcomeInfo.name === game.home_team;
         const opponent = isHome ? game.away_team : game.home_team;
@@ -467,18 +482,16 @@ function extractLegsFromGame(
         const oppRating = eloRatings.get(opponent);
         if (teamRating && oppRating) {
           const homeBonus = isHome ? tune.homeBonus : -tune.homeBonus;
-          const eloProb =
-            1 /
-            (1 +
-              Math.pow(
-                10,
-                (oppRating.rating - teamRating.rating - homeBonus) / 400,
-              ));
-          // Sport-tuned blend of Elo with de-vigged book prob.
+          // Playoff-aware Elo: dampens the Elo differential in postseason
+          // periods (favorites are less favored when it matters).
+          const eloProb = playoffDampedEloProb(
+            teamRating.rating,
+            oppRating.rating,
+            homeBonus,
+            inPlayoffs,
+          );
           ourProb = eloProb * tune.eloWeight + ourProb * (1 - tune.eloWeight);
 
-          // Recent form: last 5 games weigh more than season-long winRate.
-          // Recent form deviations from .500 nudge ourProb up to ±5 pts.
           const rec = teamRecords.get(outcomeInfo.name);
           if (rec) {
             const last5Wins = rec.lastFive.filter((x) => x === "W").length;
@@ -487,23 +500,61 @@ function extractLegsFromGame(
             const formRate = last5Rate * 0.65 + rec.winRate * 0.35;
             ourProb += (formRate - 0.5) * 0.1;
 
-            // Hot/cold streak tilt on top of form.
             if (rec.streak.type === "W" && rec.streak.count >= 4) ourProb += 0.02;
             if (rec.streak.type === "L" && rec.streak.count >= 4) ourProb -= 0.02;
           }
         }
-      } else if (marketKey === "spreads" || marketKey === "totals") {
-        // Spreads and totals are priced near 50/50 by design. Without a
-        // margin-of-victory or pace model, our only honest edge signal is
-        // raw line divergence — how much better the best book pays vs the
-        // market average. Ignore the composite edgeScore here (it absorbs
-        // team-record bonuses that only make sense for moneyline).
-        //
-        // rawLineEdge is typically 1-3% when there's real divergence. We
-        // apply half of it to ourProb so a 2% better line ≈ 1% probability
-        // edge. Anything larger should go through a dedicated model.
-        const rawLineEdge = (bestDecimal - avgDecimal) / avgDecimal;
-        ourProb += rawLineEdge * 0.5;
+      } else if (marketKey === "spreads" && eloRatings && outcomeInfo.point !== undefined) {
+        // Spreads: use Elo differential + sport-specific Elo-per-point to
+        // estimate expected margin of victory, then Normal distribution over
+        // sport-specific variance to compute P(pick covers).
+        const pickIsHome = outcomeInfo.name === game.home_team;
+        const homeRating = eloRatings.get(game.home_team)?.rating;
+        const awayRating = eloRatings.get(game.away_team)?.rating;
+        const expMargin = expectedMargin(
+          sportLabel,
+          homeRating,
+          awayRating,
+          tune.homeBonus,
+          inPlayoffs,
+        );
+        if (expMargin !== null) {
+          // outcomeInfo.point is the spread for THIS outcome. E.g. if team
+          // is home and line is -3.5, outcomeInfo.point = -3.5. We need the
+          // spread from the home team's perspective for cover probability.
+          const homeSpread = pickIsHome
+            ? outcomeInfo.point
+            : -outcomeInfo.point;
+          const coverProb = coverProbability(
+            sportLabel,
+            pickIsHome,
+            homeSpread,
+            expMargin,
+            inPlayoffs,
+          );
+          ourProb = coverProb;
+        }
+      } else if (marketKey === "totals" && outcomeInfo.point !== undefined && recentGames) {
+        // Totals: use recent scoring for both teams to estimate expected
+        // combined total, then Normal distribution to price over/under.
+        const expTotal = expectedTotal(
+          sportLabel,
+          game.home_team,
+          game.away_team,
+          recentGames,
+          inPlayoffs,
+        );
+        if (expTotal !== null) {
+          // outcomeInfo.name is "Over" or "Under" for totals market.
+          const pickIsOver = outcomeInfo.name.toLowerCase() === "over";
+          ourProb = totalProbability(
+            sportLabel,
+            pickIsOver,
+            outcomeInfo.point,
+            expTotal,
+            inPlayoffs,
+          );
+        }
       }
 
       // Clamp ourProb to realistic range
