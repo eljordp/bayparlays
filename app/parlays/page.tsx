@@ -70,6 +70,23 @@ const SORT_OPTIONS = [
 
 type SortOption = (typeof SORT_OPTIONS)[number]["value"];
 
+// Odds range filter — client-side bucketing by combined American odds.
+// "All" shows everything; the others let users dial in risk/reward directly.
+const ODDS_RANGES = [
+  { value: "all", label: "All", min: -Infinity, max: Infinity },
+  { value: "safe", label: "Safe (+200–+500)", min: 200, max: 500 },
+  { value: "medium", label: "Medium (+500–+1200)", min: 500, max: 1200 },
+  { value: "longshot", label: "Longshot (+1200+)", min: 1200, max: Infinity },
+] as const;
+
+type OddsRange = (typeof ODDS_RANGES)[number]["value"];
+
+function combinedOddsToAmerican(parlay: Parlay): number {
+  // combinedOdds comes formatted like "+283" or "-145"; parse back.
+  const raw = parlay.combinedOdds.replace(/^\+/, "");
+  return parseInt(raw, 10);
+}
+
 const SPORT_COLORS: Record<string, string> = {
   NBA: "#C9082A",
   NFL: "#013369",
@@ -112,6 +129,7 @@ export default function ParlaysPage() {
 
   const [selectedSport, setSelectedSport] = useState("All");
   const [selectedLegs, setSelectedLegs] = useState<number | null>(null);
+  const [oddsRange, setOddsRange] = useState<OddsRange>("all");
   // Default to "Most Confident" — users want "will this hit?" before
   // "is this +EV math." Lock picks lead; EV + Payout are optional tabs.
   const [sortBy, setSortBy] = useState<SortOption>("confidence");
@@ -166,14 +184,23 @@ export default function ParlaysPage() {
   const isVipAccess = isAdmin || isAuthAdmin || tier === "vip" || tier === "admin";
   const isSharpAccess = isPro || isVipAccess; // includes sharp + vip + admin
 
+  // Apply client-side odds-range filter on top of the server-side fetched set.
+  // Lets users dial risk/reward without re-fetching.
+  const visibleParlays = (() => {
+    if (oddsRange === "all") return parlays;
+    const range = ODDS_RANGES.find((r) => r.value === oddsRange);
+    if (!range) return parlays;
+    return parlays.filter((p) => {
+      const o = combinedOddsToAmerican(p);
+      if (!Number.isFinite(o)) return true;
+      return o >= range.min && o <= range.max;
+    });
+  })();
+
   const fetchParlays = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Curated output per tier. Free gets 4 picks — enough to see the AI
-      // working (Lock + a couple sides), not so many it's overwhelming.
-      // Analysis pool is the same across tiers (compute is free); what
-      // changes is output depth + access to the analytics tools.
       const effectiveTier = isAdmin
         ? "admin"
         : tier === "vip" || tier === "admin"
@@ -183,26 +210,56 @@ export default function ParlaysPage() {
             : "free";
       const countForTier =
         effectiveTier === "admin"
-          ? "30"
+          ? 30
           : effectiveTier === "vip"
-            ? "15"
+            ? 15
             : effectiveTier === "sharp"
-              ? "8"
-              : "4";
-      const params = new URLSearchParams({
-        count: countForTier,
-        tier: effectiveTier,
-      });
-      if (selectedSport !== "All") params.set("sports", selectedSport);
-      if (selectedLegs) params.set("legs", String(selectedLegs));
-      params.set("sort", sortBy);
+              ? 8
+              : 4;
 
-      const res = await fetch(`/api/parlays?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to fetch parlays");
+      // "All" legs (selectedLegs = null) = fan-out: fetch 2/3/4-leg variants
+      // in parallel, merge, then curate a mix. Users get variety by default
+      // without clicking around. Specific leg selection skips the fan-out.
+      const legCounts = selectedLegs ? [selectedLegs] : [2, 3, 4];
+      const perCall = Math.max(
+        2,
+        Math.ceil(countForTier / legCounts.length),
+      );
 
-      const data: ParlayResponse = await res.json();
-      setParlays(data.parlays);
-      setMeta(data.meta);
+      const buildUrl = (legs: number) => {
+        const p = new URLSearchParams({
+          count: String(perCall),
+          tier: effectiveTier,
+          legs: String(legs),
+          sort: sortBy,
+        });
+        if (selectedSport !== "All") p.set("sports", selectedSport);
+        return `/api/parlays?${p.toString()}`;
+      };
+
+      const responses = await Promise.all(
+        legCounts.map((n) =>
+          fetch(buildUrl(n))
+            .then((r) => (r.ok ? (r.json() as Promise<ParlayResponse>) : null))
+            .catch(() => null),
+        ),
+      );
+
+      const merged: Parlay[] = [];
+      let lastMeta: Meta | null = null;
+      for (const r of responses) {
+        if (!r) continue;
+        merged.push(...r.parlays);
+        lastMeta = r.meta;
+      }
+
+      // Re-sort merged picks by whatever mode is active so the Lock stays #1.
+      if (sortBy === "confidence") merged.sort((a, b) => b.confidence - a.confidence);
+      else if (sortBy === "payout") merged.sort((a, b) => b.payout - a.payout);
+      else merged.sort((a, b) => b.evPercent - a.evPercent);
+
+      setParlays(merged.slice(0, countForTier));
+      setMeta(lastMeta);
     } catch {
       setError("Unable to load parlays right now.");
       setParlays([]);
@@ -403,6 +460,17 @@ export default function ParlaysPage() {
               <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
                 Legs
               </span>
+              <button
+                onClick={() => setSelectedLegs(null)}
+                className="px-4 h-10 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center"
+                style={{
+                  background: selectedLegs === null ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.04)",
+                  color: selectedLegs === null ? "#FF3B3B" : "rgba(255,255,255,0.45)",
+                  border: selectedLegs === null ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                Mix
+              </button>
               {LEG_COUNTS.map((count) => (
                 <button
                   key={count}
@@ -441,6 +509,27 @@ export default function ParlaysPage() {
               ))}
             </div>
           </div>
+
+          {/* Odds range — client-side payout bucket filter */}
+          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mt-4">
+            <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Odds
+            </span>
+            {ODDS_RANGES.map((r) => (
+              <button
+                key={r.value}
+                onClick={() => setOddsRange(r.value)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
+                style={{
+                  background: oddsRange === r.value ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.04)",
+                  color: oddsRange === r.value ? "#FF3B3B" : "rgba(255,255,255,0.45)",
+                  border: oddsRange === r.value ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                }}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -464,7 +553,7 @@ export default function ParlaysPage() {
             )}
 
             {/* Error / Empty */}
-            {!loading && (error || parlays.length === 0) && (
+            {!loading && (error || visibleParlays.length === 0) && (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0, y: 20 }}
@@ -495,7 +584,7 @@ export default function ParlaysPage() {
             )}
 
             {/* Parlay cards */}
-            {!loading && !error && parlays.length > 0 && (
+            {!loading && !error && visibleParlays.length > 0 && (
               <motion.div
                 key="content"
                 initial={{ opacity: 0 }}
@@ -505,7 +594,7 @@ export default function ParlaysPage() {
               >
                 {/* VIP/Admin: see everything */}
                 {isVipAccess ? (
-                  parlays.map((parlay, idx) => (
+                  visibleParlays.map((parlay, idx) => (
                     <ParlayCard
                       key={parlay.id}
                       parlay={parlay}
@@ -522,7 +611,7 @@ export default function ParlaysPage() {
                         bottom — promises the analytics tools (bankroll mgmt,
                         line movement, alerts, CLV) that justify the jump,
                         not just "more picks." */}
-                    {parlays.map((parlay, idx) => (
+                    {visibleParlays.map((parlay, idx) => (
                       <ParlayCard
                         key={parlay.id}
                         parlay={parlay}
@@ -533,7 +622,7 @@ export default function ParlaysPage() {
                       />
                     ))}
 
-                    {parlays.length > 0 && (
+                    {visibleParlays.length > 0 && (
                       <div
                         className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14"
                         style={{
@@ -576,7 +665,7 @@ export default function ParlaysPage() {
                     {/* Free: all 4 picks visible. Real Lock of the Day + a few
                         sides so users can see the AI working. Upgrade CTA
                         below promises Sharp depth, not a content gate. */}
-                    {parlays.map((parlay, idx) => (
+                    {visibleParlays.map((parlay, idx) => (
                       <ParlayCard
                         key={parlay.id}
                         parlay={parlay}
@@ -587,7 +676,7 @@ export default function ParlaysPage() {
                       />
                     ))}
 
-                    {parlays.length > 0 && (
+                    {visibleParlays.length > 0 && (
                       <div
                         className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14"
                         style={{
