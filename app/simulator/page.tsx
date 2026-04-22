@@ -181,11 +181,12 @@ export default function SimulatorPage() {
       if (res.ok) {
         const data = await res.json();
         setPicks(
-          (data.parlays || []).slice(0, 5).map((p: PickParlay) => ({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (data.parlays || []).slice(0, 5).map((p: any) => ({
             id: p.id,
             legs: p.legs,
-            combined_odds: p.combined_odds,
-            combined_decimal: p.combined_decimal,
+            combined_odds: p.combinedOdds || p.combined_odds,
+            combined_decimal: p.combinedDecimal || p.combined_decimal,
             payout: p.payout,
           }))
         );
