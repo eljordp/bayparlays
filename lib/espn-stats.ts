@@ -1,5 +1,5 @@
 // ─── ESPN Stats Helper ───────────────────────────────────────────────────────
-// Pulls NBA player season averages from ESPN's public API (no key required).
+// Pulls NBA player season averages from ESPN's public stats API (no key needed).
 // Used by the Prop Analyzer to flag props where a player's average is way
 // above/below the sportsbook line.
 
@@ -21,78 +21,118 @@ export interface PlayerStats {
 // Cache stats for 6 hours — season averages change slowly.
 const statsCache = new Map<string, { data: PlayerStats[]; expires: number }>();
 
-// Minimal shape of ESPN's athlete response (fields we touch)
-interface EspnAthlete {
-  active?: boolean;
-  fullName?: string;
-  displayName?: string;
-  team?: { abbreviation?: string };
-  position?: { abbreviation?: string };
-  statistics?: {
-    gamesPlayed?: number | string;
-    points?: number | string;
-    rebounds?: number | string;
-    assists?: number | string;
-    threePointFieldGoalsMade?: number | string;
-    steals?: number | string;
-    blocks?: number | string;
+interface EspnStatsCategorySpec {
+  name: string;
+  names: string[];
+}
+
+interface EspnStatsCategoryValues {
+  name: string;
+  values: number[];
+}
+
+interface EspnAthleteRow {
+  athlete: {
+    displayName?: string;
+    fullName?: string;
+    shortName?: string;
+    teamShortName?: string;
+    position?: { abbreviation?: string };
   };
+  categories: EspnStatsCategoryValues[];
 }
 
-function toNum(val: unknown): number {
-  if (typeof val === "number") return val;
-  if (typeof val === "string") {
-    const n = parseFloat(val);
-    return Number.isFinite(n) ? n : 0;
+interface EspnStatsResponse {
+  pagination?: { pages?: number };
+  categories?: EspnStatsCategorySpec[];
+  athletes?: EspnAthleteRow[];
+}
+
+function currentSeasonYear(): number {
+  // NBA season crosses Oct–Jun; ESPN uses the *ending* year as the season label.
+  const now = new Date();
+  return now.getUTCMonth() >= 9 ? now.getUTCFullYear() + 1 : now.getUTCFullYear();
+}
+
+async function fetchStatsPage(season: number, page: number): Promise<EspnStatsResponse | null> {
+  const url = `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/statistics/byathlete?season=${season}&sort=offensive.avgPoints:desc&limit=50&page=${page}`;
+  try {
+    const res = await fetch(url, { next: { revalidate: 21600 } });
+    if (!res.ok) return null;
+    return (await res.json()) as EspnStatsResponse;
+  } catch {
+    return null;
   }
-  return 0;
 }
 
-// NBA player stats from ESPN
+// NBA player stats from ESPN's byathlete endpoint
 export async function getNBAPlayerStats(): Promise<PlayerStats[]> {
   const cached = statsCache.get("nba");
   if (cached && cached.expires > Date.now()) return cached.data;
 
-  try {
-    // ESPN's NBA athletes endpoint
-    const res = await fetch(
-      "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/athletes?limit=500",
-      { next: { revalidate: 21600 } } // 6 hours
-    );
-    if (!res.ok) return [];
+  // Try current season, fall back to prior if it's preseason / no data yet
+  const seasons = [currentSeasonYear(), currentSeasonYear() - 1];
 
-    const data = (await res.json()) as { athletes?: EspnAthlete[] };
-    const players: PlayerStats[] = [];
+  for (const season of seasons) {
+    const firstPage = await fetchStatsPage(season, 1);
+    if (!firstPage?.athletes?.length || !firstPage.categories) continue;
 
-    // ESPN returns athletes in data.athletes array
-    for (const athlete of data.athletes || []) {
-      if (athlete.active === false) continue;
-
-      const s = athlete.statistics || {};
-      players.push({
-        name: athlete.fullName || athlete.displayName || "",
-        team: athlete.team?.abbreviation || "",
-        position: athlete.position?.abbreviation || "",
-        gamesPlayed: toNum(s.gamesPlayed),
-        stats: {
-          points: toNum(s.points),
-          rebounds: toNum(s.rebounds),
-          assists: toNum(s.assists),
-          threes: toNum(s.threePointFieldGoalsMade),
-          steals: toNum(s.steals),
-          blocks: toNum(s.blocks),
-        },
-      });
+    // Build name-index maps for each stat category
+    const categorySpec = new Map<string, Map<string, number>>();
+    for (const spec of firstPage.categories) {
+      const idx = new Map<string, number>();
+      spec.names.forEach((n, i) => idx.set(n, i));
+      categorySpec.set(spec.name, idx);
     }
+
+    const getVal = (row: EspnAthleteRow, catName: string, statName: string): number => {
+      const cat = row.categories.find((c) => c.name === catName);
+      const idxMap = categorySpec.get(catName);
+      if (!cat || !idxMap) return 0;
+      const idx = idxMap.get(statName);
+      if (idx === undefined) return 0;
+      const v = cat.values[idx];
+      return typeof v === "number" && Number.isFinite(v) ? v : 0;
+    };
+
+    // Pull up to 5 pages (250 players) — covers all meaningful prop candidates
+    const totalPages = Math.min(firstPage.pagination?.pages || 1, 5);
+    const extraPages = await Promise.all(
+      Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) =>
+        fetchStatsPage(season, i + 2)
+      )
+    );
+
+    const allRows: EspnAthleteRow[] = [
+      ...firstPage.athletes,
+      ...extraPages.flatMap((p) => p?.athletes || []),
+    ];
+
+    const players: PlayerStats[] = allRows.map((row) => ({
+      name: row.athlete.displayName || row.athlete.fullName || "",
+      team: row.athlete.teamShortName || "",
+      position: row.athlete.position?.abbreviation || "",
+      gamesPlayed: getVal(row, "general", "gamesPlayed"),
+      stats: {
+        points: getVal(row, "offensive", "avgPoints"),
+        rebounds: getVal(row, "general", "avgRebounds"),
+        assists: getVal(row, "offensive", "avgAssists"),
+        threes: getVal(row, "offensive", "avgThreePointFieldGoalsMade"),
+        steals: getVal(row, "defensive", "avgSteals"),
+        blocks: getVal(row, "defensive", "avgBlocks"),
+      },
+    }));
+
+    if (players.length === 0) continue;
 
     statsCache.set("nba", {
       data: players,
       expires: Date.now() + 6 * 60 * 60 * 1000,
     });
     return players;
-  } catch {
-    return [];
   }
+
+  return [];
 }
 
 // Find a player by name (fuzzy match)
