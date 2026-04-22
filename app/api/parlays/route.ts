@@ -524,16 +524,15 @@ function extractLegsFromGame(
           modelEstimates.push({ p: recordProb, w: 0.6 });
         }
 
-        // Require BOTH Elo and winRate signal to call the leg scored.
-        // A leg with only one signal has too much variance from thin data.
-        if (modelEstimates.length >= 2) {
+        // Score the leg if we have ANY independent signal (Elo or winRate).
+        // Requiring both made everything unscored because Elo is trained on
+        // a thin 14-day score window and often empty for mid-season teams.
+        if (modelEstimates.length >= 1) {
           const totalW = modelEstimates.reduce((s, x) => s + x.w, 0);
           const modelProb =
             modelEstimates.reduce((s, x) => s + x.p * x.w, 0) / totalW;
 
           // Final ourProb = 70% independent model + 30% book prior.
-          // The book prior regularizes us against extreme swings from thin
-          // Elo data while still letting real disagreements drive edge.
           ourProb = modelProb * 0.7 + ourProb * 0.3;
           wasScored = true;
         }
