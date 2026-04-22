@@ -728,8 +728,13 @@ export default function SimulatorPage() {
                               </span>
                             ))}
                           </div>
-                          <div className="text-sm text-white/70 truncate">
-                            {pick.legs.map((l) => l.pick).join(" + ")}
+                          <div className="space-y-1">
+                            {pick.legs.map((l, j) => (
+                              <div key={j} className="text-sm">
+                                <span className="text-white/80 font-medium">{l.pick}</span>
+                                <span className="text-white/30 ml-2 text-xs">{l.game}</span>
+                              </div>
+                            ))}
                           </div>
                           <div className="flex items-center gap-4 mt-2">
                             <span
