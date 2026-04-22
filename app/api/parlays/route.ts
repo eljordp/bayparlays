@@ -486,21 +486,20 @@ function extractLegsFromGame(
       // worthless if half of them are unscored noise.
       let wasScored = false;
 
-      if (marketKey === "h2h" && teamRecords && eloRatings) {
+      if (marketKey === "h2h" && (teamRecords || eloRatings)) {
         const isHome = outcomeInfo.name === game.home_team;
         const opponent = isHome ? game.away_team : game.home_team;
-        const teamRating = eloRatings.get(outcomeInfo.name);
-        const oppRating = eloRatings.get(opponent);
-        const rec = teamRecords.get(outcomeInfo.name);
-        const oppRec = teamRecords.get(opponent);
+        const teamRating = eloRatings?.get(outcomeInfo.name);
+        const oppRating = eloRatings?.get(opponent);
+        const rec = teamRecords?.get(outcomeInfo.name);
+        const oppRec = teamRecords?.get(opponent);
 
-        // Independent model estimate from signals the book doesn't directly
-        // price: Elo differential + season winRate matchup. If both are
-        // available we blend them; if only one, use that. We do NOT seed
-        // from book implied here — that would bias every estimate toward
-        // the book and leave us never finding real disagreement.
+        // Collect whatever independent signals are available. Partial data
+        // (one team has record, the other doesn't) still counts — we just
+        // use a heuristic fallback. Better than reverting to pure book prior.
         const modelEstimates: { p: number; w: number }[] = [];
 
+        // Elo: need both ratings for head-to-head comparison.
         if (teamRating && oppRating) {
           const homeBonus = isHome ? tune.homeBonus : -tune.homeBonus;
           const eloProb = playoffDampedEloProb(
@@ -512,27 +511,31 @@ function extractLegsFromGame(
           modelEstimates.push({ p: eloProb, w: 0.4 });
         }
 
+        // winRate: Pythagorean matchup if we have both, solo fallback otherwise.
         if (rec && oppRec) {
           const teamRate = Math.max(0.1, rec.winRate);
           const oppRate = Math.max(0.1, oppRec.winRate);
-          // Pythagorean-style matchup probability from winRates.
           let recordProb = teamRate / (teamRate + oppRate);
           recordProb = Math.min(
             0.95,
             Math.max(0.05, recordProb + (isHome ? 0.03 : -0.03)),
           );
           modelEstimates.push({ p: recordProb, w: 0.6 });
+        } else if (rec) {
+          // Solo fallback: pick team's winRate pulled toward .500, with a
+          // small home/away tilt. Not as strong as matchup — lower weight.
+          const pullToward500 = 0.5 + (rec.winRate - 0.5) * 0.6;
+          const adjusted = Math.min(
+            0.9,
+            Math.max(0.1, pullToward500 + (isHome ? 0.03 : -0.03)),
+          );
+          modelEstimates.push({ p: adjusted, w: 0.3 });
         }
 
-        // Score the leg if we have ANY independent signal (Elo or winRate).
-        // Requiring both made everything unscored because Elo is trained on
-        // a thin 14-day score window and often empty for mid-season teams.
         if (modelEstimates.length >= 1) {
           const totalW = modelEstimates.reduce((s, x) => s + x.w, 0);
           const modelProb =
             modelEstimates.reduce((s, x) => s + x.p * x.w, 0) / totalW;
-
-          // Final ourProb = 70% independent model + 30% book prior.
           ourProb = modelProb * 0.7 + ourProb * 0.3;
           wasScored = true;
         }
