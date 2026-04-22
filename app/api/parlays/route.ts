@@ -638,18 +638,20 @@ function extractLegsFromGame(
 
 // ─── Parlay Builder ──────────────────────────────────────────────────────────
 
-// Per-tier analysis depth. "Analyze wide" was bleeding noise from unscored
-// legs into the ranking. Now: (1) require scored + ≥3 books on every leg,
-// (2) cap the pool size the greedy builder considers so we're not throwing
-// noise into parlays just because the odds were loud.
+// Per-tier analysis depth. bookCount filter ensures consensus (thin-market
+// lines get dropped); pool size caps how many legs feed into parlay
+// construction so we don't rank noise alongside real picks. `scored` flag
+// is surfaced in the response but not used as a hard gate — the underlying
+// data pipeline isn't reliable enough yet to punish users with empty pages
+// when Elo/records are sparse.
 const TIER_CONFIG: Record<
   string,
-  { poolSize: number; minBooks: number; requireScored: boolean }
+  { poolSize: number; minBooks: number }
 > = {
-  free:  { poolSize: 30,  minBooks: 3, requireScored: true },
-  sharp: { poolSize: 80,  minBooks: 3, requireScored: true },
-  vip:   { poolSize: 200, minBooks: 2, requireScored: true },
-  admin: { poolSize: 300, minBooks: 2, requireScored: false }, // diagnostic
+  free:  { poolSize: 30,  minBooks: 3 },
+  sharp: { poolSize: 80,  minBooks: 3 },
+  vip:   { poolSize: 200, minBooks: 2 },
+  admin: { poolSize: 300, minBooks: 1 },
 };
 
 function buildParlays(
@@ -664,13 +666,9 @@ function buildParlays(
 
   const cfg = TIER_CONFIG[tier] ?? TIER_CONFIG.sharp;
 
-  // Pre-filter: drop legs we can't actually score with real signal, and
-  // drop thin-market legs (2-book lines are too noisy to trust as edge).
-  const qualityLegs = allLegs.filter((leg) => {
-    if (cfg.requireScored && !leg.scored) return false;
-    if (leg.bookCount < cfg.minBooks) return false;
-    return true;
-  });
+  // Drop thin-market legs — consensus from ≥3 books is worth trusting,
+  // but a 1-book outlier is probably noise or stale.
+  const qualityLegs = allLegs.filter((leg) => leg.bookCount >= cfg.minBooks);
 
   // Sort by ranking signal for this mode, then cap to tier's pool size.
   // Everything past the cutoff is ignored — reduces noise from low-priority
