@@ -546,10 +546,11 @@ function buildParlays(
   let viable: ScoredLeg[];
 
   // Universal floor: only bet legs where we think we have real edge over the
-  // book. trueEdge is in decimal (0.03 = 3 percentage points). 3% is the bar
-  // that separates coin flips from actual positive-EV plays. Applied across
-  // all three sort modes — you don't "lower standards" for longshots.
-  const MIN_TRUE_EDGE = 0.03;
+  // book. trueEdge is in decimal (0.015 = 1.5 percentage points). Sharp
+  // bettors start qualifying bets at ~1.5% edge per leg — below that is
+  // coin-flip territory even with a good model. The parlay-level EV gate
+  // downstream (evPercent >= 5) is where we commit to tracking.
+  const MIN_TRUE_EDGE = 0.015;
   const legsWithEdge = allLegs.filter((leg) => leg.trueEdge >= MIN_TRUE_EDGE);
 
   if (sortMode === "confidence") {
