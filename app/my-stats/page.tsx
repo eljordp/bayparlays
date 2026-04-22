@@ -66,11 +66,18 @@ interface RecentBet {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   legs: any[];
   combined_odds: string;
+  combined_decimal?: number;
   status: string;
   stake: number;
   payout: number;
   profit: number;
   category: Category | null;
+}
+
+// Implied hit probability from combined decimal odds
+function impliedHitRate(decimalOdds: number | undefined): number | null {
+  if (!decimalOdds || decimalOdds <= 1) return null;
+  return Math.round((1 / decimalOdds) * 10000) / 100;
 }
 
 interface MyStatsData {
@@ -767,7 +774,7 @@ export default function MyStatsPage() {
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
                   <h2
-                    className="text-2xl md:text-3xl mb-8"
+                    className="text-2xl md:text-3xl mb-3"
                     style={{
                       fontFamily: "'DM Serif Display', serif",
                       color: "#ededed",
@@ -775,6 +782,13 @@ export default function MyStatsPage() {
                   >
                     Recent Bets
                   </h2>
+                  <p
+                    className="text-xs mb-8 max-w-2xl"
+                    style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}
+                  >
+                    <span className="font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>Hit %</span> = the book&apos;s implied probability this parlay cashes.
+                    A +500 parlay hits ~17% of the time, +100 hits ~50%. Chasing high hit rates with juiced favorites is a trap — the book&apos;s vig grinds you down. Look for picks where the AI&apos;s estimate exceeds the book&apos;s.
+                  </p>
 
                   {/* Table header - desktop */}
                   <div
@@ -891,6 +905,14 @@ export default function MyStatsPage() {
                                 }}
                               >
                                 {bet.combined_odds}
+                                {impliedHitRate(bet.combined_decimal) != null && (
+                                  <div
+                                    className="text-[10px] font-normal mt-0.5"
+                                    style={{ color: "rgba(255,255,255,0.3)" }}
+                                  >
+                                    {impliedHitRate(bet.combined_decimal)!.toFixed(1)}% hit
+                                  </div>
+                                )}
                               </div>
                               <div
                                 className="text-sm text-right font-medium"
@@ -1020,6 +1042,17 @@ export default function MyStatsPage() {
                                     >
                                       {bet.combined_odds}
                                     </span>
+                                    {impliedHitRate(bet.combined_decimal) != null && (
+                                      <span
+                                        className="text-[10px] ml-2"
+                                        style={{
+                                          color: "rgba(255,255,255,0.3)",
+                                          fontFamily: "var(--font-geist-mono)",
+                                        }}
+                                      >
+                                        ({impliedHitRate(bet.combined_decimal)!.toFixed(1)}%)
+                                      </span>
+                                    )}
                                     <span
                                       className="mx-2"
                                       style={{

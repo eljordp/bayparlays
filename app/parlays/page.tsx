@@ -42,6 +42,8 @@ interface Parlay {
   timestamp: string;
   recommendedBook?: string;
   category?: "ev" | "payout" | "confidence";
+  impliedHitRate?: number;
+  aiEstimate?: number;
 }
 
 interface Meta {
@@ -877,6 +879,49 @@ function ParlayCard({
             </div>
           </div>
         </div>
+
+        {/* Hit Rate row — book vs AI */}
+        {(parlay.impliedHitRate !== undefined || parlay.aiEstimate !== undefined) && (
+          <div
+            className="flex items-center justify-between gap-3 mb-5 px-3 py-2.5 rounded-lg"
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.05)",
+            }}
+          >
+            <div className="flex items-center gap-5 flex-wrap">
+              {parlay.impliedHitRate !== undefined && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    Book says
+                  </span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "rgba(255,255,255,0.85)", fontFamily: "ui-monospace, monospace" }}>
+                    {parlay.impliedHitRate.toFixed(1)}%
+                  </span>
+                </div>
+              )}
+              {parlay.aiEstimate !== undefined && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    AI says
+                  </span>
+                  <span
+                    className="text-sm font-bold tabular-nums"
+                    style={{
+                      color: parlay.impliedHitRate !== undefined && parlay.aiEstimate > parlay.impliedHitRate ? "#34D399" : "rgba(255,255,255,0.85)",
+                      fontFamily: "ui-monospace, monospace",
+                    }}
+                  >
+                    {parlay.aiEstimate.toFixed(1)}%
+                  </span>
+                </div>
+              )}
+            </div>
+            <span className="text-[10px] hidden sm:block" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Hit probability
+            </span>
+          </div>
+        )}
 
         {/* Copy button */}
         <button

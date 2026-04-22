@@ -52,10 +52,12 @@ interface RecentParlay {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   legs: any[];
   combined_odds: string;
+  combined_decimal?: number;
   status: string;
   payout: number;
   profit: number;
   ev_percent: number;
+  impliedHitRate?: number | null;
 }
 
 interface ResultsData {
@@ -465,11 +467,18 @@ export default function ResultsPage() {
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
                   <h2
-                    className="text-2xl md:text-3xl mb-8"
+                    className="text-2xl md:text-3xl mb-3"
                     style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
                   >
                     Recent Parlays
                   </h2>
+                  <p
+                    className="text-xs mb-8 max-w-2xl"
+                    style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}
+                  >
+                    <span className="font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>Hit %</span> is the book&apos;s implied probability this parlay cashes.
+                    Higher odds = lower hit %. A parlay at +500 hits ~17% of the time, +100 hits ~50%. High hit rates don&apos;t mean profitable — the book&apos;s vig eats you long-term unless you&apos;re finding EV.
+                  </p>
 
                   {/* Table header - desktop */}
                   <div
@@ -539,6 +548,14 @@ export default function ResultsPage() {
                                 style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
                               >
                                 {parlay.combined_odds}
+                                {parlay.impliedHitRate != null && (
+                                  <div
+                                    className="text-[10px] font-normal mt-0.5"
+                                    style={{ color: "rgba(255,255,255,0.3)" }}
+                                  >
+                                    {parlay.impliedHitRate.toFixed(1)}% hit
+                                  </div>
+                                )}
                               </div>
                               <div
                                 className="text-sm text-right font-medium"
@@ -606,6 +623,14 @@ export default function ResultsPage() {
                                     >
                                       {parlay.combined_odds}
                                     </span>
+                                    {parlay.impliedHitRate != null && (
+                                      <span
+                                        className="text-[10px] ml-2"
+                                        style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-geist-mono)" }}
+                                      >
+                                        ({parlay.impliedHitRate.toFixed(1)}%)
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                                 <span

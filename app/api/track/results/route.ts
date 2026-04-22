@@ -141,10 +141,15 @@ export async function GET() {
       created_at: p.created_at,
       legs: p.legs,
       combined_odds: p.combined_odds,
+      combined_decimal: p.combined_decimal,
       status: p.status,
       payout: p.payout,
       profit: p.profit ?? 0,
       ev_percent: p.ev_percent,
+      impliedHitRate:
+        p.combined_decimal && p.combined_decimal > 1
+          ? Math.round((1 / p.combined_decimal) * 10000) / 100
+          : null,
     }));
 
     return NextResponse.json(

@@ -65,6 +65,14 @@ interface PickParlay {
   combined_decimal: number;
   payout: number;
   category?: PickCategory;
+  aiEstimate?: number;
+}
+
+// Implied hit rate = 1/decimal_odds, as a percentage. This is what the book
+// is effectively pricing the parlay at, before vig adjustments.
+function impliedHitRate(decimalOdds: number): number {
+  if (!decimalOdds || decimalOdds <= 1) return 0;
+  return Math.round((1 / decimalOdds) * 10000) / 100;
 }
 
 const CATEGORY_META: Record<PickCategory, { label: string; color: string; bg: string; border: string }> = {
@@ -223,6 +231,7 @@ export default function SimulatorPage() {
             combined_decimal: p.combinedDecimal || p.combined_decimal,
             payout: p.payout,
             category: (p.category || modes[i]) as PickCategory,
+            aiEstimate: p.aiEstimate,
           });
         });
       });
@@ -800,7 +809,7 @@ export default function SimulatorPage() {
                               </div>
                             ))}
                           </div>
-                          <div className="flex items-center gap-4 mt-2">
+                          <div className="flex items-center gap-4 mt-2 flex-wrap">
                             <span
                               className="text-lg font-bold text-[#FF3B3B]"
                               style={{ fontFamily: "var(--font-geist-mono)" }}
@@ -812,6 +821,29 @@ export default function SimulatorPage() {
                               style={{ fontFamily: "var(--font-geist-mono)" }}
                             >
                               ${stake} pays ${(stake * pick.combined_decimal).toFixed(2)}
+                            </span>
+                            <span
+                              className="text-xs text-white/40 flex items-center gap-1.5"
+                              style={{ fontFamily: "var(--font-geist-mono)" }}
+                              title="Book's implied probability this parlay hits (includes vig)"
+                            >
+                              <span className="text-white/25">Book:</span>
+                              <span className="text-white/70">{impliedHitRate(pick.combined_decimal).toFixed(1)}%</span>
+                              {pick.aiEstimate !== undefined && (
+                                <>
+                                  <span className="text-white/20 mx-1">·</span>
+                                  <span className="text-white/25">AI:</span>
+                                  <span
+                                    className={
+                                      pick.aiEstimate > impliedHitRate(pick.combined_decimal)
+                                        ? "text-[#22C55E]"
+                                        : "text-white/70"
+                                    }
+                                  >
+                                    {pick.aiEstimate.toFixed(1)}%
+                                  </span>
+                                </>
+                              )}
                             </span>
                           </div>
                         </div>
@@ -1018,6 +1050,15 @@ export default function SimulatorPage() {
                             style={{ fontFamily: "var(--font-geist-mono)" }}
                           >
                             {p.combined_odds}
+                          </span>
+
+                          {/* Implied hit rate */}
+                          <span
+                            className="text-[10px] text-white/35 hidden md:inline"
+                            style={{ fontFamily: "var(--font-geist-mono)" }}
+                            title="Book's implied hit probability"
+                          >
+                            {impliedHitRate(p.combined_decimal).toFixed(1)}% hit
                           </span>
 
                           {/* Stake */}

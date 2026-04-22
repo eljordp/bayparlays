@@ -111,6 +111,8 @@ interface Parlay {
   timestamp: string;
   recommendedBook?: string;
   category: ParlayCategory;
+  impliedHitRate: number; // what book's odds say — includes vig
+  aiEstimate: number;     // model's take on true probability — edge if > impliedHitRate
 }
 
 interface ParlayResponse {
@@ -588,6 +590,14 @@ function buildParlays(
     }
     const recommendedBook = [...bookCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || selected[0]?.book || "DraftKings";
 
+    // Implied hit rate = what the book's odds say the parlay will cash at
+    // (includes the vig — this is the honest number a bettor should look at).
+    // AI estimate = model's take on the true probability after removing vig
+    // and applying edge adjustments. If aiEstimate > impliedHitRate, we see
+    // positive EV — the sell of this product.
+    const impliedHitRate = Math.round((1 / combinedDecimal) * 10000) / 100;
+    const aiEstimate = Math.round(combinedProb * 10000) / 100;
+
     const parlay: Parlay = {
       id: `parlay_${Date.now()}_${parlays.length}`,
       legs: selected.map((l) => ({
@@ -610,6 +620,8 @@ function buildParlays(
       timestamp: new Date().toISOString(),
       recommendedBook,
       category: sortMode,
+      impliedHitRate,
+      aiEstimate,
     };
 
     parlays.push(parlay);
@@ -804,6 +816,8 @@ function generateMockParlays(
       payout,
       timestamp: new Date().toISOString(),
       category: sortMode,
+      impliedHitRate: Math.round((1 / combinedDecimal) * 10000) / 100,
+      aiEstimate: Math.round(combinedProb * 10000) / 100,
     });
   }
 

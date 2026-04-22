@@ -70,6 +70,7 @@ function emptyPayload() {
       created_at: string;
       legs: SimLeg[];
       combined_odds: string;
+      combined_decimal: number;
       status: string;
       stake: number;
       payout: number;
@@ -233,6 +234,7 @@ export async function GET(req: NextRequest) {
       created_at: p.created_at,
       legs: p.legs ?? [],
       combined_odds: p.combined_odds,
+      combined_decimal: p.combined_decimal ?? 0,
       status: p.status,
       stake: p.stake ?? 0,
       payout: p.payout ?? 0,
