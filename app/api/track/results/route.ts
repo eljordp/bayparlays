@@ -172,6 +172,38 @@ export async function GET() {
       }),
     );
 
+    // --- Market breakdown: moneyline vs spread vs totals ---
+    // Attribute each parlay to the market with most legs. If a parlay mixes
+    // 2 moneyline legs + 1 spread, it's a "moneyline" parlay for breakdown
+    // purposes. This surfaces which markets the AI is actually winning at.
+    const marketMap = new Map<string, { won: number; lost: number }>();
+    for (const p of rows) {
+      if (p.status === "pending") continue;
+      const marketCounts = new Map<string, number>();
+      for (const leg of p.legs as { market?: string }[]) {
+        const m = leg?.market;
+        if (!m) continue;
+        marketCounts.set(m, (marketCounts.get(m) ?? 0) + 1);
+      }
+      if (marketCounts.size === 0) continue;
+      const primary = [...marketCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      const entry = marketMap.get(primary) ?? { won: 0, lost: 0 };
+      if (p.status === "won") entry.won++;
+      if (p.status === "lost") entry.lost++;
+      marketMap.set(primary, entry);
+    }
+    const marketBreakdown = Array.from(marketMap.entries()).map(
+      ([market, data]) => ({
+        market,
+        won: data.won,
+        lost: data.lost,
+        winRate:
+          data.won + data.lost > 0
+            ? Math.round((data.won / (data.won + data.lost)) * 10000) / 100
+            : 0,
+      }),
+    );
+
     // --- Recent parlays ---
     const recentParlays = rows.slice(0, 20).map((p) => ({
       id: p.id,
@@ -208,6 +240,7 @@ export async function GET() {
         },
         sportBreakdown,
         categoryBreakdown,
+        marketBreakdown,
         recentParlays,
       },
       {

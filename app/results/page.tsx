@@ -57,6 +57,13 @@ interface CategoryBreakdown {
   winRate: number;
 }
 
+interface MarketBreakdown {
+  market: string;
+  won: number;
+  lost: number;
+  winRate: number;
+}
+
 interface RecentParlay {
   id: string;
   created_at: string;
@@ -76,8 +83,15 @@ interface ResultsData {
   stats: Stats;
   sportBreakdown: SportBreakdown[];
   categoryBreakdown: CategoryBreakdown[];
+  marketBreakdown: MarketBreakdown[];
   recentParlays: RecentParlay[];
 }
+
+const MARKET_LABEL: Record<string, string> = {
+  moneyline: "Moneyline",
+  spread: "Spread",
+  total: "Totals",
+};
 
 const CATEGORY_LABEL: Record<ParlayCategory, string> = {
   ev: "Best EV",
@@ -189,7 +203,9 @@ export default function ResultsPage() {
   const stats = data?.stats;
   const sportBreakdown = data?.sportBreakdown ?? [];
   const categoryBreakdown = data?.categoryBreakdown ?? [];
+  const marketBreakdown = data?.marketBreakdown ?? [];
   const maxCategoryWinRate = Math.max(...categoryBreakdown.map((c) => c.winRate), 1);
+  const maxMarketWinRate = Math.max(...marketBreakdown.map((m) => m.winRate), 1);
   const recentParlays = data?.recentParlays ?? [];
   const maxSportWinRate = Math.max(...sportBreakdown.map((s) => s.winRate), 1);
 
@@ -562,6 +578,73 @@ export default function ResultsPage() {
                             }}
                           >
                             {cat.winRate.toFixed(0)}%
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ─── By Market ─── */}
+                {marketBreakdown.length > 0 && (
+                  <motion.div
+                    className="mt-16 md:mt-20"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.38 }}
+                  >
+                    <h2
+                      className="text-2xl md:text-3xl mb-3"
+                      style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                    >
+                      By Market
+                    </h2>
+                    <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+                      Moneyline vs spread vs totals. Useful for spotting where the model has edge and where it doesn&apos;t — no hiding weak markets.
+                    </p>
+                    <div className="space-y-4">
+                      {marketBreakdown.map((mk, idx) => (
+                        <motion.div
+                          key={mk.market}
+                          className="flex items-center gap-4 md:gap-6"
+                          initial={{ opacity: 0, x: -12 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.4, delay: 0.4 + idx * 0.06 }}
+                        >
+                          <div
+                            className="w-24 md:w-32 text-sm font-semibold flex-shrink-0"
+                            style={{ color: "rgba(255,255,255,0.7)" }}
+                          >
+                            {MARKET_LABEL[mk.market] ?? mk.market}
+                          </div>
+                          <div
+                            className="text-xs flex-shrink-0 w-16 text-right"
+                            style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-geist-mono)" }}
+                          >
+                            {mk.won}-{mk.lost}
+                          </div>
+                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                            <motion.div
+                              className="h-full rounded"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(mk.winRate / maxMarketWinRate) * 100}%` }}
+                              transition={{ duration: 0.8, delay: 0.45 + idx * 0.06, ease: "easeOut" }}
+                              style={{
+                                background: mk.winRate >= 50
+                                  ? "linear-gradient(90deg, #22c55e, #34d399)"
+                                  : "linear-gradient(90deg, rgba(255,59,59,0.4), rgba(255,59,59,0.6))",
+                                minWidth: "2px",
+                              }}
+                            />
+                          </div>
+                          <div
+                            className="w-14 text-right text-sm font-bold flex-shrink-0"
+                            style={{
+                              color: mk.winRate >= 50 ? "#22c55e" : "#ef4444",
+                              fontFamily: "var(--font-geist-mono)",
+                            }}
+                          >
+                            {mk.winRate.toFixed(0)}%
                           </div>
                         </motion.div>
                       ))}

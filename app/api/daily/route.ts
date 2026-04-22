@@ -33,11 +33,15 @@ export async function GET(req: NextRequest) {
   // Each call to /api/parlays is 1 Odds API hit (cached 5min); keeping combos
   // modest for quota. Only parlays with confidence >= 60 actually persist (see
   // /api/parlays insert path), so "count=5" won't flood the table with noise.
+  // Favor 2-leg parlays: each extra leg adds ~5% vig, so 2-leg has structurally
+  // better EV than 3-leg. Three 2-leg combos + two 3-leg combos, across all
+  // three strategies. The EV gate at insert time (evPercent >= 5) means this
+  // only fills the table with parlays the model actually stands behind.
   const sportCombos: { sports: string; legs: number; sort: "ev" | "payout" | "confidence" }[] = [
     { sports: "nba,mlb,nhl", legs: 2, sort: "ev" },
     { sports: "nba,mlb,nhl", legs: 2, sort: "confidence" },
+    { sports: "nba,mlb,nhl", legs: 2, sort: "payout" },
     { sports: "nba,mlb,nhl", legs: 3, sort: "ev" },
-    { sports: "nba,mlb,nhl", legs: 3, sort: "payout" },
     { sports: "nba,mlb,nhl", legs: 3, sort: "confidence" },
   ];
 

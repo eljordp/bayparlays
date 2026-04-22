@@ -78,8 +78,10 @@ interface ScoredLeg {
   odds: number;
   decimalOdds: number;
   book: string;
-  impliedProb: number;
-  edgeScore: number;
+  impliedProb: number;   // book's implied probability (includes vig)
+  ourProb: number;       // our estimate of true win probability
+  trueEdge: number;      // ourProb - impliedProb, in decimal (0.05 = 5 point edge)
+  edgeScore: number;     // legacy composite score, kept for back-compat
   homeTeam: string;
   awayTeam: string;
   teamRecord?: TeamRecordInfo;
@@ -438,6 +440,70 @@ function extractLegsFromGame(
       // Clamp to 0-100
       edgeScore = Math.max(0, Math.min(100, edgeScore));
 
+      // ── Our probability estimate ────────────────────────────────
+      // Compose a true-probability estimate from the signals the book
+      // doesn't price: Elo win probability, recent form, home advantage.
+      // Tuning is sport-specific because each league has different variance
+      // profiles and different home-court effects.
+      //
+      // Starting point: de-vig the book's implied prob (US books run 4-5% vig).
+      let ourProb = impliedProb / 1.045;
+
+      // Sport-specific weights
+      const sportTune: Record<string, { eloWeight: number; homeBonus: number }> = {
+        NBA:   { eloWeight: 0.50, homeBonus: 90 },   // noisier, bigger home edge
+        NHL:   { eloWeight: 0.65, homeBonus: 35 },   // Elo stable, small home edge
+        MLB:   { eloWeight: 0.55, homeBonus: 20 },   // pitcher-driven, tiny home edge
+        NFL:   { eloWeight: 0.60, homeBonus: 55 },
+        NCAAF: { eloWeight: 0.55, homeBonus: 80 },
+        NCAAB: { eloWeight: 0.50, homeBonus: 90 },
+      };
+      const tune = sportTune[sportLabel] ?? { eloWeight: 0.60, homeBonus: 65 };
+
+      if (marketKey === "h2h" && teamRecords && eloRatings) {
+        const isHome = outcomeInfo.name === game.home_team;
+        const opponent = isHome ? game.away_team : game.home_team;
+        const teamRating = eloRatings.get(outcomeInfo.name);
+        const oppRating = eloRatings.get(opponent);
+        if (teamRating && oppRating) {
+          const homeBonus = isHome ? tune.homeBonus : -tune.homeBonus;
+          const eloProb =
+            1 /
+            (1 +
+              Math.pow(
+                10,
+                (oppRating.rating - teamRating.rating - homeBonus) / 400,
+              ));
+          // Sport-tuned blend of Elo with de-vigged book prob.
+          ourProb = eloProb * tune.eloWeight + ourProb * (1 - tune.eloWeight);
+
+          // Recent form: last 5 games weigh more than season-long winRate.
+          // Recent form deviations from .500 nudge ourProb up to ±5 pts.
+          const rec = teamRecords.get(outcomeInfo.name);
+          if (rec) {
+            const last5Wins = rec.lastFive.filter((x) => x === "W").length;
+            const last5Rate =
+              rec.lastFive.length > 0 ? last5Wins / rec.lastFive.length : 0.5;
+            const formRate = last5Rate * 0.65 + rec.winRate * 0.35;
+            ourProb += (formRate - 0.5) * 0.1;
+
+            // Hot/cold streak tilt on top of form.
+            if (rec.streak.type === "W" && rec.streak.count >= 4) ourProb += 0.02;
+            if (rec.streak.type === "L" && rec.streak.count >= 4) ourProb -= 0.02;
+          }
+        }
+      } else if (marketKey === "spreads" || marketKey === "totals") {
+        // Spreads and totals are priced near 50/50 by design. Without a
+        // margin-of-victory model, our advantage here comes from line
+        // divergence (edgeScore). Nudge ourProb conservatively so a 20-point
+        // edgeScore adds 4% — edge here is thinner than on moneylines.
+        ourProb = ourProb + edgeScore / 500;
+      }
+
+      // Clamp ourProb to realistic range
+      ourProb = Math.max(0.05, Math.min(0.95, ourProb));
+      const trueEdge = ourProb - impliedProb;
+
       legs.push({
         sport: sportLabel,
         sportKey: game.sport_key,
@@ -449,6 +515,8 @@ function extractLegsFromGame(
         decimalOdds: bestDecimal,
         book: best.bestBook,
         impliedProb: Math.round(impliedProb * 10000) / 10000,
+        ourProb: Math.round(ourProb * 10000) / 10000,
+        trueEdge: Math.round(trueEdge * 10000) / 10000,
         edgeScore,
         homeTeam: game.home_team,
         awayTeam: game.away_team,
@@ -471,67 +539,62 @@ function buildParlays(
   let sorted: ScoredLeg[];
   let viable: ScoredLeg[];
 
+  // Universal floor: only bet legs where we think we have real edge over the
+  // book. trueEdge is in decimal (0.03 = 3 percentage points). 3% is the bar
+  // that separates coin flips from actual positive-EV plays. Applied across
+  // all three sort modes — you don't "lower standards" for longshots.
+  const MIN_TRUE_EDGE = 0.03;
+  const legsWithEdge = allLegs.filter((leg) => leg.trueEdge >= MIN_TRUE_EDGE);
+
   if (sortMode === "confidence") {
-    // MOST CONFIDENT: only favorites (negative odds on ML), winning teams, high edge
-    sorted = [...allLegs]
+    // MOST CONFIDENT: favorites with the highest ourProb, gated on edge.
+    sorted = [...legsWithEdge]
       .filter((leg) => {
-        // For moneyline, only pick favorites (negative odds)
         if (leg.market === "moneyline" && leg.odds > 0) return false;
-        // Only pick teams with winning records
         if (leg.teamRecord && leg.teamRecord.winRate < 0.5) return false;
         return true;
       })
-      .sort((a, b) => {
-        // Sort by implied probability (higher = safer) then edge
-        const probDiff = b.impliedProb - a.impliedProb;
-        if (Math.abs(probDiff) > 0.05) return probDiff;
-        return b.edgeScore - a.edgeScore;
-      });
-    viable = sorted.filter((leg) => leg.edgeScore > 5);
+      .sort((a, b) => b.ourProb - a.ourProb);
+    viable = sorted;
   } else if (sortMode === "payout") {
-    // HIGHEST PAYOUT: underdogs welcome, longer odds preferred
-    sorted = [...allLegs].sort((a, b) => {
-      // Prefer higher decimal odds (bigger payout)
-      return b.decimalOdds - a.decimalOdds;
-    });
-    // Lower threshold — let underdogs through for payout mode
-    viable = sorted.filter((leg) => leg.edgeScore > 2);
+    // HIGHEST PAYOUT: underdogs, but still with real edge (MIN_TRUE_EDGE above).
+    // Sorted by decimal odds — bigger payout preferred among the edge-qualified.
+    sorted = [...legsWithEdge].sort((a, b) => b.decimalOdds - a.decimalOdds);
+    viable = sorted;
   } else {
-    // BEST EV: mathematical edge (default)
-    sorted = [...allLegs].sort((a, b) => b.edgeScore - a.edgeScore);
-    viable = sorted.filter((leg) => leg.edgeScore > 10);
+    // BEST EV: sort by actual edge, not legacy composite score.
+    sorted = [...legsWithEdge].sort((a, b) => b.trueEdge - a.trueEdge);
+    viable = sorted;
   }
 
+  // If we don't have enough edge-qualified legs for this parlay size,
+  // return empty. Scarcity > manufactured picks. Better to show no parlay
+  // than to fill a slate with negative-EV ones the AI doesn't stand behind.
   if (viable.length < numLegs) {
-    // If not enough high-edge legs, fall back to best available
-    while (viable.length < numLegs && viable.length < sorted.length) {
-      viable.push(sorted[viable.length]);
-    }
+    return [];
   }
 
   const parlays: Parlay[] = [];
   const usedCombinations = new Set<string>();
 
-  // Greedy parlay construction:
-  // Start from top-edge legs and build outward, ensuring no same-game parlays
+  // Greedy parlay construction: start from top legs, no same-game parlays.
   for (let attempt = 0; attempt < count * 20 && parlays.length < count; attempt++) {
     const selected: ScoredLeg[] = [];
     const usedGames = new Set<string>();
 
-    // Shuffle the top legs slightly for variety on subsequent attempts
+    // Shuffle the top legs slightly for variety on subsequent attempts.
+    // Uses trueEdge now (not the legacy composite) as the ranking signal.
     const pool = [...viable];
     if (attempt > 0) {
-      // Fisher-Yates partial shuffle of top candidates for variety
       for (let i = Math.min(pool.length - 1, numLegs * 4); i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [pool[i], pool[j]] = [pool[j], pool[i]];
       }
-      // Re-sort by edge but with some randomness
       pool.sort(
         (a, b) =>
-          b.edgeScore -
-          a.edgeScore +
-          (Math.random() - 0.5) * (attempt * 2)
+          b.trueEdge -
+          a.trueEdge +
+          (Math.random() - 0.5) * (attempt * 0.02),
       );
     }
 
@@ -558,18 +621,11 @@ function buildParlays(
       selected.map((l) => ({ decimalOdds: l.decimalOdds }))
     );
 
-    // Use adjusted probability — boost implied prob based on edge score
-    // The book's implied prob includes their margin (~5%). Our edge score identifies
-    // where we think the true probability is higher than what the book is pricing.
-    const adjustedProbs = selected.map((leg) => {
-      // Remove the book's ~5% margin (vig) to get closer to true probability
-      const noVigProb = Math.min(0.95, leg.impliedProb * 1.05);
-      // Then boost based on our edge score (team performance, line divergence)
-      const edgeBoost = leg.edgeScore / 100; // edge of 30 = 30% boost
-      const adjusted = Math.min(0.95, noVigProb * (1 + edgeBoost));
-      return adjusted;
-    });
-    const combinedProb = adjustedProbs.reduce((acc, p) => acc * p, 1);
+    // Parlay probability = product of each leg's TRUE probability estimate.
+    // No more inflating by arbitrary edge boosts — ourProb is already the
+    // probability after de-vig + Elo + form adjustments. Compounding it across
+    // legs gives the real parlay hit rate the model is projecting.
+    const combinedProb = selected.reduce((acc, leg) => acc * leg.ourProb, 1);
 
     const stake = 100;
     const ev = calculateEV(combinedDecimal, combinedProb, stake);
@@ -577,11 +633,11 @@ function buildParlays(
     const payout = Math.round(combinedDecimal * stake * 100) / 100;
     const combinedAmerican = decimalToAmerican(combinedDecimal);
 
-    // Confidence: average edge score of the legs, weighted by implied prob
-    const avgEdge =
-      selected.reduce((sum, l) => sum + l.edgeScore, 0) / selected.length;
-    // Scale: avg edge of 20+ is high confidence, 5 is moderate
-    const confidence = Math.min(100, Math.round(avgEdge * 3));
+    // Confidence = combined true probability, mapped to a 0-100 scale.
+    // A parlay projected to hit 40% of the time = confidence 40. Parlay
+    // projected to hit 20% = confidence 20. This is a REAL number, not an
+    // aggregated composite score. Used as the track-record gate downstream.
+    const confidence = Math.min(100, Math.round(combinedProb * 100));
 
     // Find the most common book across legs — recommend placing full parlay there
     const bookCounts = new Map<string, number>();
@@ -996,12 +1052,13 @@ export async function GET(request: NextRequest) {
         .gte("created_at", fiveMinAgo);
 
       if (!count || count === 0) {
-        // Only record parlays the AI would actually stand behind.
-        // confidence 60+ = avgEdge >= 20 (see buildParlays: confidence = avgEdge * 3).
-        // Everything below that is noise — showing it as an "official pick" in the
-        // public track record tanks the win rate with parlays we wouldn't bet on ourselves.
-        const MIN_CONFIDENCE_TO_TRACK = 60;
-        const trackable = parlays.filter((p) => p.confidence >= MIN_CONFIDENCE_TO_TRACK);
+        // Only track parlays that have real positive expected value.
+        // evPercent > 5 means our model projects >5% EV over many bets —
+        // enough buffer to absorb model error while still showing +EV.
+        // Legs were already gated at trueEdge >= 3% per leg upstream, so this
+        // is a belt-and-suspenders check at the parlay level.
+        const MIN_EV_TO_TRACK = 5;
+        const trackable = parlays.filter((p) => p.evPercent >= MIN_EV_TO_TRACK);
 
         if (trackable.length > 0) {
           const baseRows = trackable.map((p) => ({
