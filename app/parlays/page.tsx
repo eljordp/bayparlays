@@ -41,6 +41,7 @@ interface Parlay {
   payout: number;
   timestamp: string;
   recommendedBook?: string;
+  category?: "ev" | "payout" | "confidence";
 }
 
 interface Meta {
@@ -210,6 +211,7 @@ export default function ParlaysPage() {
               {[
                 { href: "/", label: "Home" },
                 { href: "/parlays", label: "AI Parlays" },
+                { href: "/props", label: "Props" },
                 { href: "/odds", label: "Odds" },
                 { href: "/builder", label: "Builder" },
                 { href: "/results", label: "Results" },
@@ -259,6 +261,7 @@ export default function ParlaysPage() {
                 {[
                   { href: "/", label: "Home" },
                   { href: "/parlays", label: "AI Parlays" },
+                  { href: "/props", label: "Props" },
                   { href: "/odds", label: "Odds" },
                   { href: "/builder", label: "Builder" },
                   { href: "/results", label: "Results" },
@@ -699,6 +702,7 @@ function ParlayCard({
           combined_decimal: parlay.combinedDecimal,
           stake: 10,
           payout: Math.round(10 * parlay.combinedDecimal * 100) / 100,
+          category: parlay.category,
         }),
       });
       const data = await res.json();

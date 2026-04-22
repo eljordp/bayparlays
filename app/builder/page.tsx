@@ -330,6 +330,12 @@ export default function BuilderPage() {
             >
               Parlays
             </Link>
+            <Link
+              href="/props"
+              className="hover:text-white transition-colors"
+            >
+              Props
+            </Link>
             <Link href="/odds" className="hover:text-white transition-colors">
               Odds
             </Link>
@@ -386,6 +392,7 @@ export default function BuilderPage() {
               <div className="flex flex-col px-6 py-3 gap-1 text-sm">
                 <Link href="/" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Home</Link>
                 <Link href="/parlays" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Parlays</Link>
+                <Link href="/props" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Props</Link>
                 <Link href="/odds" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Odds</Link>
                 <Link href="/builder" onClick={() => setMobileNavOpen(false)} className="py-2 text-[#FF3B3B] font-medium">Builder</Link>
                 <Link href="/results" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Results</Link>

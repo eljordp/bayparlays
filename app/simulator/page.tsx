@@ -42,6 +42,8 @@ interface SimLeg {
   book: string;
 }
 
+type PickCategory = "ev" | "payout" | "confidence";
+
 interface SimParlay {
   id: string;
   created_at: string;
@@ -53,6 +55,7 @@ interface SimParlay {
   status: "pending" | "won" | "lost";
   profit: number;
   resolved_at: string | null;
+  category?: PickCategory | null;
 }
 
 interface PickParlay {
@@ -61,7 +64,29 @@ interface PickParlay {
   combined_odds: string;
   combined_decimal: number;
   payout: number;
+  category?: PickCategory;
 }
+
+const CATEGORY_META: Record<PickCategory, { label: string; color: string; bg: string; border: string }> = {
+  ev: {
+    label: "Best EV",
+    color: "text-[#22C55E]",
+    bg: "bg-[#22C55E]/10",
+    border: "border-[#22C55E]/20",
+  },
+  payout: {
+    label: "Highest Payout",
+    color: "text-[#FF3B3B]",
+    bg: "bg-[#FF3B3B]/10",
+    border: "border-[#FF3B3B]/20",
+  },
+  confidence: {
+    label: "Most Confident",
+    color: "text-[#60A5FA]",
+    bg: "bg-[#60A5FA]/10",
+    border: "border-[#60A5FA]/20",
+  },
+};
 
 /* ─── Animations ─── */
 
@@ -174,23 +199,34 @@ export default function SimulatorPage() {
     setDataLoading(false);
   }, [user]);
 
-  // Load picks for quick sim
+  // Load picks for quick sim — one from each category for variety
   const loadPicks = useCallback(async () => {
     try {
-      const res = await fetch("/api/parlays?count=5&legs=3");
-      if (res.ok) {
-        const data = await res.json();
-        setPicks(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (data.parlays || []).slice(0, 5).map((p: any) => ({
+      const modes: PickCategory[] = ["ev", "payout", "confidence"];
+      const results = await Promise.all(
+        modes.map((m) =>
+          fetch(`/api/parlays?count=2&legs=3&sort=${m}`)
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        )
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const merged: PickParlay[] = [];
+      results.forEach((data, i) => {
+        if (!data?.parlays?.length) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data.parlays.slice(0, 2).forEach((p: any) => {
+          merged.push({
             id: p.id,
             legs: p.legs,
             combined_odds: p.combinedOdds || p.combined_odds,
             combined_decimal: p.combinedDecimal || p.combined_decimal,
             payout: p.payout,
-          }))
-        );
-      }
+            category: (p.category || modes[i]) as PickCategory,
+          });
+        });
+      });
+      setPicks(merged.slice(0, 6));
     } catch {
       // silent
     }
@@ -257,6 +293,7 @@ export default function SimulatorPage() {
           combined_decimal: pick.combined_decimal,
           stake,
           payout: Math.round(stake * pick.combined_decimal * 100) / 100,
+          category: pick.category,
         }),
       });
 
@@ -719,6 +756,13 @@ export default function SimulatorPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
+                            {pick.category && (
+                              <span
+                                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${CATEGORY_META[pick.category].color} ${CATEGORY_META[pick.category].bg} ${CATEGORY_META[pick.category].border}`}
+                              >
+                                {CATEGORY_META[pick.category].label}
+                              </span>
+                            )}
                             {pick.legs.map((leg, j) => (
                               <span
                                 key={j}
@@ -927,6 +971,15 @@ export default function SimulatorPage() {
                           <span className="text-xs text-white/40">
                             {p.legs.length}L
                           </span>
+
+                          {/* Category badge */}
+                          {p.category && CATEGORY_META[p.category] && (
+                            <span
+                              className={`hidden sm:inline text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${CATEGORY_META[p.category].color} ${CATEGORY_META[p.category].bg}`}
+                            >
+                              {CATEGORY_META[p.category].label}
+                            </span>
+                          )}
 
                           {/* Odds */}
                           <span
@@ -1158,6 +1211,9 @@ function Nav({
           <Link href="/parlays" className="hover:text-white transition-colors duration-200">
             Parlays
           </Link>
+          <Link href="/props" className="hover:text-white transition-colors duration-200">
+            Props
+          </Link>
           <Link href="/odds" className="hover:text-white transition-colors duration-200">
             Odds
           </Link>
@@ -1192,6 +1248,9 @@ function Nav({
           <div className="px-6 py-4 flex flex-col gap-4">
             <Link href="/parlays" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
               Parlays
+            </Link>
+            <Link href="/props" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
+              Props
             </Link>
             <Link href="/odds" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
               Odds

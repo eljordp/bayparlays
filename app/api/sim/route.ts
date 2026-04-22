@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { user_id, legs, combined_odds, combined_decimal, stake, payout } = body;
+    const { user_id, legs, combined_odds, combined_decimal, stake, payout, category } = body;
 
     if (!user_id || !legs || !combined_odds || !combined_decimal || !stake || !payout) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -76,20 +76,38 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert sim parlay
-    const { data: parlay, error: insertErr } = await supabase
+    const normalizedCategory =
+      category === "ev" || category === "payout" || category === "confidence"
+        ? category
+        : null;
+
+    const baseRow = {
+      user_id,
+      legs,
+      combined_odds,
+      combined_decimal,
+      stake,
+      payout,
+      status: "pending",
+      profit: 0,
+    };
+
+    let { data: parlay, error: insertErr } = await supabase
       .from("sim_parlays")
-      .insert({
-        user_id,
-        legs,
-        combined_odds,
-        combined_decimal,
-        stake,
-        payout,
-        status: "pending",
-        profit: 0,
-      })
+      .insert({ ...baseRow, category: normalizedCategory })
       .select()
       .single();
+
+    // Fallback if migration for `category` column hasn't been applied yet
+    if (insertErr && /category/i.test(insertErr.message || "")) {
+      const retry = await supabase
+        .from("sim_parlays")
+        .insert(baseRow)
+        .select()
+        .single();
+      parlay = retry.data;
+      insertErr = retry.error;
+    }
 
     if (insertErr) {
       return NextResponse.json({ error: "Failed to place sim bet" }, { status: 500 });

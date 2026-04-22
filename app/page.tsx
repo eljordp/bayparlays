@@ -225,6 +225,12 @@ export default function Home() {
               Parlays
             </Link>
             <Link
+              href="/props"
+              className="hover:text-white transition-colors duration-200"
+            >
+              Props
+            </Link>
+            <Link
               href="/odds"
               className="hover:text-white transition-colors duration-200"
             >
@@ -275,6 +281,13 @@ export default function Home() {
                 className="text-sm text-white/50 hover:text-white transition-colors duration-200"
               >
                 Parlays
+              </Link>
+              <Link
+                href="/props"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
+              >
+                Props
               </Link>
               <Link
                 href="/odds"

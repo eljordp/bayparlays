@@ -199,6 +199,9 @@ export default function LiveScoreboard() {
             <Link href="/parlays" className="hover:text-white transition-colors duration-200">
               Parlays
             </Link>
+            <Link href="/props" className="hover:text-white transition-colors duration-200">
+              Props
+            </Link>
             <Link href="/odds" className="hover:text-white transition-colors duration-200">
               Odds
             </Link>
@@ -233,6 +236,7 @@ export default function LiveScoreboard() {
             <div className="px-6 py-4 flex flex-col gap-4">
               {[
                 { href: "/parlays", label: "Parlays" },
+                { href: "/props", label: "Props" },
                 { href: "/odds", label: "Odds" },
                 { href: "/builder", label: "Builder" },
                 { href: "/results", label: "Results" },

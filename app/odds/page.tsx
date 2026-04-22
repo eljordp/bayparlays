@@ -177,6 +177,9 @@ export default function OddsPage() {
             <Link href="/parlays" className="transition hover:text-white">
               Parlays
             </Link>
+            <Link href="/props" className="transition hover:text-white">
+              Props
+            </Link>
             <Link
               href="/odds"
               className="text-[#FF3B3B] font-medium"
@@ -215,6 +218,9 @@ export default function OddsPage() {
             </Link>
             <Link href="/parlays" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
               Parlays
+            </Link>
+            <Link href="/props" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
+              Props
             </Link>
             <Link href="/odds" className="text-[#FF3B3B] font-medium" onClick={() => setMobileNav(false)}>
               Odds

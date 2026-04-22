@@ -27,6 +27,7 @@ interface LeaderboardEntry {
 
 const NAV_LINKS = [
   { href: "/parlays", label: "Parlays" },
+  { href: "/props", label: "Props" },
   { href: "/odds", label: "Odds" },
   { href: "/builder", label: "Builder" },
   { href: "/results", label: "Results" },

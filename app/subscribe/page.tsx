@@ -157,6 +157,9 @@ function SubscribeContent() {
             <Link href="/parlays" className="hover:text-white transition-colors duration-200">
               Parlays
             </Link>
+            <Link href="/props" className="hover:text-white transition-colors duration-200">
+              Props
+            </Link>
             <Link href="/odds" className="hover:text-white transition-colors duration-200">
               Odds
             </Link>
@@ -188,6 +191,9 @@ function SubscribeContent() {
             <div className="px-6 py-4 flex flex-col gap-4">
               <Link href="/parlays" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
                 Parlays
+              </Link>
+              <Link href="/props" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
+                Props
               </Link>
               <Link href="/odds" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
                 Odds

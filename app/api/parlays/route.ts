@@ -97,6 +97,8 @@ interface ParlayLeg {
   teamRecord?: TeamRecordInfo;
 }
 
+type ParlayCategory = "ev" | "payout" | "confidence";
+
 interface Parlay {
   id: string;
   legs: ParlayLeg[];
@@ -108,6 +110,7 @@ interface Parlay {
   payout: number;
   timestamp: string;
   recommendedBook?: string;
+  category: ParlayCategory;
 }
 
 interface ParlayResponse {
@@ -606,6 +609,7 @@ function buildParlays(
       payout,
       timestamp: new Date().toISOString(),
       recommendedBook,
+      category: sortMode,
     };
 
     parlays.push(parlay);
@@ -646,7 +650,8 @@ async function fetchOddsForSport(sportKey: string): Promise<OddsGame[]> {
 function generateMockParlays(
   sports: string[],
   numLegs: number,
-  count: number
+  count: number,
+  sortMode: ParlayCategory = "ev"
 ): ParlayResponse {
   const mockGames: Record<
     string,
@@ -798,6 +803,7 @@ function generateMockParlays(
       confidence: Math.min(100, Math.round(avgEdge * 3)),
       payout,
       timestamp: new Date().toISOString(),
+      category: sortMode,
     });
   }
 
@@ -855,7 +861,7 @@ export async function GET(request: NextRequest) {
     // If no API key, return mock data
     if (!ODDS_API_KEY) {
       console.warn("ODDS_API_KEY not set — returning mock parlay data");
-      const mockData = generateMockParlays(sports, numLegs, count);
+      const mockData = generateMockParlays(sports, numLegs, count, sortMode);
       return NextResponse.json(mockData, {
         headers: {
           "X-Data-Source": "mock",
@@ -939,7 +945,7 @@ export async function GET(request: NextRequest) {
       console.warn(
         "No odds data returned from API — falling back to mock data"
       );
-      const mockData = generateMockParlays(sports, numLegs, count);
+      const mockData = generateMockParlays(sports, numLegs, count, sortMode);
       return NextResponse.json(mockData, {
         headers: {
           "X-Data-Source": "mock-fallback",

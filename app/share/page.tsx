@@ -107,6 +107,7 @@ export default function SharePage() {
               {[
                 { href: "/", label: "Home" },
                 { href: "/parlays", label: "AI Parlays" },
+                { href: "/props", label: "Props" },
                 { href: "/odds", label: "Odds" },
                 { href: "/builder", label: "Builder" },
                 { href: "/results", label: "Results" },
@@ -166,6 +167,7 @@ export default function SharePage() {
                 {[
                   { href: "/", label: "Home" },
                   { href: "/parlays", label: "AI Parlays" },
+                  { href: "/props", label: "Props" },
                   { href: "/odds", label: "Odds" },
                   { href: "/builder", label: "Builder" },
                   { href: "/results", label: "Results" },
