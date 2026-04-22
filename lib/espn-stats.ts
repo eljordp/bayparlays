@@ -55,7 +55,10 @@ function currentSeasonYear(): number {
 }
 
 async function fetchStatsPage(season: number, page: number): Promise<EspnStatsResponse | null> {
-  const url = `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/statistics/byathlete?season=${season}&sort=offensive.avgPoints:desc&limit=50&page=${page}`;
+  // seasontype=2 = regular season. Without this, ESPN defaults to the current
+  // season type — so during playoffs it returns postseason-only averages
+  // (GP=1 or 2 per player), which breaks the "gamesPlayed >= 10" filter.
+  const url = `https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/statistics/byathlete?season=${season}&seasontype=2&sort=offensive.avgPoints:desc&limit=50&page=${page}`;
   try {
     const res = await fetch(url, { next: { revalidate: 21600 } });
     if (!res.ok) return null;
