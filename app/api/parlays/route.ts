@@ -480,29 +480,62 @@ function extractLegsFromGame(
         const opponent = isHome ? game.away_team : game.home_team;
         const teamRating = eloRatings.get(outcomeInfo.name);
         const oppRating = eloRatings.get(opponent);
+        const rec = teamRecords.get(outcomeInfo.name);
+        const oppRec = teamRecords.get(opponent);
+
+        // Blend three independent signals:
+        //  - Elo (fundamental strength, limited data)
+        //  - Season winRate differential (direct, high-sample)
+        //  - De-vigged book prob (market consensus)
+        //
+        // Elo in our setup is trained on ~2 weeks of scores, so it's thin.
+        // Season winRate is the highest-sample signal we have (full season).
+        // Book is what we're trying to beat. Weighting: 25/35/40.
+        const probs: { p: number; w: number }[] = [];
+        probs.push({ p: ourProb, w: 0.40 }); // de-vigged book baseline
+
         if (teamRating && oppRating) {
           const homeBonus = isHome ? tune.homeBonus : -tune.homeBonus;
-          // Playoff-aware Elo: dampens the Elo differential in postseason
-          // periods (favorites are less favored when it matters).
           const eloProb = playoffDampedEloProb(
             teamRating.rating,
             oppRating.rating,
             homeBonus,
             inPlayoffs,
           );
-          ourProb = eloProb * tune.eloWeight + ourProb * (1 - tune.eloWeight);
+          probs.push({ p: eloProb, w: 0.25 });
+        }
 
-          const rec = teamRecords.get(outcomeInfo.name);
-          if (rec) {
-            const last5Wins = rec.lastFive.filter((x) => x === "W").length;
-            const last5Rate =
-              rec.lastFive.length > 0 ? last5Wins / rec.lastFive.length : 0.5;
-            const formRate = last5Rate * 0.65 + rec.winRate * 0.35;
-            ourProb += (formRate - 0.5) * 0.1;
+        if (rec && oppRec) {
+          // winRate differential → win probability, with home adjustment.
+          // Pythagorean-style: teamRate / (teamRate + oppRate) gives probability
+          // this team beats this opponent assuming equal home/away.
+          const teamRate = Math.max(0.1, rec.winRate);
+          const oppRate = Math.max(0.1, oppRec.winRate);
+          let recordProb = teamRate / (teamRate + oppRate);
+          // Apply ~3% home-court bump.
+          recordProb = Math.min(
+            0.95,
+            Math.max(0.05, recordProb + (isHome ? 0.03 : -0.03)),
+          );
+          probs.push({ p: recordProb, w: 0.35 });
+        }
 
-            if (rec.streak.type === "W" && rec.streak.count >= 4) ourProb += 0.02;
-            if (rec.streak.type === "L" && rec.streak.count >= 4) ourProb -= 0.02;
-          }
+        // Weighted blend with re-normalized weights (handles missing signals)
+        const totalW = probs.reduce((s, x) => s + x.w, 0);
+        if (totalW > 0) {
+          ourProb = probs.reduce((s, x) => s + x.p * x.w, 0) / totalW;
+        }
+
+        // Form + streak nudges on top.
+        if (rec) {
+          const last5Wins = rec.lastFive.filter((x) => x === "W").length;
+          const last5Rate =
+            rec.lastFive.length > 0 ? last5Wins / rec.lastFive.length : 0.5;
+          const formRate = last5Rate * 0.65 + rec.winRate * 0.35;
+          ourProb += (formRate - 0.5) * 0.1;
+
+          if (rec.streak.type === "W" && rec.streak.count >= 4) ourProb += 0.02;
+          if (rec.streak.type === "L" && rec.streak.count >= 4) ourProb -= 0.02;
         }
       } else if (marketKey === "spreads" && eloRatings && outcomeInfo.point !== undefined) {
         // Spreads: use Elo differential + sport-specific Elo-per-point to
