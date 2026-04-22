@@ -988,14 +988,10 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
   const hasReasons = !!leg.reasons && leg.reasons.length > 0;
   const edgePts =
     typeof leg.trueEdge === "number" ? leg.trueEdge * 100 : null;
-  const edgeColor =
-    edgePts === null
-      ? "rgba(255,255,255,0.3)"
-      : edgePts >= 2
-        ? "#22c55e"
-        : edgePts <= -2
-          ? "#ef4444"
-          : "rgba(255,255,255,0.4)";
+  // Only surface the edge badge when the AI is finding VALUE (positive edge).
+  // Negative-edge picks get no badge here — the warning lives in the Why
+  // panel instead, so we're not highlighting "bad bet" like it's a feature.
+  const showEdgeBadge = edgePts !== null && edgePts >= 2;
 
   return (
     <div>
@@ -1026,16 +1022,15 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
             <span className="text-[15px] sm:text-base font-semibold text-white truncate">
               {leg.pick}
             </span>
-            {edgePts !== null && Math.abs(edgePts) >= 2 && (
+            {showEdgeBadge && (
               <span
                 className="text-[10px] font-bold tabular-nums flex-shrink-0"
                 style={{
-                  color: edgeColor,
+                  color: "#22c55e",
                   fontFamily: "ui-monospace, monospace",
                 }}
               >
-                {edgePts > 0 ? "+" : ""}
-                {edgePts.toFixed(1)} edge
+                +{edgePts!.toFixed(1)} edge
               </span>
             )}
           </div>

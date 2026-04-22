@@ -648,18 +648,22 @@ function extractLegsFromGame(
 function buildReasons(leg: ScoredLeg): string[] {
   const reasons: string[] = [];
 
-  // 1. AI vs book — the core signal
+  // 1. AI vs book — the core signal. Frame positive edge as a value signal,
+  // negative edge as a warning (the AI thinks the book has it overpriced).
   const aiPct = (leg.ourProb * 100).toFixed(1);
   const bookPct = (leg.impliedProb * 100).toFixed(1);
-  const edgePts = (leg.trueEdge * 100);
-  if (Math.abs(edgePts) >= 2) {
-    const direction = edgePts > 0 ? "higher" : "lower";
+  const edgePts = leg.trueEdge * 100;
+  if (edgePts >= 2) {
     reasons.push(
-      `AI model estimates ${aiPct}% chance to hit — ${Math.abs(edgePts).toFixed(1)} pts ${direction} than the book's ${bookPct}%.`,
+      `AI sees value: model estimates ${aiPct}% chance to hit vs book's ${bookPct}% — ${edgePts.toFixed(1)} pt edge in our favor.`,
+    );
+  } else if (edgePts <= -2) {
+    reasons.push(
+      `⚠ AI flags this as overpriced: model estimates ${aiPct}% vs book's ${bookPct}%. Included only because stronger picks weren't available today.`,
     );
   } else if (leg.scored) {
     reasons.push(
-      `AI estimate (${aiPct}%) is close to book's price (${bookPct}%). Minimal disagreement — pick stands on other factors.`,
+      `AI estimate (${aiPct}%) tracks close to book's price (${bookPct}%). Pick rests on other factors — no visible mispricing.`,
     );
   } else {
     reasons.push(
@@ -731,21 +735,44 @@ function buildParlays(
   // but a 1-book outlier is probably noise or stale.
   const qualityLegs = allLegs.filter((leg) => leg.bookCount >= cfg.minBooks);
 
+  // Prefer legs with positive edge. A negative-edge leg means the AI thinks
+  // the book has this pick OVERPRICED — recommending it as a "lock" would be
+  // product malpractice. We still allow near-neutral legs (down to -1pt) so
+  // the slate isn't empty when the market is tightly priced, but true
+  // anti-picks (AI clearly disagrees) get cut.
+  const EDGE_FLOOR = -0.01;
+  const positiveEdgeLegs = qualityLegs.filter(
+    (leg) => leg.trueEdge >= EDGE_FLOOR,
+  );
+
+  // Fallback — if nothing has positive edge today, let the full pool
+  // through. Downstream UI labels these as "no edge detected" so we don't
+  // pretend to have one.
+  const basePool =
+    positiveEdgeLegs.length >= cfg.poolSize / 4
+      ? positiveEdgeLegs
+      : qualityLegs;
+
   // Sort by ranking signal for this mode, then cap to tier's pool size.
-  // Everything past the cutoff is ignored — reduces noise from low-priority
-  // picks being mixed into greedy construction.
   if (sortMode === "confidence") {
-    sorted = [...qualityLegs]
+    // Most Confident = highest AI probability AMONG edge-positive picks.
+    // Tiebreak on trueEdge so bigger market mispricings rank above
+    // ties on raw probability.
+    sorted = [...basePool]
       .filter((leg) => {
         if (leg.market === "moneyline" && leg.odds > 0) return false;
         if (leg.teamRecord && leg.teamRecord.winRate < 0.5) return false;
         return true;
       })
-      .sort((a, b) => b.ourProb - a.ourProb)
+      .sort((a, b) => {
+        const pDiff = b.ourProb - a.ourProb;
+        if (Math.abs(pDiff) > 0.01) return pDiff;
+        return b.trueEdge - a.trueEdge;
+      })
       .slice(0, cfg.poolSize);
     viable = sorted;
   } else if (sortMode === "payout") {
-    sorted = [...qualityLegs]
+    sorted = [...basePool]
       .sort((a, b) => {
         const decDiff = b.decimalOdds - a.decimalOdds;
         if (Math.abs(decDiff) > 0.1) return decDiff;
@@ -755,7 +782,7 @@ function buildParlays(
     viable = sorted;
   } else {
     // BEST EV: sort purely by trueEdge — ourProb minus book-implied.
-    sorted = [...qualityLegs]
+    sorted = [...basePool]
       .sort((a, b) => b.trueEdge - a.trueEdge)
       .slice(0, cfg.poolSize);
     viable = sorted;
