@@ -28,6 +28,7 @@ interface TeamRecordInfo {
 interface Leg {
   sport: string;
   game: string;
+  commenceTime?: string;
   pick: string;
   market: string;
   odds: number;
@@ -588,6 +589,7 @@ export default function ParlaysPage() {
                         index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
+                        pendingSimSigs={pendingSimSigs}
                         isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -648,6 +650,7 @@ export default function ParlaysPage() {
                         index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
+                        pendingSimSigs={pendingSimSigs}
                         isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -761,7 +764,14 @@ function ParlayCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: user.id,
-          legs: parlay.legs.map(l => ({ sport: l.sport, pick: l.pick, game: l.game, odds: l.odds, book: l.book })),
+          legs: parlay.legs.map(l => ({
+            sport: l.sport,
+            pick: l.pick,
+            game: l.game,
+            odds: l.odds,
+            book: l.book,
+            commenceTime: l.commenceTime,
+          })),
           combined_odds: parlay.combinedOdds,
           combined_decimal: parlay.combinedDecimal,
           stake: 10,
@@ -771,6 +781,10 @@ function ParlayCard({
       });
       const data = await res.json();
       if (res.ok) {
+        // Lock the button immediately after a successful placement so a
+        // second click can't fire the same bet while the success message
+        // is still showing. Clears on page reload (pendingSimSigs refetch).
+        setIsDuplicate(true);
         setSimResult("Placed $10 sim bet");
       } else if (res.status === 409) {
         setIsDuplicate(true);
@@ -782,6 +796,8 @@ function ParlayCard({
       setSimResult("Error");
     }
     setSimPlacing(false);
+    // Clear transient result messages, but only when the button isn't
+    // locked as a duplicate. Locked state persists until refresh.
     if (!isDuplicate) {
       setTimeout(() => setSimResult(null), 3000);
     }

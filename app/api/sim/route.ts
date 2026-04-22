@@ -17,6 +17,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Minimum stake is $1" }, { status: 400 });
     }
 
+    // Stale-game check — reject if ANY leg's game has already started.
+    // A user with an old page open might click a parlay after its games
+    // have tipped off. Refuse rather than book a bet on finished action.
+    const now = Date.now();
+    const typedLegs = legs as Array<{ commenceTime?: string }>;
+    const startedLegs = typedLegs.filter(
+      (l) => l.commenceTime && new Date(l.commenceTime).getTime() <= now,
+    );
+    if (startedLegs.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "One or more games in this parlay have already started. Refresh for today's active slate.",
+        },
+        { status: 400 },
+      );
+    }
+
     // Duplicate check — don't place same parlay twice
     const { data: pendingBets } = await supabase
       .from("sim_parlays")

@@ -81,6 +81,7 @@ interface ScoredLeg {
   sportKey: string;
   gameId: string;
   game: string;
+  commenceTime: string;  // ISO string — when this game is scheduled to start
   pick: string;
   market: string;
   odds: number;
@@ -100,6 +101,7 @@ interface ScoredLeg {
 interface ParlayLeg {
   sport: string;
   game: string;
+  commenceTime?: string;
   pick: string;
   market: string;
   odds: number;
@@ -310,6 +312,14 @@ function extractLegsFromGame(
   eloRatings?: Map<string, EloRating>,
   recentGames?: NormalizedGame[]
 ): ScoredLeg[] {
+  // Skip games that have already started. Sportsbooks sometimes keep live
+  // odds in the /odds feed after tip-off — we don't want those in new parlays
+  // because users can't realistically bet them anymore.
+  const now = Date.now();
+  if (new Date(game.commence_time).getTime() <= now) {
+    return [];
+  }
+
   const legs: ScoredLeg[] = [];
   const gameLabel = `${game.away_team} vs ${game.home_team}`;
   const markets = ["h2h", "spreads", "totals"];
@@ -620,6 +630,7 @@ function extractLegsFromGame(
         sportKey: game.sport_key,
         gameId: game.id,
         game: gameLabel,
+        commenceTime: game.commence_time,
         pick,
         market: marketLabel,
         odds: best.bestOdds,
@@ -893,6 +904,7 @@ function buildParlays(
       legs: selected.map((l) => ({
         sport: l.sport,
         game: l.game,
+        commenceTime: l.commenceTime,
         pick: l.pick,
         market: l.market,
         odds: l.odds,

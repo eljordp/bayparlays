@@ -37,6 +37,44 @@ interface SimLeg {
   game: string;
   odds: number;
   book: string;
+  commenceTime?: string;
+}
+
+// Given a parlay's legs, figure out its lifecycle status based on commence
+// times. "Upcoming" = all games still in the future. "Live" = at least one
+// game started within the last ~4 hours. "Awaiting result" = all games are
+// past their start+3h window, we're just waiting on the resolver. Returns
+// null if the parlay has no commenceTime data (older bets before we stored it).
+type GameStatus =
+  | { kind: "upcoming"; startsIn: string }
+  | { kind: "live"; label: string }
+  | { kind: "awaiting"; label: string };
+
+function getGameStatus(legs: SimLeg[]): GameStatus | null {
+  const times = legs
+    .map((l) => (l.commenceTime ? new Date(l.commenceTime).getTime() : null))
+    .filter((t): t is number => typeof t === "number");
+  if (times.length === 0) return null;
+
+  const now = Date.now();
+  const earliest = Math.min(...times);
+  const latest = Math.max(...times);
+  // Assume 3 hours is enough to finish a game (NBA/NHL/MLB all typically <3h).
+  const GAME_DURATION_MS = 3 * 60 * 60 * 1000;
+  const latestEnd = latest + GAME_DURATION_MS;
+
+  if (earliest > now) {
+    const diff = earliest - now;
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+    const startsIn =
+      hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    return { kind: "upcoming", startsIn };
+  }
+  if (now < latestEnd) {
+    return { kind: "live", label: "Live" };
+  }
+  return { kind: "awaiting", label: "Awaiting result" };
 }
 
 type PickCategory = "ev" | "payout" | "confidence";
@@ -1069,6 +1107,31 @@ export default function SimulatorPage() {
                         </div>
 
                         <div className="flex items-center gap-4">
+                          {/* Game lifecycle status (pending parlays only) */}
+                          {p.status === "pending" && (() => {
+                            const gs = getGameStatus(p.legs);
+                            if (!gs) return null;
+                            const colorClass =
+                              gs.kind === "live"
+                                ? "bg-[#FF3B3B]/15 text-[#FF3B3B] animate-pulse"
+                                : gs.kind === "awaiting"
+                                ? "bg-[#eab308]/15 text-[#eab308]"
+                                : "bg-white/[0.04] text-white/50";
+                            const text =
+                              gs.kind === "upcoming"
+                                ? `Starts in ${gs.startsIn}`
+                                : gs.kind === "live"
+                                ? "Live"
+                                : "Awaiting result";
+                            return (
+                              <span
+                                className={`hidden md:inline text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${colorClass}`}
+                              >
+                                {text}
+                              </span>
+                            );
+                          })()}
+
                           {/* Status badge */}
                           <span
                             className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${
