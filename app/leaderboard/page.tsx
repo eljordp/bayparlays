@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { AppNav } from "@/app/components/AppNav";
+import { ResultsTabs } from "@/app/components/ResultsTabs";
 import { useAuth } from "@/app/components/AuthProvider";
 import { Lock, Trophy, Crown, Medal } from "lucide-react";
 
@@ -117,10 +118,13 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
       <AppNav />
+      <div className="pt-20">
+        <ResultsTabs />
+      </div>
 
       {/* ─── VIP Gate ─── */}
       {!isVipOrAdmin ? (
-        <div className="pt-28 px-4 md:pt-36 md:px-6">
+        <div className="pt-10 px-4 md:pt-16 md:px-6">
           <div className="max-w-[1400px] mx-auto flex flex-col items-center justify-center min-h-[60vh]">
             <motion.div
               className="text-center"
@@ -156,7 +160,7 @@ export default function LeaderboardPage() {
       ) : (
         <>
           {/* ─── Header ─── */}
-          <header className="pt-28 pb-8 px-4 md:pt-36 md:pb-14 md:px-6">
+          <header className="pt-10 pb-8 px-4 md:pt-14 md:pb-14 md:px-6">
             <div className="max-w-[1400px] mx-auto">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
                 <h1
