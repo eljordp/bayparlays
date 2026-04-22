@@ -13,7 +13,6 @@ import {
   BarChart3,
   Trophy,
   DollarSign,
-  Percent,
   Hash,
   Flame,
   Zap,
@@ -120,21 +119,43 @@ export default function ResultsPage() {
   const [error, setError] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedParlay, setExpandedParlay] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  async function fetchResults() {
+    try {
+      const res = await fetch("/api/track/results", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to fetch results");
+      const json: ResultsData = await res.json();
+      setData(json);
+      setLastUpdated(new Date());
+      setError(null);
+    } catch {
+      setError("Unable to load track record.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function refreshResults() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      // Trigger server-side score resolution first, then re-fetch stats.
+      await fetch("/api/track/check-scores", { cache: "no-store" }).catch(() => null);
+      await fetchResults();
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchResults() {
-      try {
-        const res = await fetch("/api/track/results");
-        if (!res.ok) throw new Error("Failed to fetch results");
-        const json: ResultsData = await res.json();
-        setData(json);
-      } catch {
-        setError("Unable to load track record.");
-      } finally {
-        setLoading(false);
-      }
-    }
+    // First paint: show whatever's in the DB immediately, then
+    // kick off a resolver run so stale `pending` parlays get flipped.
     fetchResults();
+    fetch("/api/track/check-scores", { cache: "no-store" })
+      .then(() => fetchResults())
+      .catch(() => null);
   }, []);
 
   const stats = data?.stats;
@@ -241,9 +262,25 @@ export default function ResultsPage() {
             >
               Every AI parlay we generate is tracked. No cherry-picking. No hiding losses.
             </p>
-            <p className="mt-3 text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.25)" }}>
-              Updated in real-time
-            </p>
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              <button
+                onClick={refreshResults}
+                disabled={refreshing}
+                className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50"
+                style={{
+                  background: refreshing ? "rgba(255,59,59,0.08)" : "rgba(255,59,59,0.12)",
+                  color: "#FF3B3B",
+                  border: "1px solid rgba(255,59,59,0.25)",
+                }}
+              >
+                {refreshing ? "Refreshing…" : "Refresh Now"}
+              </button>
+              <span className="text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.25)" }}>
+                {lastUpdated
+                  ? `Updated ${lastUpdated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                  : "Updated in real-time"}
+              </span>
+            </div>
           </motion.div>
         </div>
       </header>
@@ -302,27 +339,31 @@ export default function ResultsPage() {
                   transition={{ duration: 0.5, delay: 0.1 }}
                 >
                   <StatCard
+                    icon={<Flame size={16} />}
+                    label="Current Streak"
+                    value={`${stats.currentStreak.type}${stats.currentStreak.count}`}
+                    valueColor={stats.currentStreak.type === "W" ? "#22c55e" : "#ef4444"}
+                    sublabel={stats.currentStreak.type === "W" ? "Winning" : "Losing"}
+                    delay={0}
+                  />
+                  <StatCard
                     icon={<Trophy size={16} />}
                     label="Win Rate"
                     value={`${stats.winRate.toFixed(1)}%`}
                     valueColor={stats.winRate >= 50 ? "#22c55e" : "#ef4444"}
                     sublabel={`${stats.won}W - ${stats.lost}L`}
-                    delay={0}
-                  />
-                  <StatCard
-                    icon={<DollarSign size={16} />}
-                    label="Total Profit"
-                    value={formatMoney(stats.totalProfit)}
-                    valueColor={stats.totalProfit >= 0 ? "#22c55e" : "#ef4444"}
-                    sublabel="All time"
                     delay={0.05}
                   />
                   <StatCard
-                    icon={<Percent size={16} />}
-                    label="ROI"
-                    value={`${stats.roi >= 0 ? "+" : ""}${stats.roi.toFixed(1)}%`}
-                    valueColor={stats.roi >= 0 ? "#22c55e" : "#ef4444"}
-                    sublabel="Return on investment"
+                    icon={<Clock size={16} />}
+                    label="Last 7 Days"
+                    value={`${stats.last7Days.won}-${stats.last7Days.lost}`}
+                    valueColor={
+                      stats.last7Days.won >= stats.last7Days.lost
+                        ? "#22c55e"
+                        : "#ef4444"
+                    }
+                    sublabel={formatMoney(stats.last7Days.profit)}
                     delay={0.1}
                   />
                   <StatCard
@@ -334,11 +375,11 @@ export default function ResultsPage() {
                     delay={0.15}
                   />
                   <StatCard
-                    icon={<Flame size={16} />}
-                    label="Current Streak"
-                    value={`${stats.currentStreak.type}${stats.currentStreak.count}`}
-                    valueColor={stats.currentStreak.type === "W" ? "#22c55e" : "#ef4444"}
-                    sublabel={stats.currentStreak.type === "W" ? "Winning" : "Losing"}
+                    icon={<DollarSign size={16} />}
+                    label="Total Profit"
+                    value={formatMoney(stats.totalProfit)}
+                    valueColor={stats.totalProfit >= 0 ? "#22c55e" : "#ef4444"}
+                    sublabel={`${stats.roi >= 0 ? "+" : ""}${stats.roi.toFixed(1)}% ROI`}
                     delay={0.2}
                   />
                   <StatCard

@@ -267,8 +267,28 @@ export default function SimulatorPage() {
     if (isVip && user) {
       loadData();
       loadPicks();
+      // Kick the sim resolver on page load so finished games flip without
+      // waiting for the daily cron. Fire-and-forget, then reload.
+      fetch("/api/sim/resolve", { cache: "no-store" })
+        .then(() => loadData())
+        .catch(() => null);
     }
   }, [isVip, user, loadData, loadPicks]);
+
+  // Manual refresh — trigger resolver + refetch
+  const [refreshing, setRefreshing] = useState(false);
+  async function refreshSim() {
+    if (refreshing || !user) return;
+    setRefreshing(true);
+    try {
+      await fetch("/api/sim/resolve", { cache: "no-store" }).catch(() => null);
+      await loadData();
+      setConfirmation("Results refreshed");
+      setTimeout(() => setConfirmation(null), 2000);
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   // Place sim bet
   async function placeBet(pick: PickParlay) {
@@ -918,14 +938,25 @@ export default function SimulatorPage() {
               whileInView="visible"
               viewport={{ once: true, margin: "-60px" }}
             >
-              <motion.h2
+              <motion.div
                 variants={fadeUp}
                 custom={0}
-                className="text-2xl md:text-3xl tracking-tight mb-8"
-                style={{ fontFamily: "'DM Serif Display', serif" }}
+                className="flex items-center justify-between mb-8 gap-4"
               >
-                History
-              </motion.h2>
+                <h2
+                  className="text-2xl md:text-3xl tracking-tight"
+                  style={{ fontFamily: "'DM Serif Display', serif" }}
+                >
+                  History
+                </h2>
+                <button
+                  onClick={refreshSim}
+                  disabled={refreshing}
+                  className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50 bg-[#FF3B3B]/10 text-[#FF3B3B] border border-[#FF3B3B]/25 hover:bg-[#FF3B3B]/15"
+                >
+                  {refreshing ? "Refreshing…" : "Refresh Results"}
+                </button>
+              </motion.div>
 
               {parlays.length === 0 ? (
                 <motion.div
