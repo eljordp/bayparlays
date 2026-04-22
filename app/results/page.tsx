@@ -215,7 +215,7 @@ export default function ResultsPage() {
               className="text-lg md:text-xl max-w-2xl"
               style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}
             >
-              Only parlays the AI actually stands behind (confidence 60+) are tracked here. No cherry-picking. No hiding losses.
+              Only parlays with AI-verified positive expected value (5%+ EV) are tracked here. No cherry-picking. No hiding losses.
             </p>
             {stats?.smallSample && (
               <div
