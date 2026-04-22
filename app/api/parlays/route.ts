@@ -483,16 +483,12 @@ function extractLegsFromGame(
         const rec = teamRecords.get(outcomeInfo.name);
         const oppRec = teamRecords.get(opponent);
 
-        // Blend three independent signals:
-        //  - Elo (fundamental strength, limited data)
-        //  - Season winRate differential (direct, high-sample)
-        //  - De-vigged book prob (market consensus)
-        //
-        // Elo in our setup is trained on ~2 weeks of scores, so it's thin.
-        // Season winRate is the highest-sample signal we have (full season).
-        // Book is what we're trying to beat. Weighting: 25/35/40.
-        const probs: { p: number; w: number }[] = [];
-        probs.push({ p: ourProb, w: 0.40 }); // de-vigged book baseline
+        // Independent model estimate from signals the book doesn't directly
+        // price: Elo differential + season winRate matchup. If both are
+        // available we blend them; if only one, use that. We do NOT seed
+        // from book implied here — that would bias every estimate toward
+        // the book and leave us never finding real disagreement.
+        const modelEstimates: { p: number; w: number }[] = [];
 
         if (teamRating && oppRating) {
           const homeBonus = isHome ? tune.homeBonus : -tune.homeBonus;
@@ -502,28 +498,30 @@ function extractLegsFromGame(
             homeBonus,
             inPlayoffs,
           );
-          probs.push({ p: eloProb, w: 0.25 });
+          modelEstimates.push({ p: eloProb, w: 0.4 });
         }
 
         if (rec && oppRec) {
-          // winRate differential → win probability, with home adjustment.
-          // Pythagorean-style: teamRate / (teamRate + oppRate) gives probability
-          // this team beats this opponent assuming equal home/away.
           const teamRate = Math.max(0.1, rec.winRate);
           const oppRate = Math.max(0.1, oppRec.winRate);
+          // Pythagorean-style matchup probability from winRates.
           let recordProb = teamRate / (teamRate + oppRate);
-          // Apply ~3% home-court bump.
           recordProb = Math.min(
             0.95,
             Math.max(0.05, recordProb + (isHome ? 0.03 : -0.03)),
           );
-          probs.push({ p: recordProb, w: 0.35 });
+          modelEstimates.push({ p: recordProb, w: 0.6 });
         }
 
-        // Weighted blend with re-normalized weights (handles missing signals)
-        const totalW = probs.reduce((s, x) => s + x.w, 0);
-        if (totalW > 0) {
-          ourProb = probs.reduce((s, x) => s + x.p * x.w, 0) / totalW;
+        if (modelEstimates.length > 0) {
+          const totalW = modelEstimates.reduce((s, x) => s + x.w, 0);
+          const modelProb =
+            modelEstimates.reduce((s, x) => s + x.p * x.w, 0) / totalW;
+
+          // Final ourProb = 70% independent model + 30% book prior.
+          // The book prior regularizes us against extreme swings from thin
+          // Elo data while still letting real disagreements drive edge.
+          ourProb = modelProb * 0.7 + ourProb * 0.3;
         }
 
         // Form + streak nudges on top.
