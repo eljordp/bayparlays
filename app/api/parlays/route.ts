@@ -104,9 +104,14 @@ interface ParlayLeg {
   market: string;
   odds: number;
   book: string;
+  bookCount?: number;
   impliedProb: number;
+  ourProb?: number;        // AI's true-probability estimate
+  trueEdge?: number;       // ourProb - impliedProb
   edgeScore: number;
+  scored?: boolean;        // true if we had real model signal for this leg
   teamRecord?: TeamRecordInfo;
+  reasons?: string[];      // plain-English bullets explaining why we took it
 }
 
 type ParlayCategory = "ev" | "payout" | "confidence";
@@ -636,6 +641,63 @@ function extractLegsFromGame(
   return legs;
 }
 
+// ─── Reasons Builder ─────────────────────────────────────────────────────────
+// Translates a ScoredLeg's internal signals into 2-4 plain-English bullets
+// a non-analytics user can read and decide from.
+
+function buildReasons(leg: ScoredLeg): string[] {
+  const reasons: string[] = [];
+
+  // 1. AI vs book — the core signal
+  const aiPct = (leg.ourProb * 100).toFixed(1);
+  const bookPct = (leg.impliedProb * 100).toFixed(1);
+  const edgePts = (leg.trueEdge * 100);
+  if (Math.abs(edgePts) >= 2) {
+    const direction = edgePts > 0 ? "higher" : "lower";
+    reasons.push(
+      `AI model estimates ${aiPct}% chance to hit — ${Math.abs(edgePts).toFixed(1)} pts ${direction} than the book's ${bookPct}%.`,
+    );
+  } else if (leg.scored) {
+    reasons.push(
+      `AI estimate (${aiPct}%) is close to book's price (${bookPct}%). Minimal disagreement — pick stands on other factors.`,
+    );
+  } else {
+    reasons.push(
+      `AI couldn't independently estimate this leg (thin data). Book consensus from ${leg.bookCount} sportsbooks priced it at ${bookPct}%.`,
+    );
+  }
+
+  // 2. Team form (only for moneyline/spread where team matters)
+  if (leg.teamRecord && leg.market !== "total") {
+    const rec = leg.teamRecord;
+    const record = `${rec.wins}-${rec.losses}`;
+    const streakLabel =
+      rec.streak.count >= 2
+        ? ` · ${rec.streak.type}${rec.streak.count} streak`
+        : "";
+    reasons.push(
+      `Team record: ${record} (${Math.round(rec.winRate * 100)}% win rate)${streakLabel}.`,
+    );
+
+    if (rec.lastFive && rec.lastFive.length > 0) {
+      const last5 = rec.lastFive.join("");
+      const last5Wins = rec.lastFive.filter((x) => x === "W").length;
+      reasons.push(
+        `Last 5 games: ${last5} (${last5Wins}/${rec.lastFive.length} wins).`,
+      );
+    }
+  }
+
+  // 3. Line-shopping / market consensus
+  if (leg.bookCount && leg.bookCount >= 4) {
+    reasons.push(
+      `Best price across ${leg.bookCount} sportsbooks at ${leg.book} — ${leg.odds > 0 ? "+" : ""}${leg.odds}.`,
+    );
+  }
+
+  return reasons;
+}
+
 // ─── Parlay Builder ──────────────────────────────────────────────────────────
 
 // Pool size is the same across tiers — analyzing more legs is basically
@@ -808,8 +870,13 @@ function buildParlays(
         market: l.market,
         odds: l.odds,
         book: l.book,
+        bookCount: l.bookCount,
         impliedProb: l.impliedProb,
+        ourProb: Math.round(l.ourProb * 10000) / 10000,
+        trueEdge: Math.round(l.trueEdge * 10000) / 10000,
         edgeScore: l.edgeScore,
+        scored: l.scored,
+        reasons: buildReasons(l),
         ...(l.teamRecord ? { teamRecord: l.teamRecord } : {}),
       })),
       combinedOdds: formatAmericanOdds(combinedAmerican),

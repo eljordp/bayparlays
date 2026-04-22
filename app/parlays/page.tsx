@@ -17,6 +17,14 @@ import {
 
 /* ─── Types ─── */
 
+interface TeamRecordInfo {
+  wins: number;
+  losses: number;
+  winRate: number;
+  streak: { type: "W" | "L"; count: number };
+  lastFive: ("W" | "L")[];
+}
+
 interface Leg {
   sport: string;
   game: string;
@@ -24,8 +32,14 @@ interface Leg {
   market: string;
   odds: number;
   book: string;
+  bookCount?: number;
   impliedProb: number;
+  ourProb?: number;
+  trueEdge?: number;
   edgeScore: number;
+  scored?: boolean;
+  teamRecord?: TeamRecordInfo;
+  reasons?: string[];
 }
 
 interface Parlay {
@@ -787,58 +801,10 @@ function ParlayCard({
         </div>
       </div>
 
-      {/* Legs — one clean row each */}
+      {/* Legs — one clean row each, with expandable "Why" reasoning */}
       <div className="px-5 md:px-6 py-3">
         {parlay.legs.map((leg, i) => (
-          <div key={i}>
-            {i > 0 && (
-              <div
-                className="mx-0"
-                style={{ height: 1, background: "rgba(255,255,255,0.06)" }}
-              />
-            )}
-            <div className="flex items-center gap-3 py-3">
-              {/* Sport badge — always visible */}
-              <div
-                className="flex items-center justify-center w-11 sm:w-12 h-6 rounded text-[11px] sm:text-xs font-bold uppercase tracking-wide flex-shrink-0"
-                style={{
-                  background: `${SPORT_COLORS[leg.sport] || "#333"}25`,
-                  color: SPORT_COLORS[leg.sport] || "#888",
-                }}
-              >
-                {leg.sport}
-              </div>
-
-              {/* Pick — the star of the row */}
-              <div className="flex-1 min-w-0">
-                <span className="text-[15px] sm:text-base font-semibold text-white truncate block">
-                  {leg.pick}
-                </span>
-                <span
-                  className="text-xs truncate block mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
-                  {leg.game}
-                </span>
-              </div>
-
-              {/* Odds + book — right aligned */}
-              <div className="text-right flex-shrink-0">
-                <div
-                  className="text-[15px] sm:text-base font-bold tabular-nums"
-                  style={{ color: "#FF3B3B", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
-                >
-                  {formatOdds(leg.odds)}
-                </div>
-                <div
-                  className="text-[11px] mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.3)" }}
-                >
-                  {leg.book}
-                </div>
-              </div>
-            </div>
-          </div>
+          <LegRow key={i} leg={leg} showDivider={i > 0} />
         ))}
       </div>
 
@@ -1012,6 +978,148 @@ function ParlayCard({
         )}
       </div>
     </motion.div>
+  );
+}
+
+/* ─── Leg Row with expandable "Why" reasoning ─── */
+
+function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
+  const [open, setOpen] = useState(false);
+  const hasReasons = !!leg.reasons && leg.reasons.length > 0;
+  const edgePts =
+    typeof leg.trueEdge === "number" ? leg.trueEdge * 100 : null;
+  const edgeColor =
+    edgePts === null
+      ? "rgba(255,255,255,0.3)"
+      : edgePts >= 2
+        ? "#22c55e"
+        : edgePts <= -2
+          ? "#ef4444"
+          : "rgba(255,255,255,0.4)";
+
+  return (
+    <div>
+      {showDivider && (
+        <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+      )}
+      <button
+        onClick={() => setOpen(!open)}
+        disabled={!hasReasons}
+        className="w-full flex items-center gap-3 py-3 text-left transition-colors"
+        style={{
+          cursor: hasReasons ? "pointer" : "default",
+          opacity: 1,
+        }}
+      >
+        <div
+          className="flex items-center justify-center w-11 sm:w-12 h-6 rounded text-[11px] sm:text-xs font-bold uppercase tracking-wide flex-shrink-0"
+          style={{
+            background: `${SPORT_COLORS[leg.sport] || "#333"}25`,
+            color: SPORT_COLORS[leg.sport] || "#888",
+          }}
+        >
+          {leg.sport}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[15px] sm:text-base font-semibold text-white truncate">
+              {leg.pick}
+            </span>
+            {edgePts !== null && Math.abs(edgePts) >= 2 && (
+              <span
+                className="text-[10px] font-bold tabular-nums flex-shrink-0"
+                style={{
+                  color: edgeColor,
+                  fontFamily: "ui-monospace, monospace",
+                }}
+              >
+                {edgePts > 0 ? "+" : ""}
+                {edgePts.toFixed(1)} edge
+              </span>
+            )}
+          </div>
+          <span
+            className="text-xs truncate block mt-0.5"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
+            {leg.game}
+          </span>
+        </div>
+
+        <div className="text-right flex-shrink-0">
+          <div
+            className="text-[15px] sm:text-base font-bold tabular-nums"
+            style={{
+              color: "#FF3B3B",
+              fontFamily: "ui-monospace, SFMono-Regular, monospace",
+            }}
+          >
+            {formatOdds(leg.odds)}
+          </div>
+          <div
+            className="text-[11px] mt-0.5"
+            style={{ color: "rgba(255,255,255,0.3)" }}
+          >
+            {leg.book}
+          </div>
+        </div>
+
+        {hasReasons && (
+          <div
+            className="flex-shrink-0 transition-transform"
+            style={{
+              color: "rgba(255,255,255,0.35)",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        )}
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && hasReasons && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            style={{ overflow: "hidden" }}
+          >
+            <div
+              className="mb-3 ml-[60px] rounded-lg p-3 space-y-2"
+              style={{
+                background: "rgba(255,255,255,0.025)",
+                border: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <div
+                className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-2"
+                style={{ color: "rgba(255,59,59,0.8)" }}
+              >
+                Why this pick
+              </div>
+              {leg.reasons!.map((r, j) => (
+                <div
+                  key={j}
+                  className="flex items-start gap-2 text-xs"
+                  style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}
+                >
+                  <span
+                    className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full"
+                    style={{ background: "rgba(255,59,59,0.6)" }}
+                  />
+                  <span>{r}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
