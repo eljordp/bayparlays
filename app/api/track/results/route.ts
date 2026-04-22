@@ -6,6 +6,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
+type ParlayCategory = "ev" | "payout" | "confidence";
+
 interface ParlayRow {
   id: string;
   created_at: string;
@@ -21,12 +23,22 @@ interface ParlayRow {
   sports: string[];
   status: string;
   profit: number | null;
+  category: ParlayCategory | null;
 }
+
+// Public track record only counts parlays the AI would actually stand behind.
+// Historical rows (pre-filter era) with low confidence get excluded retroactively
+// so the page doesn't broadcast noise.
+const MIN_CONFIDENCE_FOR_TRACK_RECORD = 60;
+
+// Under this total, surface a "still building" caveat in the response so the
+// UI can show sample-size honesty instead of pretending 10 bets is signal.
+const SMALL_SAMPLE_THRESHOLD = 50;
 
 export async function GET() {
   try {
     // Paginate past Supabase's default 1000-row cap so older history isn't cut off.
-    const rows: ParlayRow[] = [];
+    const allRows: ParlayRow[] = [];
     const PAGE_SIZE = 1000;
     for (let from = 0; ; from += PAGE_SIZE) {
       const { data, error } = await supabase
@@ -43,17 +55,25 @@ export async function GET() {
         );
       }
       if (!data || data.length === 0) break;
-      rows.push(...(data as ParlayRow[]));
+      allRows.push(...(data as ParlayRow[]));
       if (data.length < PAGE_SIZE) break;
     }
+
+    // Retroactive confidence filter — only count AI-endorsed picks in the public
+    // track record. Garbage pre-filter parlays still live in the DB (we don't
+    // delete history) but they don't pollute the displayed stats.
+    const rows = allRows.filter(
+      (p) => (p.confidence ?? 0) >= MIN_CONFIDENCE_FOR_TRACK_RECORD,
+    );
 
     // --- Aggregate stats ---
     const totalParlays = rows.length;
     const won = rows.filter((p) => p.status === "won").length;
     const lost = rows.filter((p) => p.status === "lost").length;
     const pending = rows.filter((p) => p.status === "pending").length;
+    const resolved = won + lost;
     const winRate =
-      won + lost > 0 ? Math.round((won / (won + lost)) * 10000) / 100 : 0;
+      resolved > 0 ? Math.round((won / resolved) * 10000) / 100 : 0;
 
     const totalProfit = rows.reduce((sum, p) => sum + (p.profit ?? 0), 0);
     const totalStaked = rows
@@ -90,14 +110,11 @@ export async function GET() {
         : 0;
 
     // --- Last 7 days ---
-    // Use resolution time when available (falls back to created_at). A parlay
-    // that was *created* 10 days ago but resolved yesterday still belongs here.
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const last7 = rows.filter((p) => {
       if (p.status === "pending") return false;
-      const resolvedAt = new Date(p.created_at);
-      return resolvedAt >= sevenDaysAgo;
+      return new Date(p.created_at) >= sevenDaysAgo;
     });
     const last7Days = {
       won: last7.filter((p) => p.status === "won").length,
@@ -108,15 +125,11 @@ export async function GET() {
         ) / 100,
     };
 
-    // --- Sport breakdown ---
-    // Each parlay counted once, attributed to its primary (first) sport.
-    // Previously every leg-sport got a +1, so a 3-sport parlay inflated the
-    // breakdown numbers above the actual win/loss counts.
+    // --- Sport breakdown (each parlay counted once, on primary sport) ---
     const sportMap = new Map<string, { won: number; lost: number }>();
     for (const p of rows) {
       if (p.status === "pending") continue;
-      const sports = p.sports ?? [];
-      const primary = sports[0];
+      const primary = p.sports?.[0];
       if (!primary) continue;
       const entry = sportMap.get(primary) ?? { won: 0, lost: 0 };
       if (p.status === "won") entry.won++;
@@ -126,6 +139,30 @@ export async function GET() {
     const sportBreakdown = Array.from(sportMap.entries()).map(
       ([sport, data]) => ({
         sport,
+        won: data.won,
+        lost: data.lost,
+        winRate:
+          data.won + data.lost > 0
+            ? Math.round((data.won / (data.won + data.lost)) * 10000) / 100
+            : 0,
+      }),
+    );
+
+    // --- Category breakdown: Best EV / Highest Payout / Most Confident ---
+    // Skip rows without a category (pre-010 migration data is uncategorized).
+    const categoryMap = new Map<ParlayCategory, { won: number; lost: number }>();
+    for (const p of rows) {
+      if (p.status === "pending") continue;
+      const cat = p.category;
+      if (!cat) continue;
+      const entry = categoryMap.get(cat) ?? { won: 0, lost: 0 };
+      if (p.status === "won") entry.won++;
+      if (p.status === "lost") entry.lost++;
+      categoryMap.set(cat, entry);
+    }
+    const categoryBreakdown = Array.from(categoryMap.entries()).map(
+      ([category, data]) => ({
+        category,
         won: data.won,
         lost: data.lost,
         winRate:
@@ -146,6 +183,7 @@ export async function GET() {
       payout: p.payout,
       profit: p.profit ?? 0,
       ev_percent: p.ev_percent,
+      category: p.category,
       impliedHitRate:
         p.combined_decimal && p.combined_decimal > 1
           ? Math.round((1 / p.combined_decimal) * 10000) / 100
@@ -165,8 +203,11 @@ export async function GET() {
           currentStreak: { type: streakType, count: streakCount },
           bestPayout,
           last7Days,
+          resolvedSample: resolved,
+          smallSample: resolved < SMALL_SAMPLE_THRESHOLD,
         },
         sportBreakdown,
+        categoryBreakdown,
         recentParlays,
       },
       {

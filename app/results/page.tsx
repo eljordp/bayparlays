@@ -26,6 +26,8 @@ interface Streak {
   count: number;
 }
 
+type ParlayCategory = "ev" | "payout" | "confidence";
+
 interface Stats {
   totalParlays: number;
   won: number;
@@ -37,10 +39,19 @@ interface Stats {
   currentStreak: Streak;
   bestPayout: number;
   last7Days: { won: number; lost: number; profit: number };
+  resolvedSample?: number;
+  smallSample?: boolean;
 }
 
 interface SportBreakdown {
   sport: string;
+  won: number;
+  lost: number;
+  winRate: number;
+}
+
+interface CategoryBreakdown {
+  category: ParlayCategory;
   won: number;
   lost: number;
   winRate: number;
@@ -57,14 +68,28 @@ interface RecentParlay {
   payout: number;
   profit: number;
   ev_percent: number;
+  category?: ParlayCategory | null;
   impliedHitRate?: number | null;
 }
 
 interface ResultsData {
   stats: Stats;
   sportBreakdown: SportBreakdown[];
+  categoryBreakdown: CategoryBreakdown[];
   recentParlays: RecentParlay[];
 }
+
+const CATEGORY_LABEL: Record<ParlayCategory, string> = {
+  ev: "Best EV",
+  payout: "Highest Payout",
+  confidence: "Most Confident",
+};
+
+const CATEGORY_DESC: Record<ParlayCategory, string> = {
+  ev: "math-first picks with the biggest edge",
+  payout: "longshots hunting the big cash",
+  confidence: "safe favorites most likely to hit",
+};
 
 /* ─── Helpers ─── */
 
@@ -163,6 +188,8 @@ export default function ResultsPage() {
 
   const stats = data?.stats;
   const sportBreakdown = data?.sportBreakdown ?? [];
+  const categoryBreakdown = data?.categoryBreakdown ?? [];
+  const maxCategoryWinRate = Math.max(...categoryBreakdown.map((c) => c.winRate), 1);
   const recentParlays = data?.recentParlays ?? [];
   const maxSportWinRate = Math.max(...sportBreakdown.map((s) => s.winRate), 1);
 
@@ -263,8 +290,21 @@ export default function ResultsPage() {
               className="text-lg md:text-xl max-w-2xl"
               style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}
             >
-              Every AI parlay we generate is tracked. No cherry-picking. No hiding losses.
+              Only parlays the AI actually stands behind (confidence 60+) are tracked here. No cherry-picking. No hiding losses.
             </p>
+            {stats?.smallSample && (
+              <div
+                className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs"
+                style={{
+                  background: "rgba(234,179,8,0.08)",
+                  border: "1px solid rgba(234,179,8,0.25)",
+                  color: "#eab308",
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#eab308" }} />
+                Early track record — {stats.resolvedSample ?? 0} resolved {stats.resolvedSample === 1 ? "bet" : "bets"}. Sample too small for real conclusions yet.
+              </div>
+            )}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               <button
                 onClick={refreshResults}
@@ -452,6 +492,76 @@ export default function ResultsPage() {
                             }}
                           >
                             {sport.winRate.toFixed(0)}%
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ─── By Category ─── */}
+                {categoryBreakdown.length > 0 && (
+                  <motion.div
+                    className="mt-16 md:mt-20"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.35 }}
+                  >
+                    <h2
+                      className="text-2xl md:text-3xl mb-3"
+                      style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                    >
+                      By Strategy
+                    </h2>
+                    <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+                      Three flavors the AI generates each day. Most Confident hits more often but pays less. Best EV is the math play. Highest Payout is the lottery.
+                    </p>
+                    <div className="space-y-4">
+                      {categoryBreakdown.map((cat, idx) => (
+                        <motion.div
+                          key={cat.category}
+                          className="flex items-center gap-4 md:gap-6"
+                          initial={{ opacity: 0, x: -12 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.4, delay: 0.4 + idx * 0.06 }}
+                        >
+                          <div
+                            className="w-28 md:w-36 text-sm font-semibold flex-shrink-0"
+                            style={{ color: "rgba(255,255,255,0.7)" }}
+                          >
+                            {CATEGORY_LABEL[cat.category]}
+                            <div className="text-[10px] font-normal mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                              {CATEGORY_DESC[cat.category]}
+                            </div>
+                          </div>
+                          <div
+                            className="text-xs flex-shrink-0 w-16 text-right"
+                            style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-geist-mono)" }}
+                          >
+                            {cat.won}-{cat.lost}
+                          </div>
+                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                            <motion.div
+                              className="h-full rounded"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(cat.winRate / maxCategoryWinRate) * 100}%` }}
+                              transition={{ duration: 0.8, delay: 0.45 + idx * 0.06, ease: "easeOut" }}
+                              style={{
+                                background: cat.winRate >= 50
+                                  ? "linear-gradient(90deg, #22c55e, #34d399)"
+                                  : "linear-gradient(90deg, rgba(255,59,59,0.4), rgba(255,59,59,0.6))",
+                                minWidth: "2px",
+                              }}
+                            />
+                          </div>
+                          <div
+                            className="w-14 text-right text-sm font-bold flex-shrink-0"
+                            style={{
+                              color: cat.winRate >= 50 ? "#22c55e" : "#ef4444",
+                              fontFamily: "var(--font-geist-mono)",
+                            }}
+                          >
+                            {cat.winRate.toFixed(0)}%
                           </div>
                         </motion.div>
                       ))}

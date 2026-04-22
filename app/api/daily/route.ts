@@ -28,27 +28,32 @@ export async function GET(req: NextRequest) {
     results.scores = { error: String(e) };
   }
 
-  // Step 2: Generate fresh parlays across all active sports
-  // Only 2 combos to conserve API quota (free tier = 500 requests/mo)
-  // Side effect: /api/parlays also snapshots current best lines into
-  // the line_history table for downstream line-movement analysis.
-  const sportCombos = [
-    { sports: "nba,mlb,nhl", legs: 2 },
-    { sports: "nba,mlb,nhl", legs: 3 },
+  // Step 2: Generate fresh parlays — vary leg count AND category so the
+  // public track record captures all three AI strategies, not just default EV.
+  // Each call to /api/parlays is 1 Odds API hit (cached 5min); keeping combos
+  // modest for quota. Only parlays with confidence >= 60 actually persist (see
+  // /api/parlays insert path), so "count=5" won't flood the table with noise.
+  const sportCombos: { sports: string; legs: number; sort: "ev" | "payout" | "confidence" }[] = [
+    { sports: "nba,mlb,nhl", legs: 2, sort: "ev" },
+    { sports: "nba,mlb,nhl", legs: 2, sort: "confidence" },
+    { sports: "nba,mlb,nhl", legs: 3, sort: "ev" },
+    { sports: "nba,mlb,nhl", legs: 3, sort: "payout" },
+    { sports: "nba,mlb,nhl", legs: 3, sort: "confidence" },
   ];
 
-  const generated: { sports: string; legs: number; count: number }[] = [];
+  const generated: { sports: string; legs: number; sort: string; count: number }[] = [];
 
   for (const combo of sportCombos) {
     try {
       const res = await fetch(
-        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&count=3`
+        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=5`
       );
       if (res.ok) {
         const data = await res.json();
         generated.push({
           sports: combo.sports,
           legs: combo.legs,
+          sort: combo.sort,
           count: data.parlays?.length || 0,
         });
       }

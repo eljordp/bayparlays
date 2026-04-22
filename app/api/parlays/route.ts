@@ -1004,7 +1004,7 @@ export async function GET(request: NextRequest) {
         const trackable = parlays.filter((p) => p.confidence >= MIN_CONFIDENCE_TO_TRACK);
 
         if (trackable.length > 0) {
-          const rows = trackable.map((p) => ({
+          const baseRows = trackable.map((p) => ({
             legs: p.legs,
             combined_odds: p.combinedOdds,
             combined_decimal: p.combinedDecimal,
@@ -1015,7 +1015,20 @@ export async function GET(request: NextRequest) {
             legs_total: p.legs.length,
             sports: [...new Set(p.legs.map((l) => l.sport))],
           }));
-          await supabase.from("parlays").insert(rows);
+          const rowsWithCategory = baseRows.map((r, i) => ({
+            ...r,
+            category: trackable[i].category,
+          }));
+
+          // Try with category first; fall back without it if the column
+          // migration (010_parlay_category.sql) hasn't been applied.
+          const { error: insertErr } = await supabase
+            .from("parlays")
+            .insert(rowsWithCategory);
+
+          if (insertErr && /category/i.test(insertErr.message || "")) {
+            await supabase.from("parlays").insert(baseRows);
+          }
         }
 
         // Snapshot current best lines for movement analysis.
