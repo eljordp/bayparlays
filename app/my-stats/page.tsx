@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppNav } from "@/app/components/AppNav";
+import { ResultsTabs } from "@/app/components/ResultsTabs";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
   ChevronDown,
@@ -244,9 +245,12 @@ export default function MyStatsPage() {
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
       <AppNav />
+      <div className="pt-20">
+        <ResultsTabs />
+      </div>
 
       {/* ─── Header ─── */}
-      <header className="pt-28 pb-8 px-4 md:pt-36 md:pb-14 md:px-6">
+      <header className="pt-8 pb-8 px-4 md:pt-14 md:pb-14 md:px-6">
         <div className="max-w-[1400px] mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

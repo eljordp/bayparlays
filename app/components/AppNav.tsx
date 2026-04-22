@@ -20,7 +20,6 @@ const NAV_LINKS = [
   { href: "/parlays", label: "Picks" },
   { href: "/simulator", label: "Simulator" },
   { href: "/results", label: "Results" },
-  { href: "/my-stats", label: "My Stats" },
 ];
 
 // Secondary routes that still exist but aren't in the primary nav.
@@ -30,6 +29,7 @@ const PARENT_MAP: Record<string, string> = {
   "/builder": "/parlays",
   "/props": "/parlays",
   "/leaderboard": "/results",
+  "/my-stats": "/results",
   "/refer": "/settings",
   "/achievements": "/settings",
 };

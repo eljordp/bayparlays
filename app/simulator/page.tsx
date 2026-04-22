@@ -93,23 +93,6 @@ interface SimParlay {
   category?: PickCategory | null;
 }
 
-interface PickParlay {
-  id: string;
-  legs: SimLeg[];
-  combined_odds: string;
-  combined_decimal: number;
-  payout: number;
-  category?: PickCategory;
-  aiEstimate?: number;
-}
-
-// Implied hit rate = 1/decimal_odds, as a percentage. This is what the book
-// is effectively pricing the parlay at, before vig adjustments.
-function impliedHitRate(decimalOdds: number): number {
-  if (!decimalOdds || decimalOdds <= 1) return 0;
-  return Math.round((1 / decimalOdds) * 10000) / 100;
-}
-
 const CATEGORY_META: Record<PickCategory, { label: string; color: string; bg: string; border: string }> = {
   ev: {
     label: "Best EV",
@@ -159,9 +142,6 @@ export default function SimulatorPage() {
   // Sim state
   const [bankroll, setBankroll] = useState<SimBankroll | null>(null);
   const [parlays, setParlays] = useState<SimParlay[]>([]);
-  const [picks, setPicks] = useState<PickParlay[]>([]);
-  const [stake, setStake] = useState(10);
-  const [placing, setPlacing] = useState<string | null>(null);
   const [expandedParlay, setExpandedParlay] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -241,67 +221,6 @@ export default function SimulatorPage() {
     setDataLoading(false);
   }, [user]);
 
-  // Load picks for quick sim — full slate across categories AND leg counts
-  // so paper traders have real variety to practice with. Simulator is a
-  // paid feature; it should feel rich. 3 categories × 2 leg counts × 3
-  // per call = up to 18 candidates, deduped + surfaced as a robust slate.
-  const loadPicks = useCallback(async () => {
-    try {
-      const effectiveTier = isAdmin ? "admin" : "vip";
-      const modes: PickCategory[] = ["ev", "payout", "confidence"];
-      const legCounts = [2, 3];
-
-      const combos: { mode: PickCategory; legs: number }[] = [];
-      for (const mode of modes) {
-        for (const legs of legCounts) {
-          combos.push({ mode, legs });
-        }
-      }
-
-      const results = await Promise.all(
-        combos.map((c) =>
-          fetch(
-            `/api/parlays?count=3&legs=${c.legs}&sort=${c.mode}&tier=${effectiveTier}`,
-          )
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
-        ),
-      );
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const merged: PickParlay[] = [];
-      const seen = new Set<string>();
-      results.forEach((data, i) => {
-        if (!data?.parlays?.length) return;
-        const mode = combos[i].mode;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data.parlays.forEach((p: any) => {
-          // Dedupe — same set of picks from different sort modes is the same parlay.
-          const sig = (p.legs || [])
-            .map((l: { game: string; pick: string }) => `${l.game}::${l.pick}`)
-            .sort()
-            .join("|");
-          if (seen.has(sig)) return;
-          seen.add(sig);
-          merged.push({
-            id: p.id,
-            legs: p.legs,
-            combined_odds: p.combinedOdds || p.combined_odds,
-            combined_decimal: p.combinedDecimal || p.combined_decimal,
-            payout: p.payout,
-            category: (p.category || mode) as PickCategory,
-            aiEstimate: p.aiEstimate,
-          });
-        });
-      });
-
-      // Cap to 12 picks — enough variety to play with, not overwhelming.
-      setPicks(merged.slice(0, 12));
-    } catch {
-      // silent
-    }
-  }, [isAdmin]);
-
   // Fetch cashout values for all pending parlays
   const fetchCashoutValues = useCallback(async () => {
     if (!user) return;
@@ -336,14 +255,13 @@ export default function SimulatorPage() {
   useEffect(() => {
     if (isVip && user) {
       loadData();
-      loadPicks();
       // Kick the sim resolver on page load so finished games flip without
       // waiting for the daily cron. Fire-and-forget, then reload.
       fetch("/api/sim/resolve", { cache: "no-store" })
         .then(() => loadData())
         .catch(() => null);
     }
-  }, [isVip, user, loadData, loadPicks]);
+  }, [isVip, user, loadData]);
 
   // Manual refresh — trigger resolver + refetch
   const [refreshing, setRefreshing] = useState(false);
@@ -358,51 +276,6 @@ export default function SimulatorPage() {
     } finally {
       setRefreshing(false);
     }
-  }
-
-  // Place sim bet
-  async function placeBet(pick: PickParlay) {
-    if (!user || !bankroll || placing) return;
-
-    if (stake > bankroll.balance) {
-      setConfirmation("Insufficient balance");
-      setTimeout(() => setConfirmation(null), 2000);
-      return;
-    }
-
-    setPlacing(pick.id);
-
-    try {
-      const res = await fetch("/api/sim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: user.id,
-          legs: pick.legs,
-          combined_odds: pick.combined_odds,
-          combined_decimal: pick.combined_decimal,
-          stake,
-          payout: Math.round(stake * pick.combined_decimal * 100) / 100,
-          category: pick.category,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setConfirmation(`Placed $${stake} sim bet`);
-        setTimeout(() => setConfirmation(null), 2500);
-        await loadData();
-      } else {
-        setConfirmation(data.error || "Failed to place bet");
-        setTimeout(() => setConfirmation(null), 2500);
-      }
-    } catch {
-      setConfirmation("Network error");
-      setTimeout(() => setConfirmation(null), 2500);
-    }
-
-    setPlacing(null);
   }
 
   // Cash out a pending parlay
@@ -765,175 +638,43 @@ export default function SimulatorPage() {
               </div>
             </motion.section>
 
-            {/* ── Quick Sim ── */}
+            {/* ── Browse Picks CTA (Quick Sim section removed — picks live on /parlays now) ── */}
             <motion.section
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, margin: "-60px" }}
               className="mb-16"
             >
-              <motion.h2
+              <motion.div
                 variants={fadeUp}
                 custom={0}
-                className="text-2xl md:text-3xl tracking-tight mb-2"
-                style={{ fontFamily: "'DM Serif Display', serif" }}
+                className="rounded-2xl px-6 py-10 md:px-12 md:py-14 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                style={{
+                  background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
+                  border: "1px solid rgba(255,59,59,0.15)",
+                }}
               >
-                Quick Sim
-              </motion.h2>
-              <motion.p variants={fadeUp} custom={1} className="text-sm text-white/30 mb-8">
-                Place a sim bet on today&apos;s AI picks. Results resolve after 24 hours.
-              </motion.p>
-
-              {/* Stake input */}
-              <motion.div variants={fadeUp} custom={2} className="flex items-center gap-4 mb-8">
-                <label className="text-xs text-white/40 uppercase tracking-wider">
-                  Stake
-                </label>
-                <div className="relative">
-                  <span
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm"
-                    style={{ fontFamily: "var(--font-geist-mono)" }}
+                <div>
+                  <p
+                    className="text-2xl md:text-3xl tracking-tight mb-2"
+                    style={{ fontFamily: "'DM Serif Display', serif" }}
                   >
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={bankroll?.balance || 1000}
-                    value={stake}
-                    onChange={(e) => setStake(Math.max(1, Number(e.target.value)))}
-                    className="bg-[#111] border border-white/[0.08] rounded-lg pl-7 pr-4 py-2.5 text-sm text-white w-28 focus:outline-none focus:border-[#FF3B3B]/40 transition-colors"
-                    style={{ fontFamily: "var(--font-geist-mono)" }}
-                  />
+                    Place a new sim bet
+                  </p>
+                  <p className="text-sm md:text-base" style={{ color: "rgba(255,255,255,0.55)" }}>
+                    Browse today&apos;s AI slate, open any parlay&apos;s &quot;Why this pick&quot; panel, and click &quot;Try $10 in Simulator&quot; to paper-trade it here.
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  {[5, 10, 25, 50, 100].map((amt) => (
-                    <button
-                      key={amt}
-                      onClick={() => setStake(amt)}
-                      className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                        stake === amt
-                          ? "bg-[#FF3B3B]/15 text-[#FF3B3B] border border-[#FF3B3B]/20"
-                          : "bg-white/[0.04] text-white/40 border border-white/[0.06] hover:text-white/60"
-                      }`}
-                      style={{ fontFamily: "var(--font-geist-mono)" }}
-                    >
-                      ${amt}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Picks */}
-              {picks.length === 0 ? (
-                <motion.div
-                  variants={fadeUp}
-                  custom={3}
-                  className="bg-[#111] border border-white/[0.06] rounded-2xl p-8 text-center text-white/30"
-                >
-                  No picks available right now. Check back later.
-                </motion.div>
-              ) : (
-                <div className="space-y-3">
-                  {picks.map((pick, i) => (
-                    <motion.div
-                      key={pick.id}
-                      variants={fadeUp}
-                      custom={i + 3}
-                      className="bg-[#111] border border-white/[0.06] rounded-xl p-5 hover:border-white/[0.12] transition-all"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            {pick.category && (
-                              <span
-                                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${CATEGORY_META[pick.category].color} ${CATEGORY_META[pick.category].bg} ${CATEGORY_META[pick.category].border}`}
-                              >
-                                {CATEGORY_META[pick.category].label}
-                              </span>
-                            )}
-                            {pick.legs.map((leg, j) => (
-                              <span
-                                key={j}
-                                className="text-[10px] font-bold uppercase tracking-wider bg-white/[0.06] text-white/50 px-2 py-0.5 rounded"
-                              >
-                                {leg.sport}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="space-y-1">
-                            {pick.legs.map((l, j) => (
-                              <div key={j} className="text-sm">
-                                <span className="text-white/80 font-medium">{l.pick}</span>
-                                <span className="text-white/30 ml-2 text-xs">{l.game}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-4 mt-2 flex-wrap">
-                            <span
-                              className="text-lg font-bold text-[#FF3B3B]"
-                              style={{ fontFamily: "var(--font-geist-mono)" }}
-                            >
-                              {pick.combined_odds}
-                            </span>
-                            <span
-                              className="text-xs text-white/30"
-                              style={{ fontFamily: "var(--font-geist-mono)" }}
-                            >
-                              ${stake} pays ${(stake * pick.combined_decimal).toFixed(2)}
-                            </span>
-                            <span
-                              className="text-xs text-white/40 flex items-center gap-1.5"
-                              style={{ fontFamily: "var(--font-geist-mono)" }}
-                              title="Book's implied probability this parlay hits (includes vig)"
-                            >
-                              <span className="text-white/25">Book:</span>
-                              <span className="text-white/70">{impliedHitRate(pick.combined_decimal).toFixed(1)}%</span>
-                              {pick.aiEstimate !== undefined && (
-                                <>
-                                  <span className="text-white/20 mx-1">·</span>
-                                  <span className="text-white/25">AI:</span>
-                                  <span
-                                    className={
-                                      pick.aiEstimate > impliedHitRate(pick.combined_decimal)
-                                        ? "text-[#22C55E]"
-                                        : "text-white/70"
-                                    }
-                                  >
-                                    {pick.aiEstimate.toFixed(1)}%
-                                  </span>
-                                </>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => placeBet(pick)}
-                          disabled={placing === pick.id || stake > (bankroll?.balance || 0)}
-                          className="ml-4 bg-[#FF3B3B] text-[#0a0a0a] px-5 py-2.5 text-xs font-semibold rounded-lg hover:bg-[#FF5252] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
-                        >
-                          {placing === pick.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : null}
-                          Place Sim Bet
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-
-              {/* Custom sim link */}
-              <motion.div variants={fadeUp} custom={8} className="mt-6">
                 <Link
-                  href="/builder"
-                  className="text-sm text-white/30 hover:text-[#FF3B3B] transition-colors"
+                  href="/parlays"
+                  className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
+                  style={{ background: "#FF3B3B", color: "#0a0a0a" }}
                 >
-                  Or build a custom parlay in the Builder &rarr;
+                  Browse Picks →
                 </Link>
               </motion.div>
             </motion.section>
+
 
             {/* ── Bankroll Chart ── */}
             {chartPoints.length > 1 && (
@@ -1024,7 +765,7 @@ export default function SimulatorPage() {
               </motion.section>
             )}
 
-            {/* ── Sim History ── */}
+            {/* ── Active Bets (pending only — full history lives on /my-stats) ── */}
             <motion.section
               initial="hidden"
               whileInView="visible"
@@ -1039,205 +780,139 @@ export default function SimulatorPage() {
                   className="text-2xl md:text-3xl tracking-tight"
                   style={{ fontFamily: "'DM Serif Display', serif" }}
                 >
-                  History
+                  Active Bets
                 </h2>
-                <button
-                  onClick={refreshSim}
-                  disabled={refreshing}
-                  className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50 bg-[#FF3B3B]/10 text-[#FF3B3B] border border-[#FF3B3B]/25 hover:bg-[#FF3B3B]/15"
-                >
-                  {refreshing ? "Refreshing…" : "Refresh Results"}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={refreshSim}
+                    disabled={refreshing}
+                    className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50 bg-[#FF3B3B]/10 text-[#FF3B3B] border border-[#FF3B3B]/25 hover:bg-[#FF3B3B]/15"
+                  >
+                    {refreshing ? "Refreshing…" : "Refresh Results"}
+                  </button>
+                  <Link
+                    href="/my-stats"
+                    className="text-xs text-white/40 hover:text-white/70 transition-colors"
+                  >
+                    Full history →
+                  </Link>
+                </div>
               </motion.div>
 
-              {parlays.length === 0 ? (
-                <motion.div
-                  variants={fadeUp}
-                  custom={1}
-                  className="bg-[#111] border border-white/[0.06] rounded-2xl p-10 text-center text-white/30"
-                >
-                  No sim bets yet. Place your first one above.
-                </motion.div>
-              ) : (
-                <div className="space-y-2">
-                  {parlays.map((p, i) => (
+              {(() => {
+                const pending = parlays.filter((p) => p.status === "pending");
+                if (pending.length === 0) {
+                  return (
                     <motion.div
-                      key={p.id}
                       variants={fadeUp}
-                      custom={i + 1}
-                      className={`border rounded-xl transition-all cursor-pointer ${
-                        p.status === "won"
-                          ? "bg-[#22C55E]/[0.04] border-[#22C55E]/10"
-                          : p.status === "lost"
-                          ? "bg-[#FF3B3B]/[0.04] border-[#FF3B3B]/10"
-                          : "bg-[#111] border-white/[0.06]"
-                      }`}
-                      onClick={() =>
-                        setExpandedParlay(expandedParlay === p.id ? null : p.id)
-                      }
+                      custom={1}
+                      className="bg-[#111] border border-white/[0.06] rounded-2xl p-10 text-center"
                     >
-                      {/* Row */}
-                      <div className="flex items-center justify-between p-4 md:px-6">
-                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                          {/* Date */}
-                          <span
-                            className="text-xs text-white/30 w-20 flex-shrink-0 hidden md:block"
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                          >
-                            {new Date(p.created_at).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
-
-                          {/* Legs count */}
-                          <span className="text-xs text-white/40">
-                            {p.legs.length}L
-                          </span>
-
-                          {/* Category badge */}
-                          {p.category && CATEGORY_META[p.category] && (
-                            <span
-                              className={`hidden sm:inline text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${CATEGORY_META[p.category].color} ${CATEGORY_META[p.category].bg}`}
-                            >
-                              {CATEGORY_META[p.category].label}
-                            </span>
-                          )}
-
-                          {/* Odds */}
-                          <span
-                            className="text-sm font-bold text-white/70"
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                          >
-                            {p.combined_odds}
-                          </span>
-
-                          {/* Implied hit rate */}
-                          <span
-                            className="text-[10px] text-white/35 hidden md:inline"
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                            title="Book's implied hit probability"
-                          >
-                            {impliedHitRate(p.combined_decimal).toFixed(1)}% hit
-                          </span>
-
-                          {/* Stake */}
-                          <span
-                            className="text-xs text-white/30"
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                          >
-                            ${p.stake}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          {/* Game lifecycle status (pending parlays only) */}
-                          {p.status === "pending" && (() => {
-                            const gs = getGameStatus(p.legs);
-                            if (!gs) return null;
-                            const colorClass =
-                              gs.kind === "live"
-                                ? "bg-[#FF3B3B]/15 text-[#FF3B3B] animate-pulse"
-                                : gs.kind === "awaiting"
-                                ? "bg-[#eab308]/15 text-[#eab308]"
-                                : "bg-white/[0.04] text-white/50";
-                            const text =
-                              gs.kind === "upcoming"
-                                ? `Starts in ${gs.startsIn}`
-                                : gs.kind === "live"
-                                ? "Live"
-                                : "Awaiting result";
-                            return (
+                      <p className="text-white/40 mb-2">No active bets.</p>
+                      <p className="text-xs text-white/25">
+                        Head to{" "}
+                        <Link href="/parlays" className="text-[#FF3B3B] hover:underline">
+                          today&apos;s picks
+                        </Link>{" "}
+                        to place one.
+                      </p>
+                    </motion.div>
+                  );
+                }
+                return (
+                  <div className="space-y-2">
+                    {pending.map((p, i) => (
+                      <motion.div
+                        key={p.id}
+                        variants={fadeUp}
+                        custom={i + 1}
+                        className="border rounded-xl transition-all cursor-pointer bg-[#111] border-white/[0.06]"
+                        onClick={() =>
+                          setExpandedParlay(expandedParlay === p.id ? null : p.id)
+                        }
+                      >
+                        <div className="flex items-center justify-between p-4 md:px-6 flex-wrap gap-2">
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <span className="text-xs text-white/40">{p.legs.length}L</span>
+                            {p.category && CATEGORY_META[p.category] && (
                               <span
-                                className={`hidden md:inline text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${colorClass}`}
+                                className={`hidden sm:inline text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${CATEGORY_META[p.category].color} ${CATEGORY_META[p.category].bg}`}
                               >
-                                {text}
+                                {CATEGORY_META[p.category].label}
                               </span>
-                            );
-                          })()}
-
-                          {/* Status badge */}
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${
-                              p.status === "won"
-                                ? "bg-[#22C55E]/15 text-[#22C55E]"
-                                : p.status === "lost"
-                                ? "bg-[#FF3B3B]/15 text-[#FF3B3B]"
-                                : "bg-white/[0.06] text-white/40"
-                            }`}
-                          >
-                            {p.status}
-                          </span>
-
-                          {/* Cash out value for pending */}
-                          {p.status === "pending" && cashoutValues[p.id] !== undefined && (
+                            )}
                             <span
-                              className={`text-xs font-medium px-2 py-1 rounded ${
-                                cashoutValues[p.id] >= p.stake
-                                  ? "bg-[#22C55E]/10 text-[#22C55E]"
-                                  : "bg-white/[0.04] text-white/40"
-                              }`}
+                              className="text-sm font-bold text-white/70"
                               style={{ fontFamily: "var(--font-geist-mono)" }}
                             >
-                              ${cashoutValues[p.id].toFixed(2)}
+                              {p.combined_odds}
                             </span>
-                          )}
-
-                          {/* Profit */}
-                          <span
-                            className={`text-sm font-bold w-20 text-right ${
-                              p.status === "won"
-                                ? "text-[#22C55E]"
-                                : p.status === "lost"
-                                ? "text-[#FF3B3B]"
-                                : "text-white/30"
-                            }`}
-                            style={{ fontFamily: "var(--font-geist-mono)" }}
-                          >
-                            {p.status === "pending"
-                              ? "-"
-                              : p.profit >= 0
-                              ? `+$${p.profit.toFixed(2)}`
-                              : `-$${Math.abs(p.profit).toFixed(2)}`}
-                          </span>
-
-                          {/* Expand */}
-                          {expandedParlay === p.id ? (
-                            <ChevronUp className="w-4 h-4 text-white/20" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4 text-white/20" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Expanded legs + actions */}
-                      {expandedParlay === p.id && (
-                        <div className="px-4 md:px-6 pb-4 space-y-2 border-t border-white/[0.04] pt-3">
-                          {p.legs.map((leg, j) => (
-                            <div
-                              key={j}
-                              className="flex items-center justify-between text-sm"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider bg-white/[0.06] text-white/40 px-1.5 py-0.5 rounded">
-                                  {leg.sport}
+                            <span className="text-xs text-white/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                              ${p.stake}
+                            </span>
+                            {(() => {
+                              const gs = getGameStatus(p.legs);
+                              if (!gs) return null;
+                              const colorClass =
+                                gs.kind === "live"
+                                  ? "bg-[#FF3B3B]/15 text-[#FF3B3B] animate-pulse"
+                                  : gs.kind === "awaiting"
+                                  ? "bg-[#eab308]/15 text-[#eab308]"
+                                  : "bg-white/[0.04] text-white/50";
+                              const text =
+                                gs.kind === "upcoming"
+                                  ? `Starts in ${gs.startsIn}`
+                                  : gs.kind === "live"
+                                  ? "Live"
+                                  : "Awaiting result";
+                              return (
+                                <span
+                                  className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${colorClass}`}
+                                >
+                                  {text}
                                 </span>
-                                <span className="text-white/60">{leg.pick}</span>
-                                <span className="text-white/25 text-xs">{leg.game}</span>
-                              </div>
+                              );
+                            })()}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {cashoutValues[p.id] !== undefined && (
                               <span
-                                className="text-white/50"
+                                className={`text-xs font-medium px-2 py-1 rounded ${
+                                  cashoutValues[p.id] >= p.stake
+                                    ? "bg-[#22C55E]/10 text-[#22C55E]"
+                                    : "bg-white/[0.04] text-white/40"
+                                }`}
                                 style={{ fontFamily: "var(--font-geist-mono)" }}
                               >
-                                {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
+                                Cash: ${cashoutValues[p.id].toFixed(2)}
                               </span>
-                            </div>
-                          ))}
+                            )}
+                            {expandedParlay === p.id ? (
+                              <ChevronUp className="w-4 h-4 text-white/20" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-white/20" />
+                            )}
+                          </div>
+                        </div>
 
-                          {/* Pending parlay actions: Cash Out + Edit Stake */}
-                          {p.status === "pending" && (
+                        {expandedParlay === p.id && (
+                          <div className="px-4 md:px-6 pb-4 space-y-2 border-t border-white/[0.04] pt-3">
+                            {p.legs.map((leg, j) => (
+                              <div key={j} className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider bg-white/[0.06] text-white/40 px-1.5 py-0.5 rounded">
+                                    {leg.sport}
+                                  </span>
+                                  <span className="text-white/60">{leg.pick}</span>
+                                  <span className="text-white/25 text-xs">{leg.game}</span>
+                                </div>
+                                <span className="text-white/50" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                                  {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
+                                </span>
+                              </div>
+                            ))}
+
                             <div className="pt-3 mt-2 border-t border-white/[0.04] space-y-3">
-                              {/* Edit Stake */}
                               {editingParlay === p.id ? (
                                 <div className="flex items-center gap-3">
                                   <label className="text-xs text-white/40 uppercase tracking-wider">
@@ -1254,11 +929,9 @@ export default function SimulatorPage() {
                                       type="number"
                                       min={1}
                                       value={editStake}
-                                      onChange={(e) =>
-                                        setEditStake(Math.max(1, Number(e.target.value)))
-                                      }
+                                      onChange={(e) => setEditStake(Math.max(1, Number(e.target.value)))}
                                       onClick={(e) => e.stopPropagation()}
-                                      className="bg-[#0a0a0a] border border-white/[0.08] rounded-lg pl-6 pr-3 py-2 text-xs text-white w-24 focus:outline-none focus:border-[#FF3B3B]/40 transition-colors"
+                                      className="bg-[#0a0a0a] border border-white/[0.08] rounded-lg pl-6 pr-3 py-2 text-xs text-white w-24 focus:outline-none focus:border-[#FF3B3B]/40"
                                       style={{ fontFamily: "var(--font-geist-mono)" }}
                                     />
                                   </div>
@@ -1268,13 +941,9 @@ export default function SimulatorPage() {
                                       handleEditStake(p.id);
                                     }}
                                     disabled={savingEdit}
-                                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20 hover:bg-[#22C55E]/15 transition-colors disabled:opacity-40"
+                                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20 hover:bg-[#22C55E]/15 disabled:opacity-40"
                                   >
-                                    {savingEdit ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <Check className="w-3 h-3" />
-                                    )}
+                                    {savingEdit ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                                     Save
                                   </button>
                                   <button
@@ -1282,7 +951,7 @@ export default function SimulatorPage() {
                                       e.stopPropagation();
                                       setEditingParlay(null);
                                     }}
-                                    className="text-xs text-white/30 hover:text-white/50 transition-colors px-2 py-2"
+                                    className="text-xs text-white/30 hover:text-white/50 px-2 py-2"
                                   >
                                     Cancel
                                   </button>
@@ -1294,14 +963,13 @@ export default function SimulatorPage() {
                                     setEditingParlay(p.id);
                                     setEditStake(p.stake);
                                   }}
-                                  className="flex items-center gap-2 text-xs font-medium text-white/40 hover:text-white/60 transition-colors"
+                                  className="flex items-center gap-2 text-xs font-medium text-white/40 hover:text-white/60"
                                 >
                                   <Pencil className="w-3 h-3" />
                                   Edit Stake (${p.stake})
                                 </button>
                               )}
 
-                              {/* Cash Out */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1324,13 +992,13 @@ export default function SimulatorPage() {
                                   : "Loading..."}
                               </button>
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                );
+              })()}
             </motion.section>
           </>
         )}

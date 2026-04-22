@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
 
 const RESULTS_TABS = [
   { href: "/results", label: "AI Track Record" },
+  { href: "/my-stats", label: "My Stats" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 
