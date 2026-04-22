@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getTeamRecords,
+  getRecentScores,
+  normalizeGames,
   getTeamEdge,
   type TeamRecord,
+  type NormalizedGame,
 } from "@/lib/sports-data";
+import {
+  calculateEloRatings,
+  getEloEdge,
+  type EloRating,
+} from "@/lib/elo";
+import { getSituationalEdge } from "@/lib/situational";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -272,7 +281,9 @@ function calculateEdgeScore(
 function extractLegsFromGame(
   game: OddsGame,
   sportLabel: string,
-  teamRecords?: Map<string, TeamRecord>
+  teamRecords?: Map<string, TeamRecord>,
+  eloRatings?: Map<string, EloRating>,
+  recentGames?: NormalizedGame[]
 ): ScoredLeg[] {
   const legs: ScoredLeg[] = [];
   const gameLabel = `${game.away_team} vs ${game.home_team}`;
@@ -349,8 +360,38 @@ function extractLegsFromGame(
       if (teamRecords && marketKey !== "totals") {
         // For h2h and spreads, the outcome name is a team name
         const isHome = outcomeInfo.name === game.home_team;
+        const opponent = isHome ? game.away_team : game.home_team;
         const teamEdge = getTeamEdge(outcomeInfo.name, teamRecords, isHome);
         edgeScore += teamEdge;
+
+        // ── Elo Edge ──────────────────────────────────────────────
+        // Compares Elo-predicted win probability against the book's
+        // implied probability. Weighted at 0.5 — Elo is predictive but
+        // not absolute and we don't want it to fully dominate scoring.
+        if (eloRatings) {
+          const eloEdge = getEloEdge(
+            outcomeInfo.name,
+            opponent,
+            impliedProb,
+            eloRatings,
+            isHome
+          );
+          edgeScore += eloEdge * 0.5;
+        }
+
+        // ── Situational Edge ──────────────────────────────────────
+        // Rest days, letdown/bounce-back spots, short-turnaround
+        // penalties. Applied at full weight — these factors are known
+        // to move lines in predictable ways.
+        if (recentGames && recentGames.length > 0) {
+          const situationalEdge = getSituationalEdge(
+            outcomeInfo.name,
+            recentGames,
+            isHome,
+            game.commence_time
+          );
+          edgeScore += situationalEdge;
+        }
 
         // Attach record info for the picked team
         const rec = teamRecords.get(outcomeInfo.name);
@@ -823,12 +864,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch odds AND team records for all requested sports in parallel
+    // Fetch odds, team records, AND raw scores (for Elo/situational) in parallel
     const sportFetches = sports.map((sport) => {
       const sportKey = SPORT_MAP[sport];
       return Promise.all([
         fetchOddsForSport(sportKey).then((games) => ({ sport, games })),
         getTeamRecords(sportKey),
+        getRecentScores(sportKey),
       ]);
     });
 
@@ -837,10 +879,32 @@ export async function GET(request: NextRequest) {
     // Collect all games and extract scored legs
     const allLegs: ScoredLeg[] = [];
     let totalGames = 0;
+    const lineHistoryRows: Array<{
+      game_id: string;
+      sport: string;
+      market: string;
+      team: string;
+      point: number | null;
+      best_odds: number;
+      best_book: string | null;
+      avg_odds: number | null;
+    }> = [];
 
     for (const result of results) {
       if (result.status !== "fulfilled") continue;
-      const [{ sport, games }, teamRecords] = result.value;
+      const [{ sport, games }, teamRecords, rawScores] = result.value;
+
+      // Normalize raw scores once per sport and feed Elo + situational
+      const normalized = normalizeGames(rawScores);
+      const eloRatings = calculateEloRatings(
+        normalized.map((g) => ({
+          home_team: g.home,
+          away_team: g.away,
+          home_score: g.homeScore,
+          away_score: g.awayScore,
+          completed: g.completed,
+        }))
+      );
 
       totalGames += games.length;
 
@@ -848,9 +912,25 @@ export async function GET(request: NextRequest) {
         const gameLegs = extractLegsFromGame(
           game,
           sport.toUpperCase(),
-          teamRecords
+          teamRecords,
+          eloRatings,
+          normalized
         );
         allLegs.push(...gameLegs);
+
+        // Capture current best lines for line-history snapshot
+        for (const leg of gameLegs) {
+          lineHistoryRows.push({
+            game_id: leg.gameId,
+            sport: leg.sport,
+            market: leg.market,
+            team: leg.pick,
+            point: null,
+            best_odds: leg.odds,
+            best_book: leg.book,
+            avg_odds: null,
+          });
+        }
       }
     }
 
@@ -908,6 +988,17 @@ export async function GET(request: NextRequest) {
           sports: [...new Set(p.legs.map((l) => l.sport))],
         }));
         await supabase.from("parlays").insert(rows);
+
+        // Snapshot current best lines for movement analysis.
+        // Gated on the same 5-minute window as parlay inserts to avoid
+        // hammering the table on every request.
+        if (lineHistoryRows.length > 0) {
+          try {
+            await supabase.from("line_history").insert(lineHistoryRows);
+          } catch (err) {
+            console.error("Failed to snapshot line_history:", err);
+          }
+        }
       }
     } catch (e) {
       console.error("Failed to track parlays:", e);

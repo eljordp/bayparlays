@@ -19,6 +19,8 @@ export async function GET() {
 
   // Step 2: Generate fresh parlays across all active sports
   // Only 2 combos to conserve API quota (free tier = 500 requests/mo)
+  // Side effect: /api/parlays also snapshots current best lines into
+  // the line_history table for downstream line-movement analysis.
   const sportCombos = [
     { sports: "nba,mlb,nhl", legs: 2 },
     { sports: "nba,mlb,nhl", legs: 3 },

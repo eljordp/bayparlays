@@ -182,6 +182,43 @@ export async function getTeamRecords(
   return records;
 }
 
+// ─── Normalized Game Rows ───────────────────────────────────────────────────
+// Raw shape used by Elo + Situational models. Flattens the Odds API scores
+// array into plain numbers so downstream models don't re-parse strings.
+
+export interface NormalizedGame {
+  date: string;
+  home: string;
+  away: string;
+  homeScore: number;
+  awayScore: number;
+  completed: boolean;
+}
+
+export function normalizeGames(games: GameScore[]): NormalizedGame[] {
+  const out: NormalizedGame[] = [];
+  for (const g of games) {
+    if (!g.completed || !g.scores || g.scores.length < 2) continue;
+    const homeScore = parseInt(
+      g.scores.find((s) => s.name === g.home_team)?.score || "0",
+      10
+    );
+    const awayScore = parseInt(
+      g.scores.find((s) => s.name === g.away_team)?.score || "0",
+      10
+    );
+    out.push({
+      date: g.commence_time,
+      home: g.home_team,
+      away: g.away_team,
+      homeScore,
+      awayScore,
+      completed: g.completed,
+    });
+  }
+  return out;
+}
+
 // ─── Team Edge Scoring ──────────────────────────────────────────────────────
 // Returns a confidence adjustment (-30 to +30 range) based on team performance.
 

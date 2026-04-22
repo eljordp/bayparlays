@@ -113,8 +113,36 @@ export default function ParlaysPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingSimSigs, setPendingSimSigs] = useState<Set<string>>(new Set());
 
-  const { isPro, isAdmin: isAuthAdmin, tier } = useAuth();
+  const { user, isPro, isAdmin: isAuthAdmin, tier } = useAuth();
+
+  // Fetch pending sim bets to mark parlays already placed
+  useEffect(() => {
+    if (!user) return;
+    async function fetchPendingSims() {
+      try {
+        const res = await fetch(`/api/sim?user_id=${user!.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          const sigs = new Set<string>();
+          for (const p of data.parlays || []) {
+            if (p.status === "pending") {
+              const sig = (p.legs || [])
+                .map((l: { game: string; pick: string }) => `${l.game}::${l.pick}`)
+                .sort()
+                .join("|");
+              sigs.add(sig);
+            }
+          }
+          setPendingSimSigs(sigs);
+        }
+      } catch {
+        // silent
+      }
+    }
+    fetchPendingSims();
+  }, [user]);
 
   // Admin bypass — check for admin key in URL or localStorage
   useEffect(() => {
@@ -454,6 +482,7 @@ export default function ParlaysPage() {
                       index={idx}
                       copiedId={copiedId}
                       onCopy={handleCopy}
+                      pendingSimSigs={pendingSimSigs}
                     />
                   ))
                 ) : isSharpAccess ? (
@@ -630,17 +659,31 @@ function ParlayCard({
   index,
   copiedId,
   onCopy,
+  pendingSimSigs,
 }: {
   parlay: Parlay;
   index: number;
   copiedId: string | null;
   onCopy: (p: Parlay) => void;
+  pendingSimSigs?: Set<string>;
 }) {
   const { user, isPro } = useAuth();
   const [simPlacing, setSimPlacing] = useState(false);
   const [simResult, setSimResult] = useState<string | null>(null);
 
-  const [isDuplicate, setIsDuplicate] = useState(false);
+  // Check if this parlay is already in the user's pending sim bets
+  const ownSig = parlay.legs
+    .map((l) => `${l.game}::${l.pick}`)
+    .sort()
+    .join("|");
+  const alreadyInSim = pendingSimSigs?.has(ownSig) || false;
+
+  const [isDuplicate, setIsDuplicate] = useState(alreadyInSim);
+
+  // Update if pendingSimSigs changes
+  useEffect(() => {
+    setIsDuplicate(alreadyInSim);
+  }, [alreadyInSim]);
 
   async function tryInSim() {
     if (!user || isDuplicate) return;
