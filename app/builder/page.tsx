@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Logo } from "@/app/components/Logo";
-import { NavUser } from "@/app/components/NavUser";
+import { AppNav } from "@/app/components/AppNav";
 import { useAuth } from "@/app/components/AuthProvider";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -128,7 +127,6 @@ export default function BuilderPage() {
   const [legs, setLegs] = useState<ParlayLeg[]>([]);
   const [stake, setStake] = useState<string>("100");
   const [activeMarket, setActiveMarket] = useState<string>("h2h");
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const slipRef = useRef<HTMLDivElement>(null);
 
   // Auth — builder is VIP/Admin only
@@ -310,105 +308,10 @@ export default function BuilderPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
-      {/* ── Nav ──────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/[0.06]">
-        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center"
-          >
-            <Logo />
-          </Link>
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
-            <Link href="/" className="hover:text-white transition-colors">
-              Home
-            </Link>
-            <Link
-              href="/parlays"
-              className="hover:text-white transition-colors"
-            >
-              Parlays
-            </Link>
-            <Link
-              href="/props"
-              className="hover:text-white transition-colors"
-            >
-              Props
-            </Link>
-            <Link href="/odds" className="hover:text-white transition-colors">
-              Odds
-            </Link>
-            <Link
-              href="/builder"
-              className="text-[#FF3B3B] font-medium"
-            >
-              Builder
-            </Link>
-            <Link href="/results" className="hover:text-white transition-colors">
-              Results
-            </Link>
-            <Link href="/simulator" className="hover:text-white transition-colors">
-              Simulator
-            </Link>
-            <Link href="/my-stats" className="hover:text-white transition-colors">
-              My Stats
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-          <NavUser />
-          {/* Mobile hamburger */}
-          <button
-            onClick={() => setMobileNavOpen((v) => !v)}
-            className="md:hidden flex items-center justify-center w-8 h-8 text-white/60 hover:text-white transition-colors"
-            aria-label="Toggle menu"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              {mobileNavOpen ? (
-                <>
-                  <path d="M4 4l12 12" />
-                  <path d="M16 4L4 16" />
-                </>
-              ) : (
-                <>
-                  <path d="M3 5h14" />
-                  <path d="M3 10h14" />
-                  <path d="M3 15h14" />
-                </>
-              )}
-            </svg>
-          </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown menu */}
-        <AnimatePresence>
-          {mobileNavOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden overflow-hidden border-t border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-md"
-            >
-              <div className="flex flex-col px-6 py-3 gap-1 text-sm">
-                <Link href="/" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Home</Link>
-                <Link href="/parlays" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Parlays</Link>
-                <Link href="/props" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Props</Link>
-                <Link href="/odds" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Odds</Link>
-                <Link href="/builder" onClick={() => setMobileNavOpen(false)} className="py-2 text-[#FF3B3B] font-medium">Builder</Link>
-                <Link href="/results" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Results</Link>
-                <Link href="/simulator" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Simulator</Link>
-                <Link href="/my-stats" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">My Stats</Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+      <AppNav />
 
       {/* ── Main ─────────────────────────────────────────────────── */}
-      <main className="pt-14">
+      <main className="pt-20">
         {/* Header */}
         <div className="border-b border-white/[0.06]">
           <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-5 md:py-8">

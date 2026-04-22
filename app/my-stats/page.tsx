@@ -3,14 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Logo } from "@/app/components/Logo";
-import { NavUser } from "@/app/components/NavUser";
+import { AppNav } from "@/app/components/AppNav";
 import { useAuth } from "@/app/components/AuthProvider";
 import {
   ChevronDown,
   ChevronUp,
-  Menu,
-  X,
   BarChart3,
   Trophy,
   DollarSign,
@@ -150,17 +147,6 @@ function statusColor(status: string): { text: string; bg: string; border: string
   return { text: "#eab308", bg: "rgba(234,179,8,0.08)", border: "rgba(234,179,8,0.2)" };
 }
 
-/* ─── Nav Links ─── */
-
-const NAV_LINKS = [
-  { href: "/parlays", label: "Parlays" },
-  { href: "/odds", label: "Odds" },
-  { href: "/builder", label: "Builder" },
-  { href: "/results", label: "Results" },
-  { href: "/simulator", label: "Simulator" },
-  { href: "/my-stats", label: "My Stats" },
-];
-
 /* ─── Page ─── */
 
 export default function MyStatsPage() {
@@ -169,7 +155,6 @@ export default function MyStatsPage() {
   const [data, setData] = useState<MyStatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedBet, setExpandedBet] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -258,97 +243,7 @@ export default function MyStatsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
-      {/* ─── Nav ─── */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{
-          background: "rgba(10,10,10,0.85)",
-          backdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center">
-              <Logo />
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm transition-colors duration-200"
-                  style={{
-                    color:
-                      link.href === "/my-stats"
-                        ? "#FF3B3B"
-                        : "rgba(255,255,255,0.5)",
-                    fontWeight: link.href === "/my-stats" ? 600 : 400,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (link.href !== "/my-stats")
-                      e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (link.href !== "/my-stats")
-                      e.currentTarget.style.color = "rgba(255,255,255,0.5)";
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <NavUser />
-            <button
-              className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200"
-              style={{ color: "rgba(255,255,255,0.7)" }}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden overflow-hidden"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-            >
-              <div className="px-6 py-4 flex flex-col gap-1">
-                {NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-150"
-                    style={{
-                      color:
-                        link.href === "/my-stats"
-                          ? "#FF3B3B"
-                          : "rgba(255,255,255,0.6)",
-                      background:
-                        link.href === "/my-stats"
-                          ? "rgba(255,59,59,0.08)"
-                          : "transparent",
-                    }}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+      <AppNav />
 
       {/* ─── Header ─── */}
       <header className="pt-28 pb-8 px-4 md:pt-36 md:pb-14 md:px-6">

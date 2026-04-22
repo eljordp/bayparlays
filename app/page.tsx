@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, useInView } from "framer-motion";
-import { Menu, X, ChevronRight, ArrowRight } from "lucide-react";
+import { ChevronRight, ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/app/components/Logo";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -10,7 +10,7 @@ import { ProcessAnimation } from "@/app/components/ProcessAnimation";
 import { ParlayPlayer } from "@/app/components/ParlayPlayer";
 import { HowItWorksPlayer } from "@/app/components/HowItWorksVideo";
 import { BettingSlip } from "@/app/components/BettingSlip";
-import { NavUser } from "@/app/components/NavUser";
+import { AppNav } from "@/app/components/AppNav";
 
 /* ─── Types ─── */
 
@@ -106,7 +106,6 @@ function formatDate(): string {
 /* ─── PAGE ─── */
 
 export default function Home() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [odds, setOdds] = useState<OddsGame[]>([]);
   const oddsScrollRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -210,130 +209,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
-      {/* ── NAV ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-white/[0.06]">
-        <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-20">
-          <Link href="/" className="flex items-center gap-2 -mb-2">
-            <Logo />
-          </Link>
-
-          <div className="hidden md:flex items-center gap-8 text-sm text-white/50">
-            <Link
-              href="/parlays"
-              className="hover:text-white transition-colors duration-200"
-            >
-              Parlays
-            </Link>
-            <Link
-              href="/props"
-              className="hover:text-white transition-colors duration-200"
-            >
-              Props
-            </Link>
-            <Link
-              href="/odds"
-              className="hover:text-white transition-colors duration-200"
-            >
-              Odds
-            </Link>
-            <Link
-              href="/builder"
-              className="hover:text-white transition-colors duration-200"
-            >
-              Builder
-            </Link>
-            <Link
-              href="/results"
-              className="hover:text-white transition-colors duration-200"
-            >
-              Results
-            </Link>
-            <Link
-              href="/simulator"
-              className="hover:text-white transition-colors duration-200"
-            >
-              Simulator
-            </Link>
-            <Link
-              href="/my-stats"
-              className="hover:text-white transition-colors duration-200"
-            >
-              My Stats
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <NavUser />
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden text-white/60 hover:text-white transition-colors"
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-xl">
-            <div className="px-6 py-4 flex flex-col gap-4">
-              <Link
-                href="/parlays"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
-              >
-                Parlays
-              </Link>
-              <Link
-                href="/props"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
-              >
-                Props
-              </Link>
-              <Link
-                href="/odds"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
-              >
-                Odds
-              </Link>
-              <Link
-                href="/builder"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
-              >
-                Builder
-              </Link>
-              <Link
-                href="/results"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
-              >
-                Results
-              </Link>
-              <Link
-                href="/simulator"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
-              >
-                Simulator
-              </Link>
-              <Link
-                href="/my-stats"
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm text-white/50 hover:text-white transition-colors duration-200"
-              >
-                My Stats
-              </Link>
-            </div>
-          </div>
-        )}
-      </nav>
+      <AppNav />
 
       {/* ── HERO ── */}
       <section className="pt-28 pb-20 md:pt-36 md:pb-32">

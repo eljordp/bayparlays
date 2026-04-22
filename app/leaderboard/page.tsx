@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { Logo } from "@/app/components/Logo";
-import { NavUser } from "@/app/components/NavUser";
+import { motion } from "framer-motion";
+import { AppNav } from "@/app/components/AppNav";
 import { useAuth } from "@/app/components/AuthProvider";
-import { Menu, X, Lock, Trophy, Crown, Medal } from "lucide-react";
+import { Lock, Trophy, Crown, Medal } from "lucide-react";
 
 /* ─── Types ─── */
 
@@ -22,20 +21,6 @@ interface LeaderboardEntry {
   losses: number;
   totalWagered: number;
 }
-
-/* ─── Nav Links ─── */
-
-const NAV_LINKS = [
-  { href: "/parlays", label: "Parlays" },
-  { href: "/props", label: "Props" },
-  { href: "/odds", label: "Odds" },
-  { href: "/builder", label: "Builder" },
-  { href: "/results", label: "Results" },
-  { href: "/simulator", label: "Simulator" },
-  { href: "/my-stats", label: "My Stats" },
-  { href: "/achievements", label: "Achievements" },
-  { href: "/leaderboard", label: "Leaderboard" },
-];
 
 /* ─── Helpers ─── */
 
@@ -64,7 +49,6 @@ export default function LeaderboardPage() {
   const { user, loading: authLoading, tier } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isVipOrAdmin = tier === "vip" || tier === "admin";
 
@@ -132,86 +116,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
-      {/* ─── Nav ─── */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{
-          background: "rgba(10,10,10,0.85)",
-          backdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center">
-              <Logo />
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm transition-colors duration-200"
-                  style={{
-                    color: link.href === "/leaderboard" ? "#FF3B3B" : "rgba(255,255,255,0.5)",
-                    fontWeight: link.href === "/leaderboard" ? 600 : 400,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (link.href !== "/leaderboard") e.currentTarget.style.color = "rgba(255,255,255,0.9)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (link.href !== "/leaderboard") e.currentTarget.style.color = "rgba(255,255,255,0.5)";
-                  }}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <NavUser />
-            <button
-              className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200"
-              style={{ color: "rgba(255,255,255,0.7)" }}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden overflow-hidden"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-            >
-              <div className="px-6 py-4 flex flex-col gap-1">
-                {NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-150"
-                    style={{
-                      color: link.href === "/leaderboard" ? "#FF3B3B" : "rgba(255,255,255,0.6)",
-                      background: link.href === "/leaderboard" ? "rgba(255,59,59,0.08)" : "transparent",
-                    }}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+      <AppNav />
 
       {/* ─── VIP Gate ─── */}
       {!isVipOrAdmin ? (

@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Logo } from "@/app/components/Logo";
-import { NavUser } from "@/app/components/NavUser";
+import { AppNav } from "@/app/components/AppNav";
 import { useAuth } from "@/app/components/AuthProvider";
 
 // ─── Types (mirrors /api/props response) ─────────────────────────────────────
@@ -77,7 +76,6 @@ export default function PropsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("points");
-  const [mobileNav, setMobileNav] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
   // VIP+ gate — VIP, admin, or explicit admin bypass
@@ -121,66 +119,9 @@ export default function PropsPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
-      {/* ─── Nav ────────────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0a0a0a]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-5 md:px-5">
-          <Link href="/" className="flex items-center">
-            <Logo />
-          </Link>
-          <div className="hidden md:flex items-center gap-6 text-sm text-white/50">
-            <Link href="/" className="transition hover:text-white">
-              Home
-            </Link>
-            <Link href="/parlays" className="transition hover:text-white">
-              Parlays
-            </Link>
-            <Link href="/odds" className="transition hover:text-white">
-              Odds
-            </Link>
-            <Link href="/props" className="text-[#FF3B3B] font-medium">
-              Props
-            </Link>
-            <Link href="/builder" className="transition hover:text-white">
-              Builder
-            </Link>
-            <Link href="/results" className="transition hover:text-white">
-              Results
-            </Link>
-            <Link href="/simulator" className="transition hover:text-white">
-              Simulator
-            </Link>
-            <Link href="/my-stats" className="transition hover:text-white">
-              My Stats
-            </Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <NavUser />
-            <button
-              onClick={() => setMobileNav(!mobileNav)}
-              className="md:hidden flex flex-col items-center justify-center gap-1.5 p-2"
-              aria-label="Toggle menu"
-            >
-              <span className={`block h-0.5 w-5 bg-white/70 transition-transform ${mobileNav ? "translate-y-[4px] rotate-45" : ""}`} />
-              <span className={`block h-0.5 w-5 bg-white/70 transition-opacity ${mobileNav ? "opacity-0" : ""}`} />
-              <span className={`block h-0.5 w-5 bg-white/70 transition-transform ${mobileNav ? "-translate-y-[4px] -rotate-45" : ""}`} />
-            </button>
-          </div>
-        </div>
-        {mobileNav && (
-          <div className="md:hidden border-t border-white/[0.06] px-4 pb-4 pt-2 flex flex-col gap-3 text-sm text-white/50">
-            <Link href="/" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Home</Link>
-            <Link href="/parlays" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Parlays</Link>
-            <Link href="/odds" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Odds</Link>
-            <Link href="/props" className="text-[#FF3B3B] font-medium" onClick={() => setMobileNav(false)}>Props</Link>
-            <Link href="/builder" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Builder</Link>
-            <Link href="/results" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Results</Link>
-            <Link href="/simulator" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Simulator</Link>
-            <Link href="/my-stats" className="transition hover:text-white" onClick={() => setMobileNav(false)}>My Stats</Link>
-          </div>
-        )}
-      </nav>
+      <AppNav />
 
-      <main className="mx-auto max-w-[1400px] px-4 py-10 md:px-5 md:py-16">
+      <main className="mx-auto max-w-[1400px] px-4 py-10 md:px-5 md:py-16 pt-28">
         {/* ─── Header ─────────────────────────────────────────────────── */}
         <div className="mb-10 md:mb-14">
           <div className="flex items-center gap-3 mb-4">

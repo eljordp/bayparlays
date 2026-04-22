@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Logo } from "@/app/components/Logo";
+import { AppNav } from "@/app/components/AppNav";
 
 type Mode = "signin" | "signup";
 
@@ -68,23 +67,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
-      {/* Nav */}
-      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-white/[0.06]">
-        <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-20">
-          <Link href="/" className="flex items-center gap-2 -mb-2">
-            <Logo />
-          </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm text-white/50">
-            <Link href="/parlays" className="hover:text-white transition-colors duration-200">Parlays</Link>
-            <Link href="/props" className="hover:text-white transition-colors duration-200">Props</Link>
-            <Link href="/odds" className="hover:text-white transition-colors duration-200">Odds</Link>
-            <Link href="/builder" className="hover:text-white transition-colors duration-200">Builder</Link>
-            <Link href="/results" className="hover:text-white transition-colors duration-200">Results</Link>
-            <Link href="/simulator" className="hover:text-white transition-colors duration-200">Simulator</Link>
-            <Link href="/my-stats" className="hover:text-white transition-colors duration-200">My Stats</Link>
-          </div>
-        </div>
-      </nav>
+      <AppNav />
 
       {/* Login Form */}
       <div className="flex items-center justify-center min-h-screen px-6 pt-20">

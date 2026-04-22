@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Menu,
-  X,
   TrendingUp,
   TrendingDown,
   Lock,
@@ -16,8 +14,7 @@ import {
   Pencil,
   Check,
 } from "lucide-react";
-import { Logo } from "@/app/components/Logo";
-import { NavUser } from "@/app/components/NavUser";
+import { AppNav } from "@/app/components/AppNav";
 import { useAuth } from "@/app/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 
@@ -117,7 +114,6 @@ export default function SimulatorPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { user, isPro, isAdmin, loading: authLoading } = useAuth();
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isVip, setIsVip] = useState(false);
   const [userTier, setUserTier] = useState<string>("free");
   const [tierLoading, setTierLoading] = useState(true);
@@ -477,8 +473,7 @@ export default function SimulatorPage() {
   if (!isVip && !isAdmin) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
-        {/* Nav */}
-        <Nav mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+        <AppNav />
 
         <div className="pt-32 pb-20 flex flex-col items-center justify-center px-6 text-center">
           <div className="w-20 h-20 rounded-2xl bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 flex items-center justify-center mb-8">
@@ -523,7 +518,7 @@ export default function SimulatorPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
-      <Nav mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+      <AppNav />
 
       {/* Confirmation toast */}
       {confirmation && (
@@ -1266,88 +1261,3 @@ export default function SimulatorPage() {
   );
 }
 
-/* ─── Nav Component ─── */
-
-function Nav({
-  mobileMenuOpen,
-  setMobileMenuOpen,
-}: {
-  mobileMenuOpen: boolean;
-  setMobileMenuOpen: (v: boolean) => void;
-}) {
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0a0a0a]/80 border-b border-white/[0.06]">
-      <div className="w-full max-w-[1400px] mx-auto flex items-center justify-between px-6 md:px-10 h-20">
-        <Link href="/" className="flex items-center gap-2 -mb-2">
-          <Logo />
-        </Link>
-
-        <div className="hidden md:flex items-center gap-8 text-sm text-white/50">
-          <Link href="/parlays" className="hover:text-white transition-colors duration-200">
-            Parlays
-          </Link>
-          <Link href="/props" className="hover:text-white transition-colors duration-200">
-            Props
-          </Link>
-          <Link href="/odds" className="hover:text-white transition-colors duration-200">
-            Odds
-          </Link>
-          <Link href="/builder" className="hover:text-white transition-colors duration-200">
-            Builder
-          </Link>
-          <Link href="/results" className="hover:text-white transition-colors duration-200">
-            Results
-          </Link>
-          <Link
-            href="/simulator"
-            className="text-[#FF3B3B] hover:text-[#FF5252] transition-colors duration-200"
-          >
-            Simulator
-          </Link>
-          <Link href="/my-stats" className="hover:text-white transition-colors duration-200">
-            My Stats
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <NavUser />
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-white/60 hover:text-white transition-colors"
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
-
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-white/[0.06] bg-[#0a0a0a]/95 backdrop-blur-xl">
-          <div className="px-6 py-4 flex flex-col gap-4">
-            <Link href="/parlays" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
-              Parlays
-            </Link>
-            <Link href="/props" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
-              Props
-            </Link>
-            <Link href="/odds" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
-              Odds
-            </Link>
-            <Link href="/builder" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
-              Builder
-            </Link>
-            <Link href="/results" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
-              Results
-            </Link>
-            <Link href="/simulator" onClick={() => setMobileMenuOpen(false)} className="text-sm text-[#FF3B3B] hover:text-[#FF5252] transition-colors">
-              Simulator
-            </Link>
-            <Link href="/my-stats" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
-              My Stats
-            </Link>
-          </div>
-        </div>
-      )}
-    </nav>
-  );
-}

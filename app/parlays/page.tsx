@@ -3,9 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Logo } from "@/app/components/Logo";
 import { useAuth } from "@/app/components/AuthProvider";
-import { NavUser } from "@/app/components/NavUser";
+import { AppNav } from "@/app/components/AppNav";
 import {
   Copy,
   Check,
@@ -13,8 +12,6 @@ import {
   BarChart3,
   Target,
   Shield,
-  Menu,
-  X,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -134,7 +131,6 @@ export default function ParlaysPage() {
   // "is this +EV math." Lock picks lead; EV + Payout are optional tabs.
   const [sortBy, setSortBy] = useState<SortOption>("confidence");
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingSimSigs, setPendingSimSigs] = useState<Set<string>>(new Set());
 
@@ -283,92 +279,7 @@ export default function ParlaysPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
-      {/* ─── Nav ─── */}
-      <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: "rgba(10,10,10,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center">
-              <Logo />
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              {[
-                { href: "/", label: "Home" },
-                { href: "/parlays", label: "AI Parlays" },
-                { href: "/props", label: "Props" },
-                { href: "/odds", label: "Odds" },
-                { href: "/builder", label: "Builder" },
-                { href: "/results", label: "Results" },
-                { href: "/simulator", label: "Simulator" },
-                { href: "/my-stats", label: "My Stats" },
-              ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm transition-colors duration-200"
-                  style={{
-                    color: link.href === "/parlays" ? "#FF3B3B" : "rgba(255,255,255,0.5)",
-                    fontWeight: link.href === "/parlays" ? 600 : 400,
-                  }}
-                  onMouseEnter={(e) => { if (link.href !== "/parlays") e.currentTarget.style.color = "rgba(255,255,255,0.9)"; }}
-                  onMouseLeave={(e) => { if (link.href !== "/parlays") e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <NavUser />
-            <button
-              className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200"
-              style={{ color: "rgba(255,255,255,0.7)" }}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="md:hidden overflow-hidden"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-            >
-              <div className="px-6 py-4 flex flex-col gap-1">
-                {[
-                  { href: "/", label: "Home" },
-                  { href: "/parlays", label: "AI Parlays" },
-                  { href: "/props", label: "Props" },
-                  { href: "/odds", label: "Odds" },
-                  { href: "/builder", label: "Builder" },
-                  { href: "/results", label: "Results" },
-                  { href: "/simulator", label: "Simulator" },
-                ].map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-150"
-                    style={{
-                      color: link.href === "/parlays" ? "#FF3B3B" : "rgba(255,255,255,0.6)",
-                      background: link.href === "/parlays" ? "rgba(255,59,59,0.08)" : "transparent",
-                    }}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </nav>
+      <AppNav />
 
       {/* ─── Header ─── */}
       <header className="pt-24 pb-10 px-4 md:pt-32 md:pb-16 md:px-6">
