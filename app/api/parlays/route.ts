@@ -545,17 +545,14 @@ function buildParlays(
   let sorted: ScoredLeg[];
   let viable: ScoredLeg[];
 
-  // Universal floor: only bet legs where we think we have real edge over the
-  // book. trueEdge is in decimal (0.015 = 1.5 percentage points). Sharp
-  // bettors start qualifying bets at ~1.5% edge per leg — below that is
-  // coin-flip territory even with a good model. The parlay-level EV gate
-  // downstream (evPercent >= 5) is where we commit to tracking.
-  const MIN_TRUE_EDGE = 0.015;
-  const legsWithEdge = allLegs.filter((leg) => leg.trueEdge >= MIN_TRUE_EDGE);
-
+  // Sort all legs by the ranking signal for this mode. We DON'T hard-filter
+  // by trueEdge here — the parlay-level EV gate downstream (evPercent >= 5
+  // at insert time) decides what actually enters the public track record.
+  // This way /parlays always has picks to browse even on thin-edge days,
+  // but /results only commits to the subset the model really stands behind.
   if (sortMode === "confidence") {
-    // MOST CONFIDENT: favorites with the highest ourProb, gated on edge.
-    sorted = [...legsWithEdge]
+    // MOST CONFIDENT: favorites with highest ourProb, with sanity filters.
+    sorted = [...allLegs]
       .filter((leg) => {
         if (leg.market === "moneyline" && leg.odds > 0) return false;
         if (leg.teamRecord && leg.teamRecord.winRate < 0.5) return false;
@@ -564,19 +561,21 @@ function buildParlays(
       .sort((a, b) => b.ourProb - a.ourProb);
     viable = sorted;
   } else if (sortMode === "payout") {
-    // HIGHEST PAYOUT: underdogs, but still with real edge (MIN_TRUE_EDGE above).
-    // Sorted by decimal odds — bigger payout preferred among the edge-qualified.
-    sorted = [...legsWithEdge].sort((a, b) => b.decimalOdds - a.decimalOdds);
+    // HIGHEST PAYOUT: sort by decimal odds (bigger payouts first), tiebreak
+    // on trueEdge so we don't pick pure coin flips.
+    sorted = [...allLegs].sort((a, b) => {
+      const decDiff = b.decimalOdds - a.decimalOdds;
+      if (Math.abs(decDiff) > 0.1) return decDiff;
+      return b.trueEdge - a.trueEdge;
+    });
     viable = sorted;
   } else {
-    // BEST EV: sort by actual edge, not legacy composite score.
-    sorted = [...legsWithEdge].sort((a, b) => b.trueEdge - a.trueEdge);
+    // BEST EV: sort purely by trueEdge — ourProb minus book-implied.
+    sorted = [...allLegs].sort((a, b) => b.trueEdge - a.trueEdge);
     viable = sorted;
   }
 
-  // If we don't have enough edge-qualified legs for this parlay size,
-  // return empty. Scarcity > manufactured picks. Better to show no parlay
-  // than to fill a slate with negative-EV ones the AI doesn't stand behind.
+  // Need at least enough legs across different games to build one parlay.
   if (viable.length < numLegs) {
     return [];
   }
