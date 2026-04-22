@@ -494,10 +494,16 @@ function extractLegsFromGame(
         }
       } else if (marketKey === "spreads" || marketKey === "totals") {
         // Spreads and totals are priced near 50/50 by design. Without a
-        // margin-of-victory model, our advantage here comes from line
-        // divergence (edgeScore). Nudge ourProb conservatively so a 20-point
-        // edgeScore adds 4% — edge here is thinner than on moneylines.
-        ourProb = ourProb + edgeScore / 500;
+        // margin-of-victory or pace model, our only honest edge signal is
+        // raw line divergence — how much better the best book pays vs the
+        // market average. Ignore the composite edgeScore here (it absorbs
+        // team-record bonuses that only make sense for moneyline).
+        //
+        // rawLineEdge is typically 1-3% when there's real divergence. We
+        // apply half of it to ourProb so a 2% better line ≈ 1% probability
+        // edge. Anything larger should go through a dedicated model.
+        const rawLineEdge = (bestDecimal - avgDecimal) / avgDecimal;
+        ourProb += rawLineEdge * 0.5;
       }
 
       // Clamp ourProb to realistic range
