@@ -521,6 +521,41 @@ export default function ParlaysPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
+                {/* Honest market-state banner — when NO parlay has AI >
+                    book, tell users the lines are tight instead of
+                    pretending something is a Lock. */}
+                {(() => {
+                  const anyPositiveEdge = visibleParlays.some(
+                    (p) =>
+                      typeof p.aiEstimate === "number" &&
+                      typeof p.impliedHitRate === "number" &&
+                      p.aiEstimate > p.impliedHitRate,
+                  );
+                  if (anyPositiveEdge) return null;
+                  return (
+                    <div
+                      className="rounded-xl px-5 py-4 flex items-start gap-3"
+                      style={{
+                        background: "rgba(234,179,8,0.06)",
+                        border: "1px solid rgba(234,179,8,0.2)",
+                      }}
+                    >
+                      <span
+                        className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full"
+                        style={{ background: "#eab308" }}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: "#eab308" }}>
+                          No clear edge found today
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
+                          Every parlay below is priced at or above the AI&apos;s own estimate — meaning the book is charging a reasonable-to-steep price for each one. Nothing qualifies as a Lock. If you&apos;re here to fire, pick carefully. If you&apos;re here to grow bankroll, it might be a day to skip.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* VIP/Admin: see everything */}
                 {isVipAccess ? (
                   visibleParlays.map((parlay, idx) => (
@@ -531,7 +566,13 @@ export default function ParlaysPage() {
                       copiedId={copiedId}
                       onCopy={handleCopy}
                       pendingSimSigs={pendingSimSigs}
-                      isLockOfDay={idx === 0 && sortBy === "confidence"}
+                      isLockOfDay={
+                        idx === 0 &&
+                        sortBy === "confidence" &&
+                        typeof parlay.aiEstimate === "number" &&
+                        typeof parlay.impliedHitRate === "number" &&
+                        parlay.aiEstimate > parlay.impliedHitRate
+                      }
                     />
                   ))
                 ) : isSharpAccess ? (
@@ -547,7 +588,13 @@ export default function ParlaysPage() {
                         index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
-                        isLockOfDay={idx === 0 && sortBy === "confidence"}
+                        isLockOfDay={
+                        idx === 0 &&
+                        sortBy === "confidence" &&
+                        typeof parlay.aiEstimate === "number" &&
+                        typeof parlay.impliedHitRate === "number" &&
+                        parlay.aiEstimate > parlay.impliedHitRate
+                      }
                       />
                     ))}
 
@@ -601,7 +648,13 @@ export default function ParlaysPage() {
                         index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
-                        isLockOfDay={idx === 0 && sortBy === "confidence"}
+                        isLockOfDay={
+                        idx === 0 &&
+                        sortBy === "confidence" &&
+                        typeof parlay.aiEstimate === "number" &&
+                        typeof parlay.impliedHitRate === "number" &&
+                        parlay.aiEstimate > parlay.impliedHitRate
+                      }
                       />
                     ))}
 
