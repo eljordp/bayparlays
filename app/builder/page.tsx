@@ -351,6 +351,9 @@ export default function BuilderPage() {
             <Link href="/simulator" className="hover:text-white transition-colors">
               Simulator
             </Link>
+            <Link href="/my-stats" className="hover:text-white transition-colors">
+              My Stats
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -397,6 +400,7 @@ export default function BuilderPage() {
                 <Link href="/builder" onClick={() => setMobileNavOpen(false)} className="py-2 text-[#FF3B3B] font-medium">Builder</Link>
                 <Link href="/results" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Results</Link>
                 <Link href="/simulator" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">Simulator</Link>
+                <Link href="/my-stats" onClick={() => setMobileNavOpen(false)} className="py-2 text-white/50 hover:text-white transition-colors">My Stats</Link>
               </div>
             </motion.div>
           )}

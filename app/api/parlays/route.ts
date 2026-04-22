@@ -982,18 +982,27 @@ export async function GET(request: NextRequest) {
         .gte("created_at", fiveMinAgo);
 
       if (!count || count === 0) {
-        const rows = parlays.map((p) => ({
-          legs: p.legs,
-          combined_odds: p.combinedOdds,
-          combined_decimal: p.combinedDecimal,
-          ev: p.ev,
-          ev_percent: p.evPercent,
-          confidence: p.confidence,
-          payout: p.payout,
-          legs_total: p.legs.length,
-          sports: [...new Set(p.legs.map((l) => l.sport))],
-        }));
-        await supabase.from("parlays").insert(rows);
+        // Only record parlays the AI would actually stand behind.
+        // confidence 60+ = avgEdge >= 20 (see buildParlays: confidence = avgEdge * 3).
+        // Everything below that is noise — showing it as an "official pick" in the
+        // public track record tanks the win rate with parlays we wouldn't bet on ourselves.
+        const MIN_CONFIDENCE_TO_TRACK = 60;
+        const trackable = parlays.filter((p) => p.confidence >= MIN_CONFIDENCE_TO_TRACK);
+
+        if (trackable.length > 0) {
+          const rows = trackable.map((p) => ({
+            legs: p.legs,
+            combined_odds: p.combinedOdds,
+            combined_decimal: p.combinedDecimal,
+            ev: p.ev,
+            ev_percent: p.evPercent,
+            confidence: p.confidence,
+            payout: p.payout,
+            legs_total: p.legs.length,
+            sports: [...new Set(p.legs.map((l) => l.sport))],
+          }));
+          await supabase.from("parlays").insert(rows);
+        }
 
         // Snapshot current best lines for movement analysis.
         // Gated on the same 5-minute window as parlay inserts to avoid

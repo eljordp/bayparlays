@@ -218,6 +218,9 @@ export default function SettingsPage() {
             <Link href="/simulator" className="hover:text-white transition-colors duration-200">
               Simulator
             </Link>
+            <Link href="/my-stats" className="hover:text-white transition-colors duration-200">
+              My Stats
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -252,6 +255,9 @@ export default function SettingsPage() {
               </Link>
               <Link href="/simulator" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
                 Simulator
+              </Link>
+              <Link href="/my-stats" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">
+                My Stats
               </Link>
               {user && (
                 <Link href="/settings" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors duration-200">

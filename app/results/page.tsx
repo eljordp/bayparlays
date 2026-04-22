@@ -109,6 +109,7 @@ const NAV_LINKS = [
   { href: "/builder", label: "Builder" },
   { href: "/results", label: "Results" },
   { href: "/simulator", label: "Simulator" },
+  { href: "/my-stats", label: "My Stats" },
 ];
 
 /* ─── Component ─── */

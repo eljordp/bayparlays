@@ -149,6 +149,9 @@ export default function PropsPage() {
             <Link href="/simulator" className="transition hover:text-white">
               Simulator
             </Link>
+            <Link href="/my-stats" className="transition hover:text-white">
+              My Stats
+            </Link>
           </div>
           <div className="flex items-center gap-3">
             <NavUser />
@@ -172,6 +175,7 @@ export default function PropsPage() {
             <Link href="/builder" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Builder</Link>
             <Link href="/results" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Results</Link>
             <Link href="/simulator" className="transition hover:text-white" onClick={() => setMobileNav(false)}>Simulator</Link>
+            <Link href="/my-stats" className="transition hover:text-white" onClick={() => setMobileNav(false)}>My Stats</Link>
           </div>
         )}
       </nav>

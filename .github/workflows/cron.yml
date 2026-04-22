@@ -1,0 +1,28 @@
+name: BayParlays Periodic Refresh
+
+# Runs every 3 hours. Hits /api/daily which resolves pending parlays
+# against real scores, generates fresh AI picks, and checks sim bets.
+# This replaces the Vercel Hobby once-a-day limit.
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  workflow_dispatch: {} # lets you trigger manually from the Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /api/daily
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/daily" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              --max-time 120
+          else
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/daily" \
+              --max-time 120
+          fi

@@ -217,6 +217,9 @@ export default function LiveScoreboard() {
             <Link href="/simulator" className="hover:text-white transition-colors duration-200">
               Simulator
             </Link>
+            <Link href="/my-stats" className="hover:text-white transition-colors duration-200">
+              My Stats
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -242,6 +245,7 @@ export default function LiveScoreboard() {
                 { href: "/results", label: "Results" },
                 { href: "/live", label: "Live" },
                 { href: "/simulator", label: "Simulator" },
+                { href: "/my-stats", label: "My Stats" },
               ].map((link) => (
                 <Link
                   key={link.href}

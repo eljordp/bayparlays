@@ -81,6 +81,7 @@ export default function LoginPage() {
             <Link href="/builder" className="hover:text-white transition-colors duration-200">Builder</Link>
             <Link href="/results" className="hover:text-white transition-colors duration-200">Results</Link>
             <Link href="/simulator" className="hover:text-white transition-colors duration-200">Simulator</Link>
+            <Link href="/my-stats" className="hover:text-white transition-colors duration-200">My Stats</Link>
           </div>
         </div>
       </nav>

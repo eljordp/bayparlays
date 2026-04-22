@@ -216,6 +216,7 @@ export default function ParlaysPage() {
                 { href: "/builder", label: "Builder" },
                 { href: "/results", label: "Results" },
                 { href: "/simulator", label: "Simulator" },
+                { href: "/my-stats", label: "My Stats" },
               ].map((link) => (
                 <Link
                   key={link.href}

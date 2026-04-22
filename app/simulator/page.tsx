@@ -1260,6 +1260,9 @@ function Nav({
           >
             Simulator
           </Link>
+          <Link href="/my-stats" className="hover:text-white transition-colors duration-200">
+            My Stats
+          </Link>
         </div>
 
         <div className="flex items-center gap-3">
@@ -1294,6 +1297,9 @@ function Nav({
             </Link>
             <Link href="/simulator" onClick={() => setMobileMenuOpen(false)} className="text-sm text-[#FF3B3B] hover:text-[#FF5252] transition-colors">
               Simulator
+            </Link>
+            <Link href="/my-stats" onClick={() => setMobileMenuOpen(false)} className="text-sm text-white/50 hover:text-white transition-colors">
+              My Stats
             </Link>
           </div>
         </div>

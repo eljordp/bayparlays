@@ -195,6 +195,9 @@ export default function OddsPage() {
             <Link href="/simulator" className="transition hover:text-white">
               Simulator
             </Link>
+            <Link href="/my-stats" className="transition hover:text-white">
+              My Stats
+            </Link>
           </div>
           <div className="flex items-center gap-3">
           <NavUser />
@@ -233,6 +236,9 @@ export default function OddsPage() {
             </Link>
             <Link href="/simulator" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
               Simulator
+            </Link>
+            <Link href="/my-stats" className="transition hover:text-white" onClick={() => setMobileNav(false)}>
+              My Stats
             </Link>
           </div>
         )}
