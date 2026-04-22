@@ -86,10 +86,12 @@ interface ScoredLeg {
   odds: number;
   decimalOdds: number;
   book: string;
+  bookCount: number;     // how many books priced this outcome (signal strength)
   impliedProb: number;   // book's implied probability (includes vig)
   ourProb: number;       // our estimate of true win probability
   trueEdge: number;      // ourProb - impliedProb, in decimal (0.05 = 5 point edge)
   edgeScore: number;     // legacy composite score, kept for back-compat
+  scored: boolean;       // true if we had real signal to compute ourProb (not just de-vig)
   homeTeam: string;
   awayTeam: string;
   teamRecord?: TeamRecordInfo;
@@ -130,7 +132,10 @@ interface ParlayResponse {
   meta: {
     sportsScanned: string[];
     gamesAnalyzed: number;
-    legsEvaluated: number;
+    legsEvaluated: number;   // total legs pulled from all books
+    legsScored: number;      // subset we could score with real model signal
+    poolSize: number;        // how many legs made it into the ranked pool
+    tier: string;
     generatedAt: string;
   };
 }
@@ -475,6 +480,12 @@ function extractLegsFromGame(
         new Date(game.commence_time),
       );
 
+      // Track whether this leg was actually scored with real model signal,
+      // vs. just falling back to de-vigged book prior. Unscored legs get
+      // filtered out before parlay construction — studying 218 legs is
+      // worthless if half of them are unscored noise.
+      let wasScored = false;
+
       if (marketKey === "h2h" && teamRecords && eloRatings) {
         const isHome = outcomeInfo.name === game.home_team;
         const opponent = isHome ? game.away_team : game.home_team;
@@ -513,7 +524,9 @@ function extractLegsFromGame(
           modelEstimates.push({ p: recordProb, w: 0.6 });
         }
 
-        if (modelEstimates.length > 0) {
+        // Require BOTH Elo and winRate signal to call the leg scored.
+        // A leg with only one signal has too much variance from thin data.
+        if (modelEstimates.length >= 2) {
           const totalW = modelEstimates.reduce((s, x) => s + x.w, 0);
           const modelProb =
             modelEstimates.reduce((s, x) => s + x.p * x.w, 0) / totalW;
@@ -522,6 +535,7 @@ function extractLegsFromGame(
           // The book prior regularizes us against extreme swings from thin
           // Elo data while still letting real disagreements drive edge.
           ourProb = modelProb * 0.7 + ourProb * 0.3;
+          wasScored = true;
         }
 
         // Form + streak nudges on top.
@@ -564,6 +578,7 @@ function extractLegsFromGame(
             inPlayoffs,
           );
           ourProb = coverProb;
+          wasScored = true;
         }
       } else if (marketKey === "totals" && outcomeInfo.point !== undefined && recentGames) {
         // Totals: use recent scoring for both teams to estimate expected
@@ -585,6 +600,7 @@ function extractLegsFromGame(
             expTotal,
             inPlayoffs,
           );
+          wasScored = true;
         }
       }
 
@@ -602,10 +618,12 @@ function extractLegsFromGame(
         odds: best.bestOdds,
         decimalOdds: bestDecimal,
         book: best.bestBook,
+        bookCount: best.allOdds.length,
         impliedProb: Math.round(impliedProb * 10000) / 10000,
         ourProb: Math.round(ourProb * 10000) / 10000,
         trueEdge: Math.round(trueEdge * 10000) / 10000,
         edgeScore,
+        scored: wasScored,
         homeTeam: game.home_team,
         awayTeam: game.away_team,
         teamRecord: teamRecordInfo,
@@ -618,42 +636,67 @@ function extractLegsFromGame(
 
 // ─── Parlay Builder ──────────────────────────────────────────────────────────
 
+// Per-tier analysis depth. "Analyze wide" was bleeding noise from unscored
+// legs into the ranking. Now: (1) require scored + ≥3 books on every leg,
+// (2) cap the pool size the greedy builder considers so we're not throwing
+// noise into parlays just because the odds were loud.
+const TIER_CONFIG: Record<
+  string,
+  { poolSize: number; minBooks: number; requireScored: boolean }
+> = {
+  free:  { poolSize: 30,  minBooks: 3, requireScored: true },
+  sharp: { poolSize: 80,  minBooks: 3, requireScored: true },
+  vip:   { poolSize: 200, minBooks: 2, requireScored: true },
+  admin: { poolSize: 300, minBooks: 2, requireScored: false }, // diagnostic
+};
+
 function buildParlays(
   allLegs: ScoredLeg[],
   numLegs: number,
   count: number,
-  sortMode: "ev" | "payout" | "confidence" = "ev"
+  sortMode: "ev" | "payout" | "confidence" = "ev",
+  tier: string = "sharp",
 ): Parlay[] {
   let sorted: ScoredLeg[];
   let viable: ScoredLeg[];
 
-  // Sort all legs by the ranking signal for this mode. We DON'T hard-filter
-  // by trueEdge here — the parlay-level EV gate downstream (evPercent >= 5
-  // at insert time) decides what actually enters the public track record.
-  // This way /parlays always has picks to browse even on thin-edge days,
-  // but /results only commits to the subset the model really stands behind.
+  const cfg = TIER_CONFIG[tier] ?? TIER_CONFIG.sharp;
+
+  // Pre-filter: drop legs we can't actually score with real signal, and
+  // drop thin-market legs (2-book lines are too noisy to trust as edge).
+  const qualityLegs = allLegs.filter((leg) => {
+    if (cfg.requireScored && !leg.scored) return false;
+    if (leg.bookCount < cfg.minBooks) return false;
+    return true;
+  });
+
+  // Sort by ranking signal for this mode, then cap to tier's pool size.
+  // Everything past the cutoff is ignored — reduces noise from low-priority
+  // picks being mixed into greedy construction.
   if (sortMode === "confidence") {
-    // MOST CONFIDENT: favorites with highest ourProb, with sanity filters.
-    sorted = [...allLegs]
+    sorted = [...qualityLegs]
       .filter((leg) => {
         if (leg.market === "moneyline" && leg.odds > 0) return false;
         if (leg.teamRecord && leg.teamRecord.winRate < 0.5) return false;
         return true;
       })
-      .sort((a, b) => b.ourProb - a.ourProb);
+      .sort((a, b) => b.ourProb - a.ourProb)
+      .slice(0, cfg.poolSize);
     viable = sorted;
   } else if (sortMode === "payout") {
-    // HIGHEST PAYOUT: sort by decimal odds (bigger payouts first), tiebreak
-    // on trueEdge so we don't pick pure coin flips.
-    sorted = [...allLegs].sort((a, b) => {
-      const decDiff = b.decimalOdds - a.decimalOdds;
-      if (Math.abs(decDiff) > 0.1) return decDiff;
-      return b.trueEdge - a.trueEdge;
-    });
+    sorted = [...qualityLegs]
+      .sort((a, b) => {
+        const decDiff = b.decimalOdds - a.decimalOdds;
+        if (Math.abs(decDiff) > 0.1) return decDiff;
+        return b.trueEdge - a.trueEdge;
+      })
+      .slice(0, cfg.poolSize);
     viable = sorted;
   } else {
     // BEST EV: sort purely by trueEdge — ourProb minus book-implied.
-    sorted = [...allLegs].sort((a, b) => b.trueEdge - a.trueEdge);
+    sorted = [...qualityLegs]
+      .sort((a, b) => b.trueEdge - a.trueEdge)
+      .slice(0, cfg.poolSize);
     viable = sorted;
   }
 
@@ -973,6 +1016,9 @@ function generateMockParlays(
       sportsScanned: sports,
       gamesAnalyzed: allGames.length,
       legsEvaluated: allGames.length * 6,
+      legsScored: 0,
+      poolSize: 0,
+      tier: "mock",
       generatedAt: new Date().toISOString(),
     },
   };
@@ -1002,11 +1048,15 @@ export async function GET(request: NextRequest) {
     }
 
     const numLegs = Math.min(6, Math.max(2, parseInt(searchParams.get("legs") || "3", 10)));
-    const count = Math.min(20, Math.max(1, parseInt(searchParams.get("count") || "5", 10)));
+    const count = Math.min(30, Math.max(1, parseInt(searchParams.get("count") || "5", 10)));
     const sortMode = (searchParams.get("sort") || "ev") as "ev" | "payout" | "confidence";
+    // Tier controls pre-filter strictness + pool size. Higher tiers get
+    // access to more legs (less aggressive culling) since VIPs/admins want
+    // the wider slate. Free users get the tightest-quality pool.
+    const tier = (searchParams.get("tier") || "sharp").toLowerCase();
 
-    // Check cache
-    const cached = getCachedResponse(sports, numLegs, count, sortMode);
+    // Check cache (cache key includes tier — free/sharp/vip responses differ)
+    const cached = getCachedResponse(sports, numLegs, count, sortMode + ":" + tier);
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
@@ -1113,7 +1163,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Build optimized parlays
-    const parlays = buildParlays(allLegs, numLegs, count, sortMode);
+    const parlays = buildParlays(allLegs, numLegs, count, sortMode, tier);
+    const legsScored = allLegs.filter((l) => l.scored).length;
+    const tierCfg = (TIER_CONFIG as Record<string, { poolSize: number }>)[tier] ?? TIER_CONFIG.sharp;
 
     const response: ParlayResponse = {
       parlays,
@@ -1121,12 +1173,15 @@ export async function GET(request: NextRequest) {
         sportsScanned: sports.map((s) => s.toUpperCase()),
         gamesAnalyzed: totalGames,
         legsEvaluated: allLegs.length,
+        legsScored,
+        poolSize: tierCfg.poolSize,
+        tier,
         generatedAt: new Date().toISOString(),
       },
     };
 
     // Cache the response
-    setCachedResponse(response, sports, numLegs, count, sortMode);
+    setCachedResponse(response, sports, numLegs, count, sortMode + ":" + tier);
 
     // Save parlays to tracking database (fire and forget, skip if recent insert)
     try {

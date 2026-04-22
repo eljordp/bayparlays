@@ -49,8 +49,11 @@ export async function GET(req: NextRequest) {
 
   for (const combo of sportCombos) {
     try {
+      // Tracked record uses "sharp" tier — balances pool size with quality
+      // filters (scored + 3+ books per leg). Tight enough to not pollute
+      // the public track record, loose enough to actually surface picks.
       const res = await fetch(
-        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=5`
+        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=5&tier=sharp`
       );
       if (res.ok) {
         const data = await res.json();

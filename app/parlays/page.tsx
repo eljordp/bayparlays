@@ -168,7 +168,25 @@ export default function ParlaysPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ count: "10" });
+      // Count scales with tier: free=5, sharp=10, vip=20 parlays per slate.
+      // Backend also uses tier to control leg pool size + quality filters.
+      const effectiveTier = isAdmin
+        ? "admin"
+        : tier === "vip" || tier === "admin"
+          ? "vip"
+          : isPro
+            ? "sharp"
+            : "free";
+      const countForTier =
+        effectiveTier === "vip" || effectiveTier === "admin"
+          ? "20"
+          : effectiveTier === "sharp"
+            ? "10"
+            : "5";
+      const params = new URLSearchParams({
+        count: countForTier,
+        tier: effectiveTier,
+      });
       if (selectedSport !== "All") params.set("sports", selectedSport);
       if (selectedLegs) params.set("legs", String(selectedLegs));
       params.set("sort", sortBy);
@@ -185,7 +203,7 @@ export default function ParlaysPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSport, selectedLegs, sortBy]);
+  }, [selectedSport, selectedLegs, sortBy, tier, isPro, isAdmin]);
 
   useEffect(() => {
     fetchParlays();

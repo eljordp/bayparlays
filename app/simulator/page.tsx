@@ -207,13 +207,16 @@ export default function SimulatorPage() {
     setDataLoading(false);
   }, [user]);
 
-  // Load picks for quick sim — one from each category for variety
+  // Load picks for quick sim — one from each category for variety.
+  // Simulator is already a paid/VIP feature, so always request vip tier
+  // (wider leg pool → more picks even after the quality filter).
   const loadPicks = useCallback(async () => {
     try {
+      const effectiveTier = isAdmin ? "admin" : "vip";
       const modes: PickCategory[] = ["ev", "payout", "confidence"];
       const results = await Promise.all(
         modes.map((m) =>
-          fetch(`/api/parlays?count=2&legs=3&sort=${m}`)
+          fetch(`/api/parlays?count=2&legs=3&sort=${m}&tier=${effectiveTier}`)
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null)
         )
@@ -239,7 +242,7 @@ export default function SimulatorPage() {
     } catch {
       // silent
     }
-  }, []);
+  }, [isAdmin]);
 
   // Fetch cashout values for all pending parlays
   const fetchCashoutValues = useCallback(async () => {
