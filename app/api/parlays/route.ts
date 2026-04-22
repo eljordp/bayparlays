@@ -751,6 +751,21 @@ function buildParlays(
       selected.map((l) => ({ decimalOdds: l.decimalOdds }))
     );
 
+    // Minimum payout gate per sort mode. Nobody bets $10 to win $5 — heavy-
+    // favorite juice parlays (combined -185) are structurally bad even if
+    // they hit 65% of the time. Confidence mode needs real upside; payout
+    // mode needs actual longshots; EV mode is math-driven and can flex.
+    //
+    //   confidence: min +200 (decimal 3.0) — $10 pays at least $30 profit
+    //   payout:     min +600 (decimal 7.0) — real swings, not mid-odds
+    //   ev:         min +100 (decimal 2.0) — basic "actually worth stacking"
+    const minDecimalByMode: Record<typeof sortMode, number> = {
+      confidence: 3.0,
+      payout: 7.0,
+      ev: 2.0,
+    };
+    if (combinedDecimal < minDecimalByMode[sortMode]) continue;
+
     // Parlay probability = product of each leg's TRUE probability estimate.
     // No more inflating by arbitrary edge boosts — ourProb is already the
     // probability after de-vig + Elo + form adjustments. Compounding it across
