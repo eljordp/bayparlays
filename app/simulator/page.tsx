@@ -12,6 +12,9 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  DollarSign,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { NavUser } from "@/app/components/NavUser";
@@ -95,6 +98,15 @@ export default function SimulatorPage() {
   const [expandedParlay, setExpandedParlay] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [confirmation, setConfirmation] = useState<string | null>(null);
+
+  // Cash out state
+  const [cashoutValues, setCashoutValues] = useState<Record<string, number>>({});
+  const [cashingOut, setCashingOut] = useState<string | null>(null);
+
+  // Edit stake state
+  const [editingParlay, setEditingParlay] = useState<string | null>(null);
+  const [editStake, setEditStake] = useState<number>(0);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Check VIP tier
   useEffect(() => {
@@ -183,6 +195,37 @@ export default function SimulatorPage() {
     }
   }, []);
 
+  // Fetch cashout values for all pending parlays
+  const fetchCashoutValues = useCallback(async () => {
+    if (!user) return;
+    const pending = parlays.filter((p) => p.status === "pending");
+    const values: Record<string, number> = {};
+    await Promise.all(
+      pending.map(async (p) => {
+        try {
+          const res = await fetch(
+            `/api/sim/cashout?parlay_id=${p.id}&user_id=${user.id}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data.cashoutAvailable) {
+              values[p.id] = data.cashoutValue;
+            }
+          }
+        } catch {
+          // silent
+        }
+      })
+    );
+    setCashoutValues(values);
+  }, [user, parlays]);
+
+  useEffect(() => {
+    if (parlays.length > 0) {
+      fetchCashoutValues();
+    }
+  }, [parlays, fetchCashoutValues]);
+
   useEffect(() => {
     if (isVip && user) {
       loadData();
@@ -232,6 +275,77 @@ export default function SimulatorPage() {
     }
 
     setPlacing(null);
+  }
+
+  // Cash out a pending parlay
+  async function handleCashOut(parlayId: string) {
+    if (!user || cashingOut) return;
+
+    const value = cashoutValues[parlayId];
+    const confirmed = window.confirm(
+      `Cash out this parlay for $${value?.toFixed(2) || "??"}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setCashingOut(parlayId);
+    try {
+      const res = await fetch("/api/sim/cashout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parlay_id: parlayId, user_id: user.id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConfirmation(`Cashed out for $${data.cashoutValue.toFixed(2)}`);
+        setTimeout(() => setConfirmation(null), 2500);
+        await loadData();
+      } else {
+        setConfirmation(data.error || "Failed to cash out");
+        setTimeout(() => setConfirmation(null), 2500);
+      }
+    } catch {
+      setConfirmation("Network error");
+      setTimeout(() => setConfirmation(null), 2500);
+    }
+    setCashingOut(null);
+  }
+
+  // Edit stake on a pending parlay
+  async function handleEditStake(parlayId: string) {
+    if (!user || savingEdit) return;
+
+    if (editStake < 1) {
+      setConfirmation("Minimum stake is $1");
+      setTimeout(() => setConfirmation(null), 2000);
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch("/api/sim", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parlay_id: parlayId,
+          user_id: user.id,
+          new_stake: editStake,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConfirmation(`Stake updated to $${editStake}`);
+        setTimeout(() => setConfirmation(null), 2500);
+        setEditingParlay(null);
+        await loadData();
+      } else {
+        setConfirmation(data.error || "Failed to update stake");
+        setTimeout(() => setConfirmation(null), 2500);
+      }
+    } catch {
+      setConfirmation("Network error");
+      setTimeout(() => setConfirmation(null), 2500);
+    }
+    setSavingEdit(false);
   }
 
   // Bankroll chart data
@@ -839,6 +953,20 @@ export default function SimulatorPage() {
                             {p.status}
                           </span>
 
+                          {/* Cash out value for pending */}
+                          {p.status === "pending" && cashoutValues[p.id] !== undefined && (
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded ${
+                                cashoutValues[p.id] >= p.stake
+                                  ? "bg-[#22C55E]/10 text-[#22C55E]"
+                                  : "bg-white/[0.04] text-white/40"
+                              }`}
+                              style={{ fontFamily: "var(--font-geist-mono)" }}
+                            >
+                              ${cashoutValues[p.id].toFixed(2)}
+                            </span>
+                          )}
+
                           {/* Profit */}
                           <span
                             className={`text-sm font-bold w-20 text-right ${
@@ -866,7 +994,7 @@ export default function SimulatorPage() {
                         </div>
                       </div>
 
-                      {/* Expanded legs */}
+                      {/* Expanded legs + actions */}
                       {expandedParlay === p.id && (
                         <div className="px-4 md:px-6 pb-4 space-y-2 border-t border-white/[0.04] pt-3">
                           {p.legs.map((leg, j) => (
@@ -889,6 +1017,98 @@ export default function SimulatorPage() {
                               </span>
                             </div>
                           ))}
+
+                          {/* Pending parlay actions: Cash Out + Edit Stake */}
+                          {p.status === "pending" && (
+                            <div className="pt-3 mt-2 border-t border-white/[0.04] space-y-3">
+                              {/* Edit Stake */}
+                              {editingParlay === p.id ? (
+                                <div className="flex items-center gap-3">
+                                  <label className="text-xs text-white/40 uppercase tracking-wider">
+                                    New Stake
+                                  </label>
+                                  <div className="relative">
+                                    <span
+                                      className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40 text-xs"
+                                      style={{ fontFamily: "var(--font-geist-mono)" }}
+                                    >
+                                      $
+                                    </span>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      value={editStake}
+                                      onChange={(e) =>
+                                        setEditStake(Math.max(1, Number(e.target.value)))
+                                      }
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="bg-[#0a0a0a] border border-white/[0.08] rounded-lg pl-6 pr-3 py-2 text-xs text-white w-24 focus:outline-none focus:border-[#FF3B3B]/40 transition-colors"
+                                      style={{ fontFamily: "var(--font-geist-mono)" }}
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditStake(p.id);
+                                    }}
+                                    disabled={savingEdit}
+                                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20 hover:bg-[#22C55E]/15 transition-colors disabled:opacity-40"
+                                  >
+                                    {savingEdit ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <Check className="w-3 h-3" />
+                                    )}
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingParlay(null);
+                                    }}
+                                    className="text-xs text-white/30 hover:text-white/50 transition-colors px-2 py-2"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingParlay(p.id);
+                                    setEditStake(p.stake);
+                                  }}
+                                  className="flex items-center gap-2 text-xs font-medium text-white/40 hover:text-white/60 transition-colors"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                  Edit Stake (${p.stake})
+                                </button>
+                              )}
+
+                              {/* Cash Out */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCashOut(p.id);
+                                }}
+                                disabled={cashingOut === p.id || cashoutValues[p.id] === undefined}
+                                className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                                  cashoutValues[p.id] !== undefined && cashoutValues[p.id] >= p.stake
+                                    ? "bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20 hover:bg-[#22C55E]/15"
+                                    : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:bg-white/[0.06]"
+                                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                              >
+                                {cashingOut === p.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <DollarSign className="w-3 h-3" />
+                                )}
+                                {cashoutValues[p.id] !== undefined
+                                  ? `Cash Out: $${cashoutValues[p.id].toFixed(2)}`
+                                  : "Loading..."}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </motion.div>

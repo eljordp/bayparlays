@@ -17,6 +17,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Minimum stake is $1" }, { status: 400 });
     }
 
+    // Duplicate check — don't place same parlay twice
+    const { data: pendingBets } = await supabase
+      .from("sim_parlays")
+      .select("legs")
+      .eq("user_id", user_id)
+      .eq("status", "pending");
+
+    const newSig = (legs as Array<{ pick: string; game: string }>)
+      .map((l) => `${l.game}::${l.pick}`)
+      .sort()
+      .join("|");
+
+    const isDuplicate = (pendingBets || []).some(
+      (bet: { legs: Array<{ pick: string; game: string }> }) => {
+        const existingSig = (bet.legs || [])
+          .map((l: { pick: string; game: string }) => `${l.game}::${l.pick}`)
+          .sort()
+          .join("|");
+        return existingSig === newSig;
+      }
+    );
+
+    if (isDuplicate) {
+      return NextResponse.json(
+        { error: "You already have this parlay pending" },
+        { status: 409 }
+      );
+    }
+
     // Check bankroll
     const { data: bankroll, error: bankrollErr } = await supabase
       .from("sim_bankroll")
@@ -105,4 +134,86 @@ export async function GET(req: NextRequest) {
     bankroll: bankroll || null,
     parlays: parlays || [],
   });
+}
+
+// PATCH — Edit stake on a pending sim parlay
+export async function PATCH(request: NextRequest) {
+  try {
+    const { parlay_id, user_id, new_stake } = await request.json();
+
+    if (!parlay_id || !user_id || !new_stake) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    }
+
+    if (new_stake < 1) {
+      return NextResponse.json({ error: "Minimum stake is $1" }, { status: 400 });
+    }
+
+    // Get current parlay
+    const { data: parlay } = await supabase
+      .from("sim_parlays")
+      .select("*")
+      .eq("id", parlay_id)
+      .eq("user_id", user_id)
+      .eq("status", "pending")
+      .single();
+
+    if (!parlay) {
+      return NextResponse.json({ error: "Parlay not found" }, { status: 404 });
+    }
+
+    const stakeDiff = new_stake - parlay.stake;
+
+    // Check bankroll for stake increase
+    if (stakeDiff > 0) {
+      const { data: bankroll } = await supabase
+        .from("sim_bankroll")
+        .select("balance, total_wagered")
+        .eq("user_id", user_id)
+        .single();
+
+      if (!bankroll || bankroll.balance < stakeDiff) {
+        return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
+      }
+
+      // Deduct additional stake
+      await supabase
+        .from("sim_bankroll")
+        .update({
+          balance: bankroll.balance - stakeDiff,
+          total_wagered: bankroll.total_wagered + stakeDiff,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user_id);
+    } else if (stakeDiff < 0) {
+      // Refund the difference
+      const { data: bankroll } = await supabase
+        .from("sim_bankroll")
+        .select("balance, total_wagered")
+        .eq("user_id", user_id)
+        .single();
+
+      if (bankroll) {
+        await supabase
+          .from("sim_bankroll")
+          .update({
+            balance: bankroll.balance + Math.abs(stakeDiff),
+            total_wagered: bankroll.total_wagered - Math.abs(stakeDiff),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", user_id);
+      }
+    }
+
+    const newPayout = Math.round(new_stake * parlay.combined_decimal * 100) / 100;
+
+    await supabase
+      .from("sim_parlays")
+      .update({ stake: new_stake, payout: newPayout })
+      .eq("id", parlay_id);
+
+    return NextResponse.json({ success: true, newStake: new_stake, newPayout });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
 }

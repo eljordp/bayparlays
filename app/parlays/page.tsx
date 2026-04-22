@@ -640,8 +640,10 @@ function ParlayCard({
   const [simPlacing, setSimPlacing] = useState(false);
   const [simResult, setSimResult] = useState<string | null>(null);
 
+  const [isDuplicate, setIsDuplicate] = useState(false);
+
   async function tryInSim() {
-    if (!user) return;
+    if (!user || isDuplicate) return;
     setSimPlacing(true);
     try {
       const res = await fetch("/api/sim", {
@@ -659,6 +661,9 @@ function ParlayCard({
       const data = await res.json();
       if (res.ok) {
         setSimResult("Placed $10 sim bet");
+      } else if (res.status === 409) {
+        setIsDuplicate(true);
+        setSimResult("Already in Sim");
       } else {
         setSimResult(data.error || "Failed");
       }
@@ -666,7 +671,9 @@ function ParlayCard({
       setSimResult("Error");
     }
     setSimPlacing(false);
-    setTimeout(() => setSimResult(null), 3000);
+    if (!isDuplicate) {
+      setTimeout(() => setSimResult(null), 3000);
+    }
   }
 
   const conf = confidenceLabel(parlay.confidence);
@@ -862,15 +869,28 @@ function ParlayCard({
         {user && isPro && (
           <button
             onClick={tryInSim}
-            disabled={simPlacing || !!simResult}
+            disabled={simPlacing || !!simResult || isDuplicate}
             className="w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 mt-2"
             style={{
-              background: simResult ? "rgba(34,197,94,0.1)" : "rgba(255,59,59,0.08)",
-              color: simResult ? "#22C55E" : "#FF3B3B",
-              border: simResult ? "1px solid rgba(34,197,94,0.2)" : "1px solid rgba(255,59,59,0.15)",
+              background: isDuplicate
+                ? "rgba(255,255,255,0.04)"
+                : simResult
+                ? "rgba(34,197,94,0.1)"
+                : "rgba(255,59,59,0.08)",
+              color: isDuplicate
+                ? "rgba(255,255,255,0.3)"
+                : simResult
+                ? "#22C55E"
+                : "#FF3B3B",
+              border: isDuplicate
+                ? "1px solid rgba(255,255,255,0.06)"
+                : simResult
+                ? "1px solid rgba(34,197,94,0.2)"
+                : "1px solid rgba(255,59,59,0.15)",
+              cursor: isDuplicate ? "not-allowed" : undefined,
             }}
           >
-            {simPlacing ? "Placing..." : simResult || "Try $10 in Simulator"}
+            {simPlacing ? "Placing..." : isDuplicate ? "Already in Sim" : simResult || "Try $10 in Simulator"}
           </button>
         )}
 
