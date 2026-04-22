@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AppNav } from "@/app/components/AppNav";
+import { PicksTabs } from "@/app/components/PicksTabs";
 
 // ─── Types (mirrors API route) ───────────────────────────────────────────────
 
@@ -161,8 +162,11 @@ export default function OddsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
       <AppNav />
+      <div className="pt-20">
+        <PicksTabs />
+      </div>
 
-      <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-5 md:py-10 pt-28">
+      <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-5 md:py-10">
         {/* ─── Header ─────────────────────────────────────────────────── */}
         <div className="mb-8">
           <h1

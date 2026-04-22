@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/components/AuthProvider";
 import { AppNav } from "@/app/components/AppNav";
+import { PicksTabs } from "@/app/components/PicksTabs";
 import {
   Copy,
   Check,
@@ -280,6 +281,9 @@ export default function ParlaysPage() {
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
       <AppNav />
+      <div className="pt-20">
+        <PicksTabs />
+      </div>
 
       {/* ─── Header ─── */}
       <header className="pt-24 pb-10 px-4 md:pt-32 md:pb-16 md:px-6">

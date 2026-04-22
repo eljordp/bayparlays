@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { AppNav } from "@/app/components/AppNav";
+import { PicksTabs } from "@/app/components/PicksTabs";
 import { useAuth } from "@/app/components/AuthProvider";
 
 // ─── Types (mirrors /api/props response) ─────────────────────────────────────
@@ -120,8 +121,11 @@ export default function PropsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
       <AppNav />
+      <div className="pt-20">
+        <PicksTabs />
+      </div>
 
-      <main className="mx-auto max-w-[1400px] px-4 py-10 md:px-5 md:py-16 pt-28">
+      <main className="mx-auto max-w-[1400px] px-4 py-10 md:px-5 md:py-16">
         {/* ─── Header ─────────────────────────────────────────────────── */}
         <div className="mb-10 md:mb-14">
           <div className="flex items-center gap-3 mb-4">

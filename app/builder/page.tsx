@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { AppNav } from "@/app/components/AppNav";
+import { PicksTabs } from "@/app/components/PicksTabs";
 import { useAuth } from "@/app/components/AuthProvider";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -309,9 +310,12 @@ export default function BuilderPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
       <AppNav />
+      <div className="pt-20">
+        <PicksTabs />
+      </div>
 
       {/* ── Main ─────────────────────────────────────────────────── */}
-      <main className="pt-20">
+      <main>
         {/* Header */}
         <div className="border-b border-white/[0.06]">
           <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-5 md:py-8">
