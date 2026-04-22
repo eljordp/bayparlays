@@ -168,8 +168,8 @@ export default function ParlaysPage() {
     setLoading(true);
     setError(null);
     try {
-      // Count scales with tier: free=5, sharp=10, vip=20 parlays per slate.
-      // Backend also uses tier to control leg pool size + quality filters.
+      // Count scales with tier: free=3, sharp=8, vip=15, admin=30.
+      // Philosophy: fewer, sharper picks > long lists of mediocre ones.
       const effectiveTier = isAdmin
         ? "admin"
         : tier === "vip" || tier === "admin"
@@ -178,11 +178,13 @@ export default function ParlaysPage() {
             ? "sharp"
             : "free";
       const countForTier =
-        effectiveTier === "vip" || effectiveTier === "admin"
-          ? "20"
-          : effectiveTier === "sharp"
-            ? "10"
-            : "5";
+        effectiveTier === "admin"
+          ? "30"
+          : effectiveTier === "vip"
+            ? "15"
+            : effectiveTier === "sharp"
+              ? "8"
+              : "3";
       const params = new URLSearchParams({
         count: countForTier,
         tier: effectiveTier,

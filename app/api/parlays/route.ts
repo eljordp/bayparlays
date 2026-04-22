@@ -638,20 +638,22 @@ function extractLegsFromGame(
 
 // ─── Parlay Builder ──────────────────────────────────────────────────────────
 
-// Per-tier analysis depth. bookCount filter ensures consensus (thin-market
-// lines get dropped); pool size caps how many legs feed into parlay
-// construction so we don't rank noise alongside real picks. `scored` flag
-// is surfaced in the response but not used as a hard gate — the underlying
-// data pipeline isn't reliable enough yet to punish users with empty pages
-// when Elo/records are sparse.
+// Per-tier analysis depth. Philosophy: fewer, sharper picks beat
+// "show me 30 bets" every time. A good capper fires 2-4 plays/day.
+// Higher tiers unlock more picks AND more tools — not just more quantity.
+//
+//   free:  top 20 legs → a taste, enough to see the AI work
+//   sharp: top 40 legs → sharp depth, serious play (fewer = quality)
+//   vip:   top 80 legs → wider slate for advanced users + analytics tools
+//   admin: top 150 legs → diagnostic view
 const TIER_CONFIG: Record<
   string,
   { poolSize: number; minBooks: number }
 > = {
-  free:  { poolSize: 30,  minBooks: 3 },
-  sharp: { poolSize: 80,  minBooks: 3 },
-  vip:   { poolSize: 200, minBooks: 2 },
-  admin: { poolSize: 300, minBooks: 1 },
+  free:  { poolSize: 20,  minBooks: 3 },
+  sharp: { poolSize: 40,  minBooks: 3 },
+  vip:   { poolSize: 80,  minBooks: 2 },
+  admin: { poolSize: 150, minBooks: 2 },
 };
 
 function buildParlays(
