@@ -638,22 +638,19 @@ function extractLegsFromGame(
 
 // ─── Parlay Builder ──────────────────────────────────────────────────────────
 
-// Per-tier analysis depth. Philosophy: fewer, sharper picks beat
-// "show me 30 bets" every time. A good capper fires 2-4 plays/day.
-// Higher tiers unlock more picks AND more tools — not just more quantity.
-//
-//   free:  top 20 legs → a taste, enough to see the AI work
-//   sharp: top 40 legs → sharp depth, serious play (fewer = quality)
-//   vip:   top 80 legs → wider slate for advanced users + analytics tools
-//   admin: top 150 legs → diagnostic view
+// Pool size is the same across tiers — analyzing more legs is basically
+// free once the Odds API call has been made. What tier controls is OUTPUT
+// curation + access to analytics tools, not how many legs we scan.
+// Tighter minBooks at lower tiers means only strongly-priced consensus
+// lines reach free users (extra noise filter on a casual audience).
 const TIER_CONFIG: Record<
   string,
   { poolSize: number; minBooks: number }
 > = {
-  free:  { poolSize: 20,  minBooks: 3 },
-  sharp: { poolSize: 40,  minBooks: 3 },
-  vip:   { poolSize: 80,  minBooks: 2 },
-  admin: { poolSize: 150, minBooks: 2 },
+  free:  { poolSize: 150, minBooks: 3 },
+  sharp: { poolSize: 150, minBooks: 3 },
+  vip:   { poolSize: 150, minBooks: 2 },
+  admin: { poolSize: 200, minBooks: 2 },
 };
 
 function buildParlays(

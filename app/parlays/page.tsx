@@ -112,7 +112,9 @@ export default function ParlaysPage() {
 
   const [selectedSport, setSelectedSport] = useState("All");
   const [selectedLegs, setSelectedLegs] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>("ev");
+  // Default to "Most Confident" — users want "will this hit?" before
+  // "is this +EV math." Lock picks lead; EV + Payout are optional tabs.
+  const [sortBy, setSortBy] = useState<SortOption>("confidence");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -168,8 +170,10 @@ export default function ParlaysPage() {
     setLoading(true);
     setError(null);
     try {
-      // Count scales with tier: free=3, sharp=8, vip=15, admin=30.
-      // Philosophy: fewer, sharper picks > long lists of mediocre ones.
+      // Curated output per tier. Free gets 4 picks — enough to see the AI
+      // working (Lock + a couple sides), not so many it's overwhelming.
+      // Analysis pool is the same across tiers (compute is free); what
+      // changes is output depth + access to the analytics tools.
       const effectiveTier = isAdmin
         ? "admin"
         : tier === "vip" || tier === "admin"
@@ -184,7 +188,7 @@ export default function ParlaysPage() {
             ? "15"
             : effectiveTier === "sharp"
               ? "8"
-              : "3";
+              : "4";
       const params = new URLSearchParams({
         count: countForTier,
         tier: effectiveTier,
@@ -509,139 +513,103 @@ export default function ParlaysPage() {
                       copiedId={copiedId}
                       onCopy={handleCopy}
                       pendingSimSigs={pendingSimSigs}
+                      isLockOfDay={idx === 0 && sortBy === "confidence"}
                     />
                   ))
                 ) : isSharpAccess ? (
                   <>
-                    {/* Sharp: first 5 visible, rest locked */}
-                    {parlays.slice(0, 5).map((parlay, idx) => (
+                    {/* Sharp: all 8 picks visible. Upsell to VIP is at the
+                        bottom — promises the analytics tools (bankroll mgmt,
+                        line movement, alerts, CLV) that justify the jump,
+                        not just "more picks." */}
+                    {parlays.map((parlay, idx) => (
                       <ParlayCard
                         key={parlay.id}
                         parlay={parlay}
                         index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
+                        isLockOfDay={idx === 0 && sortBy === "confidence"}
                       />
                     ))}
 
-                    {parlays.length > 5 && (
-                      <>
-                        {parlays.slice(5).map((parlay, idx) => (
-                          <div key={parlay.id} className="relative">
-                            <ParlayCard
-                              parlay={parlay}
-                              index={idx + 5}
-                              copiedId={copiedId}
-                              onCopy={handleCopy}
-                            />
-                            <div className="absolute inset-0 z-10 backdrop-blur-sm bg-[#0a0a0a]/70 rounded-2xl flex flex-col items-center justify-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="32"
-                                height="32"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="rgba(255,255,255,0.35)"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                              </svg>
-                              <p className="mt-4 text-lg font-semibold" style={{ color: "#ededed" }}>
-                                Upgrade to VIP
-                              </p>
-                              <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-                                Unlimited parlays, full builder, advanced analytics
-                              </p>
-                              <Link
-                                href="/subscribe"
-                                className="mt-5 px-8 py-3 rounded-full text-sm font-bold transition-all duration-200"
-                                style={{ background: "#FF3B3B", color: "#0a0a0a" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
-                              >
-                                Upgrade to VIP
-                              </Link>
+                    {parlays.length > 0 && (
+                      <div
+                        className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,59,59,0.02) 100%)",
+                          border: "1px solid rgba(255,59,59,0.15)",
+                        }}
+                      >
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                          <div>
+                            <p className="text-xl md:text-2xl font-semibold" style={{ color: "#ededed" }}>
+                              Ready to run this like a business?
+                            </p>
+                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.5)" }}>
+                              VIP unlocks 15+ picks/day, bankroll manager (Kelly criterion), line-movement tracking, closing-line value dashboard, and real-time alerts when the AI finds high-EV plays.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-3 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                              <span>· Bankroll calculator</span>
+                              <span>· Line movement</span>
+                              <span>· CLV tracker</span>
+                              <span>· High-EV alerts</span>
+                              <span>· $10K sim bankroll</span>
+                              <span>· Priority slate (1hr early)</span>
                             </div>
                           </div>
-                        ))}
-                      </>
+                          <Link
+                            href="/subscribe"
+                            className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
+                            style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
+                          >
+                            Upgrade to VIP
+                          </Link>
+                        </div>
+                      </div>
                     )}
                   </>
                 ) : (
                   <>
-                    {/* Free: first 1 visible, rest locked */}
-                    {parlays.length > 0 && (
+                    {/* Free: all 4 picks visible. Real Lock of the Day + a few
+                        sides so users can see the AI working. Upgrade CTA
+                        below promises Sharp depth, not a content gate. */}
+                    {parlays.map((parlay, idx) => (
                       <ParlayCard
-                        key={parlays[0].id}
-                        parlay={parlays[0]}
-                        index={0}
+                        key={parlay.id}
+                        parlay={parlay}
+                        index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
+                        isLockOfDay={idx === 0 && sortBy === "confidence"}
                       />
-                    )}
+                    ))}
 
-                    {parlays.length > 1 && (
-                      <>
-                        {parlays.slice(1).map((parlay, idx) => (
-                          <div key={parlay.id} className="relative">
-                            <ParlayCard
-                              parlay={parlay}
-                              index={idx + 1}
-                              copiedId={copiedId}
-                              onCopy={handleCopy}
-                            />
-                            <div className="absolute inset-0 z-10 backdrop-blur-sm bg-[#0a0a0a]/70 rounded-2xl flex flex-col items-center justify-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="32"
-                                height="32"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="rgba(255,255,255,0.35)"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                              </svg>
-                              <p className="mt-4 text-lg font-semibold" style={{ color: "#ededed" }}>
-                                Unlock all parlays
-                              </p>
-                              <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-                                Starting at $50/mo &mdash; 7-day free trial
-                              </p>
-                              <Link
-                                href="/subscribe"
-                                className="mt-5 px-8 py-3 rounded-full text-sm font-bold transition-all duration-200"
-                                style={{ background: "#FF3B3B", color: "#0a0a0a" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
-                              >
-                                Start Free Trial
-                              </Link>
-                            </div>
-                          </div>
-                        ))}
-
-                        {/* CTA Banner */}
-                        <div
-                          className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14 flex flex-col md:flex-row items-center justify-between gap-6"
-                          style={{
-                            background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
-                            border: "1px solid rgba(255,59,59,0.15)",
-                          }}
-                        >
+                    {parlays.length > 0 && (
+                      <div
+                        className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
+                          border: "1px solid rgba(255,59,59,0.15)",
+                        }}
+                      >
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                           <div>
                             <p className="text-xl md:text-2xl font-semibold" style={{ color: "#ededed" }}>
-                              {parlays.length} parlays found today.
+                              Want 2× more picks + the full toolkit?
                             </p>
-                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.45)" }}>
-                              Subscribe to unlock every AI-optimized parlay. Try free for 7 days.
+                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.5)" }}>
+                              Sharp unlocks 8 picks/day across all strategies, the Simulator (paper trade with $1K bankroll), personal stats tracking, and the Props analyzer.
                             </p>
+                            <div className="mt-4 flex flex-wrap gap-3 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                              <span>· Simulator</span>
+                              <span>· My Stats</span>
+                              <span>· Props analyzer</span>
+                              <span>· Custom Builder</span>
+                              <span>· All 3 sort modes</span>
+                            </div>
                           </div>
                           <Link
                             href="/subscribe"
@@ -653,7 +621,7 @@ export default function ParlaysPage() {
                             Start Free Trial
                           </Link>
                         </div>
-                      </>
+                      </div>
                     )}
                   </>
                 )}
@@ -686,12 +654,14 @@ function ParlayCard({
   copiedId,
   onCopy,
   pendingSimSigs,
+  isLockOfDay,
 }: {
   parlay: Parlay;
   index: number;
   copiedId: string | null;
   onCopy: (p: Parlay) => void;
   pendingSimSigs?: Set<string>;
+  isLockOfDay?: boolean;
 }) {
   const { user, isPro } = useAuth();
   const [simPlacing, setSimPlacing] = useState(false);
@@ -761,9 +731,29 @@ function ParlayCard({
       className="rounded-2xl overflow-hidden"
       style={{
         background: "#111",
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: isLockOfDay ? "1px solid rgba(255,59,59,0.35)" : "1px solid rgba(255,255,255,0.08)",
+        boxShadow: isLockOfDay ? "0 0 40px rgba(255,59,59,0.08)" : "none",
       }}
     >
+      {isLockOfDay && (
+        <div
+          className="px-5 md:px-6 py-2.5 flex items-center gap-2"
+          style={{
+            background: "linear-gradient(90deg, rgba(255,59,59,0.12) 0%, rgba(255,59,59,0.02) 100%)",
+            borderBottom: "1px solid rgba(255,59,59,0.2)",
+          }}
+        >
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.2em]"
+            style={{ color: "#FF3B3B" }}
+          >
+            ★ Lock of the Day
+          </span>
+          <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+            · AI&apos;s highest-confidence pick
+          </span>
+        </div>
+      )}
       {/* Header: number + confidence + time */}
       <div
         className="px-5 md:px-6 py-4 flex items-center justify-between"
