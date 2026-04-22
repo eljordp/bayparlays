@@ -424,13 +424,15 @@ export default function OddsPage() {
                               rel="noopener noreferrer"
                               className="group inline-flex items-baseline gap-2 hover:opacity-80 transition"
                             >
-                              <span className="text-2xl sm:text-3xl font-black font-mono text-[#FF3B3B] tracking-tight tabular-nums">
+                              <span className="flex flex-col items-start font-mono tracking-tight tabular-nums">
                                 {b.bestPoint !== undefined && (
-                                  <span className="text-[#FF3B3B]/70 mr-1">
+                                  <span className="text-lg sm:text-xl font-bold text-white/70 leading-none">
                                     {market === "totals" ? b.bestPoint : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint}`}
                                   </span>
                                 )}
-                                {formatOdds(b.bestPrice)}
+                                <span className="text-2xl sm:text-3xl font-black text-[#FF3B3B] leading-none mt-1">
+                                  {formatOdds(b.bestPrice)}
+                                </span>
                               </span>
                               <svg
                                 className="h-3 w-3 text-[#FF3B3B]/40 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -447,13 +449,15 @@ export default function OddsPage() {
                               </svg>
                             </a>
                           ) : (
-                            <span className="text-2xl sm:text-3xl font-black font-mono text-[#FF3B3B] tracking-tight tabular-nums">
+                            <span className="flex flex-col items-start font-mono tracking-tight tabular-nums">
                               {b.bestPoint !== undefined && (
-                                <span className="text-[#FF3B3B]/70 mr-1">
+                                <span className="text-lg sm:text-xl font-bold text-white/70 leading-none">
                                   {market === "totals" ? b.bestPoint : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint}`}
                                 </span>
                               )}
-                              {formatOdds(b.bestPrice)}
+                              <span className="text-2xl sm:text-3xl font-black text-[#FF3B3B] leading-none mt-1">
+                                {formatOdds(b.bestPrice)}
+                              </span>
                             </span>
                           )}
                           <div className="text-xs text-[#FF3B3B]/60 font-medium mt-1">
