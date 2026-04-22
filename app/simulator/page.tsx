@@ -241,38 +241,62 @@ export default function SimulatorPage() {
     setDataLoading(false);
   }, [user]);
 
-  // Load picks for quick sim — one from each category for variety.
-  // Simulator is already a paid/VIP feature, so always request vip tier
-  // (wider leg pool → more picks even after the quality filter).
+  // Load picks for quick sim — full slate across categories AND leg counts
+  // so paper traders have real variety to practice with. Simulator is a
+  // paid feature; it should feel rich. 3 categories × 2 leg counts × 3
+  // per call = up to 18 candidates, deduped + surfaced as a robust slate.
   const loadPicks = useCallback(async () => {
     try {
       const effectiveTier = isAdmin ? "admin" : "vip";
       const modes: PickCategory[] = ["ev", "payout", "confidence"];
+      const legCounts = [2, 3];
+
+      const combos: { mode: PickCategory; legs: number }[] = [];
+      for (const mode of modes) {
+        for (const legs of legCounts) {
+          combos.push({ mode, legs });
+        }
+      }
+
       const results = await Promise.all(
-        modes.map((m) =>
-          fetch(`/api/parlays?count=2&legs=3&sort=${m}&tier=${effectiveTier}`)
+        combos.map((c) =>
+          fetch(
+            `/api/parlays?count=3&legs=${c.legs}&sort=${c.mode}&tier=${effectiveTier}`,
+          )
             .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null)
-        )
+            .catch(() => null),
+        ),
       );
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const merged: PickParlay[] = [];
+      const seen = new Set<string>();
       results.forEach((data, i) => {
         if (!data?.parlays?.length) return;
+        const mode = combos[i].mode;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        data.parlays.slice(0, 2).forEach((p: any) => {
+        data.parlays.forEach((p: any) => {
+          // Dedupe — same set of picks from different sort modes is the same parlay.
+          const sig = (p.legs || [])
+            .map((l: { game: string; pick: string }) => `${l.game}::${l.pick}`)
+            .sort()
+            .join("|");
+          if (seen.has(sig)) return;
+          seen.add(sig);
           merged.push({
             id: p.id,
             legs: p.legs,
             combined_odds: p.combinedOdds || p.combined_odds,
             combined_decimal: p.combinedDecimal || p.combined_decimal,
             payout: p.payout,
-            category: (p.category || modes[i]) as PickCategory,
+            category: (p.category || mode) as PickCategory,
             aiEstimate: p.aiEstimate,
           });
         });
       });
-      setPicks(merged.slice(0, 6));
+
+      // Cap to 12 picks — enough variety to play with, not overwhelming.
+      setPicks(merged.slice(0, 12));
     } catch {
       // silent
     }
