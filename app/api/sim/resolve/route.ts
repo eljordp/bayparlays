@@ -155,6 +155,23 @@ export async function GET() {
     let losses = 0;
     let stillPending = 0;
 
+    // Collect bankroll deltas per user across ALL parlays in this batch, then
+    // apply ONE bankroll update per user at the end. The previous pattern
+    // read-modify-write'd the bankroll row inside the per-parlay loop, which
+    // races badly when the resolver is invoked concurrently (Vercel
+    // serverless can spawn multiple instances). Losing an update silently
+    // means the UI shows stale wins/losses/balance forever.
+    type Delta = { balance: number; total_won: number; total_lost: number; wins: number; losses: number };
+    const userDeltas = new Map<string, Delta>();
+    const getDelta = (uid: string): Delta => {
+      let d = userDeltas.get(uid);
+      if (!d) {
+        d = { balance: 0, total_won: 0, total_lost: 0, wins: 0, losses: 0 };
+        userDeltas.set(uid, d);
+      }
+      return d;
+    };
+
     for (const parlay of pending) {
       const legs = parlay.legs || [];
       let allResolved = true;
@@ -200,7 +217,7 @@ export async function GET() {
 
       const profit = newStatus === "won" ? parlay.payout - parlay.stake : -parlay.stake;
 
-      // Update sim parlay
+      // Update sim parlay immediately (one row, no race).
       await supabase
         .from("sim_parlays")
         .update({
@@ -210,39 +227,48 @@ export async function GET() {
         })
         .eq("id", parlay.id);
 
-      // Update bankroll
-      const { data: bankroll } = await supabase
-        .from("sim_bankroll")
-        .select("*")
-        .eq("user_id", parlay.user_id)
-        .single();
-
-      if (bankroll) {
-        if (newStatus === "won") {
-          await supabase
-            .from("sim_bankroll")
-            .update({
-              balance: bankroll.balance + parlay.payout,
-              total_won: bankroll.total_won + parlay.payout,
-              wins: bankroll.wins + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", parlay.user_id);
-          wins++;
-        } else {
-          await supabase
-            .from("sim_bankroll")
-            .update({
-              total_lost: bankroll.total_lost + parlay.stake,
-              losses: bankroll.losses + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", parlay.user_id);
-          losses++;
-        }
+      // Accumulate bankroll delta for this user.
+      const d = getDelta(parlay.user_id);
+      if (newStatus === "won") {
+        d.balance += parlay.payout;
+        d.total_won += parlay.payout;
+        d.wins += 1;
+        wins++;
+      } else {
+        // Balance was already debited on bet placement; no balance change on loss.
+        d.total_lost += parlay.stake;
+        d.losses += 1;
+        losses++;
       }
 
       resolved++;
+    }
+
+    // Apply deltas — one read + one update per user instead of per-parlay.
+    // Still a theoretical race vs a concurrent resolver, but we collapse the
+    // window dramatically, and the backfill-from-sim_parlays script can
+    // reconcile if needed.
+    for (const [userId, delta] of userDeltas) {
+      const { data: bankroll } = await supabase
+        .from("sim_bankroll")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+      if (!bankroll) continue;
+      const { error: updErr } = await supabase
+        .from("sim_bankroll")
+        .update({
+          balance: bankroll.balance + delta.balance,
+          total_won: bankroll.total_won + delta.total_won,
+          total_lost: bankroll.total_lost + delta.total_lost,
+          wins: bankroll.wins + delta.wins,
+          losses: bankroll.losses + delta.losses,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+      if (updErr) {
+        console.error(`Failed to update sim_bankroll for ${userId}:`, updErr);
+      }
     }
 
     scoresCache.clear();
