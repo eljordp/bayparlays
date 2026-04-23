@@ -105,7 +105,7 @@ export function LockOfTheDay() {
         borderColor: "rgba(255,255,255,0.06)",
       }}
     >
-      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pt-28 pb-10 md:pt-32 md:pb-14">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-10 pt-24 pb-8 md:pt-32 md:pb-14">
         {loading && <LockSkeleton />}
         {!loading && (error || !lock) && <LockEmpty />}
         {!loading && !error && lock && <LockCard leg={lock} />}
@@ -198,16 +198,17 @@ function LockCard({ leg }: { leg: Leg }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-      className="rounded-xl p-6 md:p-8"
+      className="rounded-xl p-5 md:p-8"
       style={{
         background: "rgba(255,255,255,0.02)",
         border: `1px solid ${sharp ? "rgba(34,197,94,0.3)" : "rgba(255,59,59,0.25)"}`,
       }}
     >
-      {/* Header row */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      {/* Header row — eyebrow left, tip-off time right, sport + sharp wrap
+          naturally. On mobile the time stays on its own line if pills crowd. */}
+      <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4 md:mb-5">
         <span
-          className="text-xs uppercase tracking-wider"
+          className="text-[11px] md:text-xs uppercase tracking-wider"
           style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
         >
           Live · Lock of the Day
@@ -244,11 +245,13 @@ function LockCard({ leg }: { leg: Leg }) {
         )}
       </div>
 
-      {/* Main row: pick + game on left, odds + book on right */}
-      <div className="flex items-start justify-between gap-6 mb-6">
+      {/* Main row — stack on mobile (pick / odds / book block-flow) so the
+          serif pick title gets full width and doesn't crowd the odds. Desktop
+          keeps the side-by-side layout. */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6 mb-5 md:mb-6">
         <div className="flex-1 min-w-0">
           <h2
-            className="text-3xl md:text-5xl leading-[1.05] mb-2"
+            className="text-[2rem] leading-[1.05] md:text-5xl mb-2"
             style={{ fontFamily: "'DM Serif Display', serif" }}
           >
             {leg.pick}
@@ -261,9 +264,9 @@ function LockCard({ leg }: { leg: Leg }) {
           </div>
         </div>
 
-        <div className="text-right flex-shrink-0">
+        <div className="flex items-baseline gap-3 md:block md:text-right md:flex-shrink-0">
           <div
-            className="text-4xl md:text-5xl leading-none"
+            className="text-3xl md:text-5xl leading-none"
             style={{
               fontFamily: "var(--font-geist-mono)",
               color: "#FF3B3B",
@@ -273,7 +276,7 @@ function LockCard({ leg }: { leg: Leg }) {
             {formatOdds(leg.odds)}
           </div>
           <div
-            className="text-xs md:text-sm mt-2"
+            className="text-xs md:text-sm md:mt-2"
             style={{ color: "rgba(255,255,255,0.45)" }}
           >
             {leg.book}
@@ -306,11 +309,15 @@ function LockCard({ leg }: { leg: Leg }) {
         />
       </div>
 
-      {/* CTA */}
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      {/* CTA — button first, best supporting reason inline. We skip the first
+          reason (it's the AI-vs-book framing which reads meh on low-edge picks
+          like "tracks close to book's price"). Instead we grab the first
+          reason that's actually sport-specific context: team record, sharp
+          edge callout, weather/pitcher, or line-shopping consensus. */}
+      <div className="mt-5 md:mt-6 flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
         <Link
           href="/edges"
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm rounded-full transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 md:py-2.5 text-sm rounded-full transition-colors"
           style={{
             background: "#FF3B3B",
             color: "#0a0a0a",
@@ -320,14 +327,23 @@ function LockCard({ leg }: { leg: Leg }) {
           See all edges
           <ArrowRight size={14} />
         </Link>
-        {leg.reasons && leg.reasons.length > 0 && (
-          <span
-            className="text-xs"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-          >
-            {leg.reasons[0]}
-          </span>
-        )}
+        {(() => {
+          const reasons = leg.reasons ?? [];
+          // Prefer reasons that aren't the AI-vs-book framing (those start with
+          // "AI sees value", "AI flags", "AI estimate", or "AI couldn't").
+          const supporting = reasons.find(
+            (r) => !/^(AI sees|AI flags|AI estimate|AI couldn't)/i.test(r),
+          );
+          if (!supporting) return null;
+          return (
+            <span
+              className="text-xs md:text-xs leading-relaxed"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              {supporting}
+            </span>
+          );
+        })()}
       </div>
     </motion.div>
   );
