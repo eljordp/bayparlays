@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppNav } from "@/app/components/AppNav";
 import { PicksTabs } from "@/app/components/PicksTabs";
-import { Zap, TrendingUp, Target, Info } from "lucide-react";
+import { Zap, TrendingUp, Target, Info, History } from "lucide-react";
 
 /* ─── Types ─── */
 
@@ -156,10 +157,23 @@ export default function EdgesPage() {
             </div>
 
             {data && (
-              <div className="flex gap-6">
-                <Stat label="Games" value={data.meta.gamesAnalyzed} />
-                <Stat label="Legs Scanned" value={data.meta.legsEvaluated} />
-                <Stat label="Edges Found" value={data.meta.edgesFound} accent />
+              <div className="flex flex-col gap-4 md:items-end">
+                <div className="flex gap-6">
+                  <Stat label="Games" value={data.meta.gamesAnalyzed} />
+                  <Stat label="Legs Scanned" value={data.meta.legsEvaluated} />
+                  <Stat label="Edges Found" value={data.meta.edgesFound} accent />
+                </div>
+                <Link
+                  href="/edges/history"
+                  className="text-xs flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors"
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    color: "rgba(255,255,255,0.7)",
+                  }}
+                >
+                  <History size={12} />
+                  View track record →
+                </Link>
               </div>
             )}
           </div>

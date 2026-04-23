@@ -1569,6 +1569,49 @@ export async function GET(request: NextRequest) {
           generatedAt: new Date().toISOString(),
         },
       };
+      // Persist sharp-edge picks into the edge_picks archive. Unique
+      // constraint on (game_id, market, pick, date) dedupes — we only log
+      // a given mispricing once per UTC day even if /api/edges refreshes
+      // every 5 min. Failure is non-fatal; we don't want an archive write
+      // error to break the user's pick feed.
+      try {
+        const archiveRows = edgeLegs
+          .filter(
+            (l) =>
+              l.sharpEdge === true &&
+              l.commenceTime &&
+              l.gameId,
+          )
+          .map((l) => ({
+            sport: l.sport,
+            game_id: l.gameId,
+            game: l.game,
+            market: l.market,
+            pick: l.pick,
+            commence_time: l.commenceTime,
+            odds: l.odds,
+            decimal_odds: l.decimalOdds,
+            book: l.book,
+            book_count: l.bookCount,
+            implied_prob: l.impliedProb,
+            fair_prob: l.fairProb,
+            our_prob: l.ourProb,
+            ev_vs_fair: l.evVsFair,
+            sharp_edge: true,
+            scored: l.scored,
+          }));
+        if (archiveRows.length > 0) {
+          const { supabase } = await import("@/lib/supabase");
+          // upsert with onConflict=dedupe_key so re-detections within the
+          // same UTC day are silent no-ops, not errors.
+          await supabase
+            .from("edge_picks")
+            .upsert(archiveRows, { onConflict: "dedupe_key", ignoreDuplicates: true });
+        }
+      } catch (err) {
+        console.error("Failed to archive edge_picks:", err);
+      }
+
       return NextResponse.json(legsResponse, {
         headers: {
           "X-Cache": "MISS",

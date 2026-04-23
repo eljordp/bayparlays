@@ -1,6 +1,12 @@
 // ─── Sports Data Helper ─────────────────────────────────────────────────────
-// Pulls recent game results from The Odds API scores endpoint
-// and builds team performance records for smarter parlay scoring.
+// Pulls recent game results for Elo + team-record calculation.
+//
+// Primary source: ESPN scoreboard (free, unlimited, no key). Covers last
+// 21 days for a proper Elo base. Falls back to The Odds API /scores/ only
+// if ESPN returns nothing — and even then, capped at daysFrom=3 which is
+// the free-tier ceiling (anything higher silently 422s).
+
+import { fetchRecentScoresFromEspn } from "./espn-scores";
 
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const BASE = "https://api.the-odds-api.com/v4/sports";
@@ -55,11 +61,30 @@ export async function getRecentScores(
   const cached = scoresCache.get(sportKey);
   if (cached && cached.expires > Date.now()) return cached.data;
 
+  // ── Primary: ESPN scoreboard ──────────────────────────────────────────
+  // Free, unlimited, covers 21 days which is enough for Elo convergence.
+  try {
+    const espnGames = await fetchRecentScoresFromEspn(sportKey, 21);
+    const completed = espnGames.filter((g) => g.completed && g.scores);
+    if (completed.length > 0) {
+      scoresCache.set(sportKey, {
+        data: completed,
+        expires: Date.now() + 6 * 3600000, // 6 hours
+      });
+      return completed;
+    }
+  } catch (err) {
+    console.warn(`ESPN scores failed for ${sportKey}, falling back:`, err);
+  }
+
+  // ── Fallback: The Odds API /scores/ ───────────────────────────────────
+  // Capped at daysFrom=3 (free-tier ceiling; anything higher returns 422).
+  // Burns a few credits per call — only hit this if ESPN is unreachable.
   if (!ODDS_API_KEY) return [];
 
   try {
     const res = await fetch(
-      `${BASE}/${sportKey}/scores/?apiKey=${ODDS_API_KEY}&daysFrom=14`,
+      `${BASE}/${sportKey}/scores/?apiKey=${ODDS_API_KEY}&daysFrom=3`,
       { next: { revalidate: 3600 } } // Next.js fetch cache: 1 hour
     );
     if (!res.ok) return [];

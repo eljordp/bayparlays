@@ -374,6 +374,108 @@ async function checkScores() {
       updates.push({ id: parlay.id, status: newStatus, profit });
     }
 
+    // ── Grade edge_picks too ──────────────────────────────────────────
+    // Same scores cache, same didLegWin parser. Every sharp-edge pick that's
+    // been sitting in pending for a completed game gets its status, profit,
+    // and CLV updated so /edges/history reflects real outcomes.
+    const edgeCutoff = new Date();
+    edgeCutoff.setHours(edgeCutoff.getHours() - 48);
+    const edgesUpdated: { id: string; status: string; profit: number }[] = [];
+    try {
+      const { data: pendingEdges } = await supabase
+        .from("edge_picks")
+        .select("*")
+        .eq("status", "pending")
+        .gte("created_at", edgeCutoff.toISOString());
+      const edgeRows = (pendingEdges ?? []) as Array<{
+        id: string;
+        sport: string;
+        game_id: string;
+        game: string;
+        market: string;
+        pick: string;
+        commence_time: string;
+        odds: number;
+        decimal_odds: number;
+      }>;
+
+      // Make sure we have scores for any sport in the edges queue.
+      const edgeSportKeys = new Set<string>();
+      for (const e of edgeRows) {
+        const k = SPORT_MAP[e.sport?.toUpperCase()];
+        if (k && !scoresCache.has(k)) edgeSportKeys.add(k);
+      }
+      await Promise.all(Array.from(edgeSportKeys).map((k) => fetchScores(k)));
+
+      for (const edge of edgeRows) {
+        const sportKey = SPORT_MAP[edge.sport?.toUpperCase()];
+        if (!sportKey) continue;
+        const scores = scoresCache.get(sportKey) ?? [];
+        const game = findGame(scores, edge.game);
+        if (!game || !game.completed) continue;
+
+        const result = didLegWin(
+          {
+            sport: edge.sport,
+            game: edge.game,
+            pick: edge.pick,
+            market: edge.market,
+            odds: edge.odds,
+            book: "",
+            impliedProb: 0,
+            edgeScore: 0,
+          } as ParlayLeg,
+          game,
+        );
+        if (result === null) continue;
+
+        const newStatus = result ? "won" : "lost";
+        const stake = 100;
+        const profit = result ? stake * (edge.decimal_odds - 1) : -stake;
+
+        // Closing-line capture for this single leg's CLV
+        let clv: number | null = null;
+        let closingOdds: number | null = null;
+        try {
+          const { data: historyRows } = await supabase
+            .from("line_history")
+            .select("best_odds, captured_at")
+            .eq("game_id", edge.game_id)
+            .eq("market", edge.market)
+            .eq("team", edge.pick)
+            .lte("captured_at", edge.commence_time)
+            .order("captured_at", { ascending: false })
+            .limit(1);
+          closingOdds = historyRows?.[0]?.best_odds ?? null;
+          if (closingOdds !== null) {
+            const openDec = americanToDecimal(edge.odds);
+            const closeDec = americanToDecimal(closingOdds);
+            clv = Math.round(((openDec / closeDec - 1) * 100) * 100) / 100;
+          }
+        } catch {
+          /* non-fatal */
+        }
+
+        const { error: edgeUpdateErr } = await supabase
+          .from("edge_picks")
+          .update({
+            status: newStatus,
+            profit: Math.round(profit * 100) / 100,
+            closing_odds: closingOdds,
+            clv_percent: clv,
+            resolved_at: new Date().toISOString(),
+          })
+          .eq("id", edge.id);
+        if (edgeUpdateErr) {
+          console.error(`Failed to update edge ${edge.id}:`, edgeUpdateErr);
+          continue;
+        }
+        edgesUpdated.push({ id: edge.id, status: newStatus, profit });
+      }
+    } catch (err) {
+      console.error("Edge grading failed:", err);
+    }
+
     // Clear the cache after processing
     scoresCache.clear();
 
@@ -381,6 +483,8 @@ async function checkScores() {
       message: `Checked ${rows.length} pending parlays`,
       updated: updates.length,
       results: updates,
+      edgesUpdated: edgesUpdated.length,
+      edgeResults: edgesUpdated,
     });
   } catch (error) {
     console.error("Check scores error:", error);
