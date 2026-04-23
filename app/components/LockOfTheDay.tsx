@@ -54,10 +54,19 @@ function timeUntil(iso: string): string {
   return `${days}d`;
 }
 
+// Calendar-date key in viewer's local timezone (YYYY-MM-DD). Used to filter
+// Lock of the Day picks to TODAY specifically, not just "within 3 days".
+function localDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /* ─── Component ─── */
 
 export function LockOfTheDay() {
-  const [lock, setLock] = useState<Leg | null>(null);
+  const [locks, setLocks] = useState<Leg[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -66,25 +75,29 @@ export function LockOfTheDay() {
     async function run() {
       try {
         const res = await fetch(
-          "/api/parlays?sports=nba,mlb,nhl,ncaab&format=legs&count=5&tier=admin",
+          "/api/parlays?sports=nba,mlb,nhl,ncaab&format=legs&count=30&tier=admin",
           { cache: "no-store" },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json: ApiResponse = await res.json();
         if (cancelled) return;
         const legs = Array.isArray(json.legs) ? json.legs : [];
-        // Only positive-EV picks are considered a "lock"
-        const positive = legs.filter(
+
+        // "Lock of the Day" means TODAY. A game that starts tomorrow or
+        // 2 days from now shouldn't surface here. Filter by calendar date
+        // in the viewer's local timezone so users see what's labelled.
+        const todayKey = localDateKey(new Date());
+        const todayOnly = legs.filter((l) => {
+          if (!l.commenceTime) return false;
+          return localDateKey(new Date(l.commenceTime)) === todayKey;
+        });
+
+        // Positive-EV picks only. Sort by evVsFair desc, top 3.
+        const positive = todayOnly.filter(
           (l) => typeof l.evVsFair === "number" && l.evVsFair > 0,
         );
-        if (positive.length === 0) {
-          setLock(null);
-        } else {
-          const best = positive.reduce((a, b) =>
-            (a.evVsFair ?? 0) >= (b.evVsFair ?? 0) ? a : b,
-          );
-          setLock(best);
-        }
+        positive.sort((a, b) => (b.evVsFair ?? 0) - (a.evVsFair ?? 0));
+        setLocks(positive.slice(0, 3));
       } catch {
         if (!cancelled) setError(true);
       } finally {
@@ -107,8 +120,26 @@ export function LockOfTheDay() {
     >
       <div className="max-w-[1400px] mx-auto px-4 md:px-10 pt-24 pb-8 md:pt-32 md:pb-14">
         {loading && <LockSkeleton />}
-        {!loading && (error || !lock) && <LockEmpty />}
-        {!loading && !error && lock && <LockCard leg={lock} />}
+        {!loading && (error || locks.length === 0) && <LockEmpty />}
+        {!loading && !error && locks.length > 0 && (
+          <div className="space-y-4 md:space-y-5">
+            {locks.length > 1 && (
+              <h2
+                className="text-xs md:text-sm uppercase tracking-wider"
+                style={{ color: "rgba(255,255,255,0.55)", fontFamily: "var(--font-geist-mono)" }}
+              >
+                Today&apos;s Locks — top {locks.length} positive-EV pick{locks.length === 1 ? "" : "s"}
+              </h2>
+            )}
+            {locks.map((leg, i) => (
+              <LockCard
+                key={`${leg.gameId ?? leg.pick}-${i}`}
+                leg={leg}
+                showHeroLabel={i === 0}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -187,7 +218,7 @@ function LockEmpty() {
   );
 }
 
-function LockCard({ leg }: { leg: Leg }) {
+function LockCard({ leg, showHeroLabel = true }: { leg: Leg; showHeroLabel?: boolean }) {
   const ev = leg.evVsFair ?? 0;
   const evColor =
     ev >= 0.02 ? "#22c55e" : ev >= 0.01 ? "#eab308" : "rgba(255,255,255,0.7)";
@@ -207,12 +238,14 @@ function LockCard({ leg }: { leg: Leg }) {
       {/* Header row — eyebrow left, tip-off time right, sport + sharp wrap
           naturally. On mobile the time stays on its own line if pills crowd. */}
       <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4 md:mb-5">
-        <span
-          className="text-[11px] md:text-xs uppercase tracking-wider"
-          style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
-        >
-          Live · Lock of the Day
-        </span>
+        {showHeroLabel && (
+          <span
+            className="text-[11px] md:text-xs uppercase tracking-wider"
+            style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
+          >
+            Live · Lock of the Day
+          </span>
+        )}
         <span
           className="text-xs font-semibold px-2 py-0.5 rounded"
           style={{
