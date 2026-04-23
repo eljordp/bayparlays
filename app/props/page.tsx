@@ -18,7 +18,7 @@ interface PropRow {
   games: number;
 }
 
-type Sport = "nba" | "mlb" | "nhl" | "nfl";
+type Sport = "nba" | "wnba" | "mlb" | "nhl" | "nfl" | "mls" | "epl";
 
 interface PropCategory {
   label: string;
@@ -49,7 +49,7 @@ const CATEGORY_DISPLAY: Record<string, CategoryDisplay> = {
   // NBA
   points: { unit: "pts", gamesLabel: "GP", averageLabel: "Per game" },
   rebounds: { unit: "reb", gamesLabel: "GP", averageLabel: "Per game" },
-  assists: { unit: "ast", gamesLabel: "GP", averageLabel: "Per game" },
+  assists: { unit: "A", gamesLabel: "GP", averageLabel: "Per game" },
   threes: { unit: "3PM", gamesLabel: "GP", averageLabel: "Per game" },
   steals: { unit: "stl", gamesLabel: "GP", averageLabel: "Per game" },
   blocks: { unit: "blk", gamesLabel: "GP", averageLabel: "Per game" },
@@ -75,13 +75,20 @@ const CATEGORY_DISPLAY: Record<string, CategoryDisplay> = {
   wr_receiving_yards: { unit: "YDS", gamesLabel: "GP", averageLabel: "Per game" },
   wr_receptions: { unit: "REC", gamesLabel: "GP", averageLabel: "Per game" },
   wr_anytime_td: { unit: "TD", gamesLabel: "GP", averageLabel: "Per game" },
+  // Soccer (MLS + EPL share keys)
+  goals: { unit: "G", gamesLabel: "GP", averageLabel: "Per game" },
+  shots_on_target: { unit: "SOT", gamesLabel: "GP", averageLabel: "Per game" },
+  total_shots: { unit: "SH", gamesLabel: "GP", averageLabel: "Per game" },
 };
 
 const SPORT_LABELS: Record<Sport, string> = {
   nba: "NBA",
+  wnba: "WNBA",
   mlb: "MLB",
   nhl: "NHL",
   nfl: "NFL",
+  mls: "MLS",
+  epl: "EPL",
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -198,6 +205,9 @@ function prettyLabelFromKey(key: string): string {
     wr_receiving_yards: "WR Receiving Yards",
     wr_receptions: "WR Receptions",
     wr_anytime_td: "WR Anytime TD",
+    goals: "Goals",
+    shots_on_target: "Shots on Target",
+    total_shots: "Total Shots",
   };
   return map[key] || key.replace(/_/g, " ");
 }
@@ -206,6 +216,8 @@ function defaultCategoryFor(sport: Sport): string {
   if (sport === "mlb") return "pitcher_strikeouts";
   if (sport === "nhl") return "skater_goals";
   if (sport === "nfl") return "qb_passing_yards";
+  if (sport === "mls" || sport === "epl") return "goals";
+  // NBA + WNBA both lead with points.
   return "points";
 }
 
@@ -289,17 +301,44 @@ export default function PropsPage() {
   }
 
   const howItWorks = (() => {
-    if (sport === "nba") {
+    if (sport === "nba" || sport === "wnba") {
+      const leagueBits =
+        sport === "nba" ? (
+          <>
+            Example: if LeBron averages{" "}
+            <span className="text-white font-medium">27 PPG</span>, his{" "}
+            <span className="text-[#FF3B3B] font-medium">
+              over 24.5 points
+            </span>{" "}
+            prop has an 80%+ hit rate historically.
+          </>
+        ) : (
+          <>
+            Example: if A&apos;ja Wilson averages{" "}
+            <span className="text-white font-medium">23 PPG</span>, her{" "}
+            <span className="text-[#FF3B3B] font-medium">
+              over 20.5 points
+            </span>{" "}
+            prop has a strong historical hit rate.
+          </>
+        );
       return (
         <>
           These are players whose season averages significantly exceed typical
-          prop lines. Example: if LeBron averages{" "}
-          <span className="text-white font-medium">27 PPG</span>, his{" "}
+          prop lines. {leagueBits} We flag the biggest gaps across the league.
+        </>
+      );
+    }
+    if (sport === "mls" || sport === "epl") {
+      return (
+        <>
+          Soccer props from season totals — per-game goals and assists for{" "}
           <span className="text-[#FF3B3B] font-medium">
-            over 24.5 points
+            anytime goalscorer / anytime assist
           </span>{" "}
-          prop has an 80%+ hit rate historically. We flag the biggest gaps
-          across the league.
+          bets, plus shots and shots-on-target for volume shooters. Lines stay
+          at 0.5 for goals/assists (the standard book shape); shot lines step
+          with the per-game average.
         </>
       );
     }
@@ -375,8 +414,10 @@ export default function PropsPage() {
         </div>
 
         {/* ─── Sport Toggle ───────────────────────────────────────────── */}
-        <div className="mb-6 inline-flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-1">
-          {(["nba", "mlb", "nhl", "nfl"] as Sport[]).map((s) => {
+        <div className="mb-6 inline-flex flex-wrap rounded-lg border border-white/[0.08] bg-white/[0.02] p-1">
+          {(
+            ["nba", "wnba", "mlb", "nhl", "nfl", "mls", "epl"] as Sport[]
+          ).map((s) => {
             const active = sport === s;
             return (
               <button

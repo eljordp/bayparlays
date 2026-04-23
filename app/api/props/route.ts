@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getNBAPlayerStats, type PlayerStats } from "@/lib/espn-stats";
+import { getWNBAPlayerStats } from "@/lib/espn-wnba-stats";
 import {
   getMLBPitcherStats,
   getMLBBatterStats,
@@ -18,6 +19,11 @@ import {
   type NFLRushingStats,
   type NFLReceivingStats,
 } from "@/lib/espn-nfl-stats";
+import {
+  getMLSPlayerStats,
+  getEPLPlayerStats,
+  type SoccerPlayerStats,
+} from "@/lib/espn-soccer-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -504,19 +510,121 @@ function topWRAnytimeTD(wrs: NFLReceivingStats[], limit = 10): PropRow[] {
     });
 }
 
+// ─── Soccer builders (MLS + EPL share shapes) ────────────────────────────────
+
+// goals: line = 0.5 (anytime-goalscorer), edge = goalsPerGame * 0.8
+function topSoccerGoals(
+  players: SoccerPlayerStats[],
+  limit = 10,
+): PropRow[] {
+  return [...players]
+    .filter((p) => p.goalsPerGame > 0)
+    .sort((a, b) => b.goalsPerGame - a.goalsPerGame)
+    .slice(0, limit)
+    .map((p) => {
+      const avg = p.goalsPerGame;
+      return {
+        player: p.name,
+        team: p.team,
+        stat: "goals",
+        average: r(avg, 3),
+        typicalLine: 0.5,
+        edge: r(avg * 0.8, 3),
+        games: p.games,
+      };
+    });
+}
+
+// assists: line = 0.5 (anytime-assist), edge = assistsPerGame * 0.7
+function topSoccerAssists(
+  players: SoccerPlayerStats[],
+  limit = 10,
+): PropRow[] {
+  return [...players]
+    .filter((p) => p.assistsPerGame > 0)
+    .sort((a, b) => b.assistsPerGame - a.assistsPerGame)
+    .slice(0, limit)
+    .map((p) => {
+      const avg = p.assistsPerGame;
+      return {
+        player: p.name,
+        team: p.team,
+        stat: "assists",
+        average: r(avg, 3),
+        typicalLine: 0.5,
+        edge: r(avg * 0.7, 3),
+        games: p.games,
+      };
+    });
+}
+
+// shots_on_target: line = floor(avg) + 0.5, edge = avg - line
+function topSoccerShotsOnTarget(
+  players: SoccerPlayerStats[],
+  limit = 10,
+): PropRow[] {
+  return [...players]
+    .filter((p) => p.shotsOnTargetPerGame > 0)
+    .sort((a, b) => b.shotsOnTargetPerGame - a.shotsOnTargetPerGame)
+    .slice(0, limit)
+    .map((p) => {
+      const avg = p.shotsOnTargetPerGame;
+      const line = Math.floor(avg) + 0.5;
+      return {
+        player: p.name,
+        team: p.team,
+        stat: "shotsOnTarget",
+        average: r(avg, 2),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: p.games,
+      };
+    });
+}
+
+// total_shots: line = floor(avg) + 0.5, edge = avg - line
+function topSoccerTotalShots(
+  players: SoccerPlayerStats[],
+  limit = 10,
+): PropRow[] {
+  return [...players]
+    .filter((p) => p.shotsPerGame > 0)
+    .sort((a, b) => b.shotsPerGame - a.shotsPerGame)
+    .slice(0, limit)
+    .map((p) => {
+      const avg = p.shotsPerGame;
+      const line = Math.floor(avg) + 0.5;
+      return {
+        player: p.name,
+        team: p.team,
+        stat: "totalShots",
+        average: r(avg, 2),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: p.games,
+      };
+    });
+}
+
 // ─── Route ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const sportParam = url.searchParams.get("sport")?.toLowerCase() || "nba";
-  const sport: "nba" | "mlb" | "nhl" | "nfl" =
-    sportParam === "mlb"
-      ? "mlb"
-      : sportParam === "nhl"
-        ? "nhl"
-        : sportParam === "nfl"
-          ? "nfl"
-          : "nba";
+  const sport: "nba" | "wnba" | "mlb" | "nhl" | "nfl" | "mls" | "epl" =
+    sportParam === "wnba"
+      ? "wnba"
+      : sportParam === "mlb"
+        ? "mlb"
+        : sportParam === "nhl"
+          ? "nhl"
+          : sportParam === "nfl"
+            ? "nfl"
+            : sportParam === "mls"
+              ? "mls"
+              : sportParam === "epl"
+                ? "epl"
+                : "nba";
   const updated = new Date().toISOString();
 
   if (sport === "mlb") {
@@ -656,6 +764,82 @@ export async function GET(req: Request) {
     };
 
     return NextResponse.json({ sport: "nfl", updated, categories });
+  }
+
+  if (sport === "wnba") {
+    const players = await getWNBAPlayerStats();
+
+    if (players.length === 0) {
+      return NextResponse.json({
+        sport: "wnba",
+        updated,
+        categories: {
+          points: { label: "Points", rows: [] },
+          rebounds: { label: "Rebounds", rows: [] },
+          assists: { label: "Assists", rows: [] },
+          threes: { label: "Threes", rows: [] },
+          steals: { label: "Steals", rows: [] },
+          blocks: { label: "Blocks", rows: [] },
+        },
+        error: "Unable to fetch WNBA player stats",
+      });
+    }
+
+    // Same buffer/edge tuning as NBA — stat distributions are very similar.
+    return NextResponse.json({
+      sport: "wnba",
+      updated,
+      categories: {
+        points: { label: "Points", rows: topNBA(players, "points", 2.5, 3) },
+        rebounds: {
+          label: "Rebounds",
+          rows: topNBA(players, "rebounds", 1.5, 2),
+        },
+        assists: {
+          label: "Assists",
+          rows: topNBA(players, "assists", 1.5, 2),
+        },
+        threes: { label: "Threes", rows: topNBA(players, "threes", 2.5, 1.5) },
+        steals: { label: "Steals", rows: topNBA(players, "steals", 0.5, 0.5) },
+        blocks: { label: "Blocks", rows: topNBA(players, "blocks", 0.5, 0.5) },
+      },
+    });
+  }
+
+  if (sport === "mls" || sport === "epl") {
+    const players =
+      sport === "mls" ? await getMLSPlayerStats() : await getEPLPlayerStats();
+
+    if (players.length === 0) {
+      return NextResponse.json({
+        sport,
+        updated,
+        categories: {
+          goals: { label: "Goals", rows: [] },
+          assists: { label: "Assists", rows: [] },
+          shots_on_target: { label: "Shots on Target", rows: [] },
+          total_shots: { label: "Total Shots", rows: [] },
+        },
+        error: `Unable to fetch ${sport.toUpperCase()} player stats`,
+      });
+    }
+
+    return NextResponse.json({
+      sport,
+      updated,
+      categories: {
+        goals: { label: "Goals", rows: topSoccerGoals(players) },
+        assists: { label: "Assists", rows: topSoccerAssists(players) },
+        shots_on_target: {
+          label: "Shots on Target",
+          rows: topSoccerShotsOnTarget(players),
+        },
+        total_shots: {
+          label: "Total Shots",
+          rows: topSoccerTotalShots(players),
+        },
+      },
+    });
   }
 
   // NBA (default) ────────────────────────────────────────────────────────────

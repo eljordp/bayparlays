@@ -79,6 +79,23 @@ export async function GET(req: NextRequest) {
     results.simResolution = { error: String(e) };
   }
 
+  // Step 4: Warm props cache for every supported sport so morning visitors get
+  // fresh numbers without paying the cold-fetch latency. ESPN is free and
+  // unlimited — zero cost to hit every sport.
+  const propsSports = ["nba", "wnba", "mlb", "nhl", "nfl", "mls", "epl"];
+  const propsWarmed: string[] = [];
+  for (const sport of propsSports) {
+    try {
+      const res = await fetch(`${baseUrl}/api/props?sport=${sport}`, {
+        cache: "no-store",
+      });
+      if (res.ok) propsWarmed.push(sport);
+    } catch {
+      /* continue */
+    }
+  }
+  results.propsWarmed = propsWarmed;
+
   results.timestamp = new Date().toISOString();
 
   return NextResponse.json(results);
