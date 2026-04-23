@@ -1486,6 +1486,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Loud warning when the model silently broke. If we evaluated a real
+    // pool of legs but scored ZERO of them with model signal, the upstream
+    // data feed is dead (common cause: Odds API credits exhausted). Every
+    // leg will fall back to naive de-vig, producing fake -EV "AI" numbers.
+    // Log it so it's visible in Vercel logs — don't just return garbage.
+    const legsScoredCheck = allLegs.filter((l) => l.scored).length;
+    if (allLegs.length >= 20 && legsScoredCheck === 0) {
+      console.error(
+        `⚠ MODEL SILENT FAILURE: evaluated ${allLegs.length} legs but scored 0. ` +
+        `Team records / Elo / situational all empty. Likely cause: Odds API ` +
+        `credit exhaustion or sports-data.ts fetch failing. Sports: ${sports.join(",")}`,
+      );
+    }
+
     // If no live data came back, fall back to mock
     if (allLegs.length === 0) {
       console.warn(
