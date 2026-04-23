@@ -5,7 +5,8 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppNav } from "@/app/components/AppNav";
 import { PicksTabs } from "@/app/components/PicksTabs";
-import { Zap, TrendingUp, Target, Info, History } from "lucide-react";
+import { Zap, TrendingUp, Target, Info, History, Share2, Copy, Check, ExternalLink } from "lucide-react";
+import { affiliateLink, hasAffiliate } from "@/lib/affiliates";
 
 /* ─── Types ─── */
 
@@ -88,6 +89,18 @@ export default function EdgesPage() {
   const [error, setError] = useState<string | null>(null);
   const [sport, setSport] = useState("All");
   const [market, setMarket] = useState("all");
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+
+  useEffect(() => {
+    // Hide the capture form on repeat visits.
+    try {
+      if (typeof window !== "undefined" && localStorage.getItem("bp_edges_email_submitted") === "1") {
+        setEmailSubmitted(true);
+      }
+    } catch {
+      // localStorage can throw in private-mode / embedded contexts — ignore.
+    }
+  }, []);
 
   const fetchEdges = useCallback(async () => {
     setLoading(true);
@@ -181,6 +194,22 @@ export default function EdgesPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Honesty banner ── */}
+      {/* Sharp edges are rare by design — if the market is efficient today
+          the feed is mostly empty. Tell users that up front so they don't
+          assume the site is broken when they see 0-3 picks. */}
+      <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="max-w-[1400px] mx-auto px-6 py-4 text-xs flex items-start gap-2" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <Info size={12} className="mt-0.5 flex-shrink-0" />
+          <span>
+            Real sharp edges are rare — most days surface 0–5 picks. An empty feed means the market is tight, not that the model is broken. Quality over quantity.
+          </span>
+        </div>
+      </section>
+
+      {/* ── Email capture ── */}
+      <EmailCapture submitted={emailSubmitted} onSubmitted={() => setEmailSubmitted(true)} />
 
       {/* ── Filters ── */}
       <section
@@ -325,6 +354,24 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
   const sharp = leg.sharpEdge === true;
   const ev = leg.evVsFair ?? leg.trueEdge ?? 0;
   const evColor = ev >= 0.02 ? "#22c55e" : ev >= 0.01 ? "#eab308" : "rgba(255,255,255,0.5)";
+  const [copied, setCopied] = useState(false);
+
+  const copyPick = async () => {
+    const line =
+      `${leg.sport} · ${leg.pick} @ ${formatOdds(leg.odds)} (${leg.book})` +
+      (typeof leg.evVsFair === "number" ? ` · ${formatEv(leg.evVsFair)} EV vs fair` : "") +
+      ` — via bayparlays.vercel.app/edges`;
+    try {
+      await navigator.clipboard.writeText(line);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard can fail in insecure contexts — silent no-op is fine
+    }
+  };
+
+  const bookUrl = affiliateLink(leg.book);
+  const isAffiliate = hasAffiliate(leg.book);
 
   return (
     <motion.div
@@ -391,22 +438,67 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
           </div>
         </div>
 
-        <div className="text-right flex-shrink-0">
-          <div
-            className="text-2xl md:text-3xl leading-none"
-            style={{
-              fontFamily: "var(--font-geist-mono)",
-              color: "#FF3B3B",
-              fontWeight: 500,
-            }}
-          >
-            {formatOdds(leg.odds)}
+        <div className="flex items-start gap-3 flex-shrink-0">
+          <div className="text-right">
+            <div
+              className="text-2xl md:text-3xl leading-none"
+              style={{
+                fontFamily: "var(--font-geist-mono)",
+                color: "#FF3B3B",
+                fontWeight: 500,
+              }}
+            >
+              {formatOdds(leg.odds)}
+            </div>
+            {bookUrl !== "#" ? (
+              <a
+                href={bookUrl}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className="text-xs mt-1 inline-flex items-center gap-1 hover:underline"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+                title={isAffiliate ? `Place bet at ${leg.book}` : `Open ${leg.book}`}
+              >
+                {leg.book}
+                <ExternalLink size={10} />
+              </a>
+            ) : (
+              <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                {leg.book}
+              </div>
+            )}
           </div>
-          <div
-            className="text-xs mt-1"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-          >
-            {leg.book}
+          <div className="flex flex-col gap-1.5">
+            <button
+              onClick={copyPick}
+              aria-label={copied ? "Copied" : "Copy pick"}
+              title={copied ? "Copied!" : "Copy pick"}
+              className="flex items-center justify-center rounded-full transition-colors"
+              style={{
+                width: 32,
+                height: 32,
+                background: copied ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
+                border: `1px solid ${copied ? "rgba(34,197,94,0.35)" : "rgba(255,255,255,0.08)"}`,
+                color: copied ? "#22c55e" : "rgba(255,255,255,0.55)",
+              }}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+            <Link
+              href="/share/edge"
+              aria-label="Share this edge"
+              title="Share this edge"
+              className="flex items-center justify-center rounded-full transition-colors"
+              style={{
+                width: 32,
+                height: 32,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.55)",
+              }}
+            >
+              <Share2 size={14} />
+            </Link>
           </div>
         </div>
       </div>
@@ -474,5 +566,118 @@ function MiniStat({
         {value}
       </div>
     </div>
+  );
+}
+
+function EmailCapture({
+  submitted,
+  onSubmitted,
+}: {
+  submitted: boolean;
+  onSubmitted: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "error">("idle");
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  if (submitted) {
+    return (
+      <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div
+          className="max-w-[1400px] mx-auto px-6 py-4 text-xs"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          You&apos;re in. Expect tomorrow morning.
+        </div>
+      </section>
+    );
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes("@")) {
+      setStatus("error");
+      setErrMsg("Enter a valid email.");
+      return;
+    }
+    setStatus("sending");
+    setErrMsg(null);
+    try {
+      const res = await fetch("/api/email-capture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      try {
+        localStorage.setItem("bp_edges_email_submitted", "1");
+      } catch {
+        // ignore
+      }
+      onSubmitted();
+    } catch (err) {
+      setStatus("error");
+      setErrMsg(err instanceof Error ? err.message : "Something went wrong.");
+    }
+  }
+
+  return (
+    <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="max-w-[1400px] mx-auto px-6 py-5">
+        <form
+          onSubmit={submit}
+          className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
+        >
+          <span
+            className="text-sm"
+            style={{ color: "rgba(255,255,255,0.75)" }}
+          >
+            Get tomorrow&apos;s edges in your inbox.{" "}
+            <span style={{ color: "rgba(255,255,255,0.45)" }}>Free. No spam.</span>
+          </span>
+          <div className="flex gap-2 flex-1 sm:max-w-md sm:ml-auto">
+            <input
+              type="email"
+              inputMode="email"
+              required
+              placeholder="you@email.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (status === "error") setStatus("idle");
+              }}
+              disabled={status === "sending"}
+              className="flex-1 px-3 py-2 text-sm rounded-md outline-none"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "#ededed",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={status === "sending"}
+              className="px-4 py-2 text-xs font-semibold rounded-md transition-opacity"
+              style={{
+                background: "#FF3B3B",
+                color: "#0a0a0a",
+                opacity: status === "sending" ? 0.6 : 1,
+              }}
+            >
+              {status === "sending" ? "Sending…" : "Subscribe"}
+            </button>
+          </div>
+        </form>
+        {status === "error" && errMsg && (
+          <div
+            className="mt-2 text-xs"
+            style={{ color: "#ef4444" }}
+          >
+            {errMsg}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

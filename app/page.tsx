@@ -11,6 +11,7 @@ import { ParlayPlayer } from "@/app/components/ParlayPlayer";
 import { HowItWorksPlayer } from "@/app/components/HowItWorksVideo";
 import { BettingSlip } from "@/app/components/BettingSlip";
 import { AppNav } from "@/app/components/AppNav";
+import { LockOfTheDay } from "@/app/components/LockOfTheDay";
 
 /* ─── Types ─── */
 
@@ -211,8 +212,11 @@ export default function Home() {
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
       <AppNav />
 
+      {/* ── LOCK OF THE DAY (top hero) ── */}
+      <LockOfTheDay />
+
       {/* ── HERO ── */}
-      <section className="pt-28 pb-20 md:pt-36 md:pb-32">
+      <section className="pt-16 pb-20 md:pt-20 md:pb-32">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             {/* Left — Copy */}

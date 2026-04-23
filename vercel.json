@@ -3,6 +3,10 @@
     {
       "path": "/api/daily",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/email/daily-edges",
+      "schedule": "0 13 * * *"
     }
   ]
 }
