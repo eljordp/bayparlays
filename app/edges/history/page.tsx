@@ -52,6 +52,8 @@ interface Data {
   bySport: BySport[];
   recent: Recent[];
   migrationPending?: boolean;
+  error?: string;
+  details?: string;
 }
 
 function fmtMoney(n: number): string {
@@ -87,7 +89,9 @@ export default function EdgesHistoryPage() {
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a", color: "#ededed" }}>
       <AppNav />
-      <PicksTabs />
+      <div className="pt-20">
+        <PicksTabs />
+      </div>
 
       <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div className="max-w-[1400px] mx-auto px-6 py-10 md:py-14">
@@ -120,12 +124,34 @@ export default function EdgesHistoryPage() {
         )}
 
         {!loading && data?.migrationPending && (
+          <div className="rounded-lg p-6" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.25)" }}>
+            <div className="text-sm font-semibold mb-2" style={{ color: "#eab308" }}>
+              Setup pending
+            </div>
+            <div className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+              The edge archive requires a one-time database migration to store graded picks. Run <code style={{ fontFamily: "var(--font-geist-mono)", background: "rgba(255,255,255,0.05)", padding: "1px 6px", borderRadius: 3 }}>supabase/migrations/013_edge_picks.sql</code> in the Supabase SQL editor, then reload. From that point on, every sharp edge /edges flags will automatically log, grade, and appear here.
+            </div>
+          </div>
+        )}
+
+        {!loading && data?.error && !data.migrationPending && (
           <div className="rounded-lg p-6" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
             <div className="text-sm font-semibold mb-1" style={{ color: "#ef4444" }}>
-              Migration 013 not yet applied
+              Couldn&apos;t load track record
             </div>
             <div className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
-              Edge picks archive requires running supabase/migrations/013_edge_picks.sql in the Supabase SQL editor. Until then, this page stays empty.
+              {data.details || data.error}
+            </div>
+          </div>
+        )}
+
+        {!loading && data && !data.stats && !data.migrationPending && !data.error && (
+          <div className="rounded-lg p-10 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="text-base mb-2" style={{ color: "rgba(255,255,255,0.8)" }}>
+              No picks logged yet
+            </div>
+            <div className="text-xs max-w-md mx-auto" style={{ color: "rgba(255,255,255,0.5)" }}>
+              The archive is live and watching. Once /edges finds its first sharp mispricing on a game within the next 3 days, it&apos;ll land here automatically.
             </div>
           </div>
         )}

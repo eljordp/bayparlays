@@ -126,7 +126,9 @@ export default function EdgesPage() {
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a", color: "#ededed" }}>
       <AppNav />
-      <PicksTabs />
+      <div className="pt-20">
+        <PicksTabs />
+      </div>
 
       {/* ── Hero ── */}
       <section

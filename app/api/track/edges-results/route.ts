@@ -40,11 +40,15 @@ export async function GET() {
         .range(from, from + PAGE - 1);
       if (error) {
         // Table may not exist yet if migration 013 hasn't been applied.
-        if (/relation .*edge_picks.* does not exist/i.test(error.message)) {
+        // Supabase PostgREST returns variations like "Could not find the table
+        // 'public.edge_picks'", or "relation does not exist". Match loosely.
+        const msg = error.message || "";
+        if (/edge_picks/i.test(msg) && /(does not exist|not find|cache)/i.test(msg)) {
           return NextResponse.json(
             {
               stats: null,
               recent: [],
+              bySport: [],
               migrationPending: true,
             },
             { headers: { "Cache-Control": "no-store" } },

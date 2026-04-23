@@ -1524,13 +1524,21 @@ export async function GET(request: NextRequest) {
     if (format === "legs") {
       // Filter to meaningful picks only. We want either sharpEdge flag OR a
       // positive modeled edge >= 1.5%. Skip legs with trueEdge < 0 (anti-picks).
+      // Also require the game to start within 3 days — sharp action happens
+      // in the 72hr window before kickoff. Longer-dated games (futures,
+      // offseason series) get priced loose by retail books and produce noisy
+      // "edges" that aren't real opportunities.
       const MIN_EDGE = 0.015;
-      const edgeLegs = allLegs.filter(
-        (l) =>
-          l.bookCount >= 3 && // require broad-market consensus
-          l.commenceTime && // must have a kickoff
-          (l.sharpEdge === true || l.trueEdge >= MIN_EDGE),
-      );
+      const MAX_DAYS_AHEAD = 3;
+      const now = Date.now();
+      const cutoff = now + MAX_DAYS_AHEAD * 24 * 60 * 60 * 1000;
+      const edgeLegs = allLegs.filter((l) => {
+        if (l.bookCount < 3) return false;
+        if (!l.commenceTime) return false;
+        const t = new Date(l.commenceTime).getTime();
+        if (t < now || t > cutoff) return false;
+        return l.sharpEdge === true || l.trueEdge >= MIN_EDGE;
+      });
       // Sort by the honest metric: EV vs no-vig fair (bigger = better).
       // Fall back to trueEdge if evVsFair isn't populated.
       edgeLegs.sort((a, b) => {
