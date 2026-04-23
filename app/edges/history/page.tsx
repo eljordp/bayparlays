@@ -267,44 +267,57 @@ export default function EdgesHistoryPage() {
                     key={p.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex items-center gap-4 py-3 px-4 rounded-lg"
+                    className="rounded-lg py-3 px-4 md:py-3 md:px-4"
                     style={{
                       background: "rgba(255,255,255,0.02)",
                       border: `1px solid ${p.status === "won" ? "rgba(34,197,94,0.15)" : p.status === "lost" ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)"}`,
                     }}
                   >
-                    <div className="text-xs flex-shrink-0 w-16" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-geist-mono)" }}>
-                      {fmtDate(p.createdAt)}
-                    </div>
-                    <div className="text-xs flex-shrink-0 w-12 font-semibold" style={{ color: "#3b82f6" }}>
-                      {p.sport}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate">{p.pick}</div>
-                      <div className="text-xs truncate" style={{ color: "rgba(255,255,255,0.4)" }}>{p.game}</div>
-                    </div>
-                    <div className="text-xs flex-shrink-0" style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}>
-                      {fmtOdds(p.odds)}
-                    </div>
-                    <div className="text-xs flex-shrink-0 w-16 text-right" style={{
-                      color: p.evVsFair && p.evVsFair >= 0.02 ? "#22c55e" : "rgba(255,255,255,0.5)",
-                      fontFamily: "var(--font-geist-mono)",
-                    }}>
-                      {p.evVsFair !== null ? `${(p.evVsFair * 100).toFixed(1)}%` : "—"}
-                    </div>
-                    <div className="text-xs flex-shrink-0 w-20 text-right" style={{
-                      color: p.status === "won" ? "#22c55e" : p.status === "lost" ? "#ef4444" : "rgba(255,255,255,0.5)",
-                      fontFamily: "var(--font-geist-mono)",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                    }}>
-                      {p.status}
-                    </div>
-                    <div className="text-xs flex-shrink-0 w-20 text-right" style={{
-                      color: p.profit > 0 ? "#22c55e" : p.profit < 0 ? "#ef4444" : "rgba(255,255,255,0.5)",
-                      fontFamily: "var(--font-geist-mono)",
-                    }}>
-                      {p.status === "pending" ? "—" : fmtMoney(p.profit)}
+                    {/* Mobile: two-line stack. Desktop: all-in-one row.
+                        The desktop version has 7 fixed-width columns that
+                        together need ~514px of width, which overflows or
+                        crushes content on a 390px viewport. */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                      {/* Row 1 (mobile) / left (desktop): meta + pick */}
+                      <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+                        <div className="text-[11px] md:text-xs flex-shrink-0 w-14 md:w-16" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-geist-mono)" }}>
+                          {fmtDate(p.createdAt)}
+                        </div>
+                        <div className="text-[11px] md:text-xs flex-shrink-0 w-10 md:w-12 font-semibold" style={{ color: "#3b82f6" }}>
+                          {p.sport}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">{p.pick}</div>
+                          <div className="text-xs truncate" style={{ color: "rgba(255,255,255,0.4)" }}>{p.game}</div>
+                        </div>
+                      </div>
+
+                      {/* Row 2 (mobile) / right (desktop): numbers */}
+                      <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4 pl-[108px] md:pl-0">
+                        <div className="text-xs flex-shrink-0 md:w-auto" style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}>
+                          {fmtOdds(p.odds)}
+                        </div>
+                        <div className="text-xs flex-shrink-0 md:w-16 md:text-right" style={{
+                          color: p.evVsFair && p.evVsFair >= 0.02 ? "#22c55e" : "rgba(255,255,255,0.5)",
+                          fontFamily: "var(--font-geist-mono)",
+                        }}>
+                          {p.evVsFair !== null ? `${(p.evVsFair * 100).toFixed(1)}%` : "—"}
+                        </div>
+                        <div className="text-xs flex-shrink-0 md:w-20 md:text-right" style={{
+                          color: p.status === "won" ? "#22c55e" : p.status === "lost" ? "#ef4444" : "rgba(255,255,255,0.5)",
+                          fontFamily: "var(--font-geist-mono)",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                        }}>
+                          {p.status}
+                        </div>
+                        <div className="text-xs flex-shrink-0 md:w-20 md:text-right" style={{
+                          color: p.profit > 0 ? "#22c55e" : p.profit < 0 ? "#ef4444" : "rgba(255,255,255,0.5)",
+                          fontFamily: "var(--font-geist-mono)",
+                        }}>
+                          {p.status === "pending" ? "—" : fmtMoney(p.profit)}
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 ))}

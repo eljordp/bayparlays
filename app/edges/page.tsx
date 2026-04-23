@@ -386,9 +386,9 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
         border: `1px solid ${sharp ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.06)"}`,
       }}
     >
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex items-start justify-between gap-3 md:gap-4 mb-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center flex-wrap gap-2 md:gap-3 mb-2">
             <span
               className="text-xs font-semibold px-2 py-0.5 rounded"
               style={{
