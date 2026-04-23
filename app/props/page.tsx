@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { AppNav } from "@/app/components/AppNav";
 import { PicksTabs } from "@/app/components/PicksTabs";
@@ -11,49 +11,96 @@ import { useAuth } from "@/app/components/AuthProvider";
 interface PropRow {
   player: string;
   team: string;
-  stat: "points" | "rebounds" | "assists";
+  stat: string;
   average: number;
   typicalLine: number;
   edge: number;
   games: number;
 }
 
-interface PropsResponse {
-  points: PropRow[];
-  rebounds: PropRow[];
-  assists: PropRow[];
-  updated: string;
-  error?: string;
+type Sport = "nba" | "mlb" | "nhl";
+
+interface PropCategory {
+  label: string;
+  rows: PropRow[];
 }
 
-type Tab = "points" | "rebounds" | "assists";
+interface PropsResponse {
+  sport: Sport;
+  // NEW shape: categories is a dict of { label, rows }
+  categories?: Record<string, PropCategory | PropRow[]>;
+  updated: string;
+  error?: string;
+  // LEGACY top-level keys (NBA backwards-compat fallback)
+  points?: PropRow[];
+  rebounds?: PropRow[];
+  assists?: PropRow[];
+}
 
-const TABS: { key: Tab; label: string; sublabel: string }[] = [
-  { key: "points", label: "Points", sublabel: "Top scorers" },
-  { key: "rebounds", label: "Rebounds", sublabel: "Top boards" },
-  { key: "assists", label: "Assists", sublabel: "Top dimes" },
-];
+// Per-category display config. Drives unit labels, games-column label,
+// average-column label, and the "how this works" blurb.
+interface CategoryDisplay {
+  unit: string;
+  gamesLabel: string;
+  averageLabel: string;
+}
+
+const CATEGORY_DISPLAY: Record<string, CategoryDisplay> = {
+  // NBA
+  points: { unit: "pts", gamesLabel: "GP", averageLabel: "Per game" },
+  rebounds: { unit: "reb", gamesLabel: "GP", averageLabel: "Per game" },
+  assists: { unit: "ast", gamesLabel: "GP", averageLabel: "Per game" },
+  threes: { unit: "3PM", gamesLabel: "GP", averageLabel: "Per game" },
+  steals: { unit: "stl", gamesLabel: "GP", averageLabel: "Per game" },
+  blocks: { unit: "blk", gamesLabel: "GP", averageLabel: "Per game" },
+  // MLB
+  pitcher_strikeouts: { unit: "K/9", gamesLabel: "GS", averageLabel: "K per 9" },
+  batter_hits: { unit: "H", gamesLabel: "GP", averageLabel: "Per game" },
+  batter_rbis: { unit: "RBI", gamesLabel: "GP", averageLabel: "Per game" },
+  batter_home_runs: { unit: "HR", gamesLabel: "GP", averageLabel: "Per game" },
+  // NHL
+  skater_goals: { unit: "G", gamesLabel: "GP", averageLabel: "Per game" },
+  skater_points: { unit: "PTS", gamesLabel: "GP", averageLabel: "Per game" },
+  skater_shots: { unit: "SOG", gamesLabel: "GP", averageLabel: "Per game" },
+};
+
+const SPORT_LABELS: Record<Sport, string> = {
+  nba: "NBA",
+  mlb: "MLB",
+  nhl: "NHL",
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function confidenceFromGap(avg: number, line: number): {
-  label: string;
-  className: string;
-} {
-  const gap = avg - line;
-  if (gap >= 5) {
+// Relative confidence from spec:
+//   edge / typicalLine >= 0.15 → LOCK
+//   edge / typicalLine >= 0.08 → STRONG
+//   edge / typicalLine >= 0.04 → LEAN
+//   else PASS
+function confidenceFromRelativeEdge(
+  edge: number,
+  line: number,
+): { label: string; className: string } {
+  if (line <= 0 || !Number.isFinite(edge)) {
+    return {
+      label: "PASS",
+      className: "bg-white/5 text-white/30 border border-white/10",
+    };
+  }
+  const ratio = edge / line;
+  if (ratio >= 0.15) {
     return {
       label: "LOCK",
       className: "bg-[#FF3B3B] text-[#0a0a0a]",
     };
   }
-  if (gap >= 2.5) {
+  if (ratio >= 0.08) {
     return {
       label: "STRONG",
       className: "bg-[#FF3B3B]/20 text-[#FF3B3B] border border-[#FF3B3B]/40",
     };
   }
-  if (gap >= 1) {
+  if (ratio >= 0.04) {
     return {
       label: "LEAN",
       className: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30",
@@ -65,28 +112,105 @@ function confidenceFromGap(avg: number, line: number): {
   };
 }
 
-function statLabel(stat: Tab): string {
-  return stat.charAt(0).toUpperCase() + stat.slice(1);
+// Format numbers — fewer decimals for large, more for small
+function formatAvg(v: number): string {
+  if (v >= 10) return v.toFixed(1);
+  if (v >= 1) return v.toFixed(2);
+  return v.toFixed(3);
+}
+
+// Normalize legacy response (old NBA shape had top-level points/rebounds/assists
+// arrays and no categories) into the new { label, rows } form.
+function normalizeCategories(
+  data: PropsResponse,
+): Record<string, PropCategory> {
+  const out: Record<string, PropCategory> = {};
+
+  const raw = data.categories;
+  if (raw) {
+    for (const [key, value] of Object.entries(raw)) {
+      if (Array.isArray(value)) {
+        // Old shape: bare array per key
+        out[key] = {
+          label: CATEGORY_DISPLAY[key]?.unit
+            ? prettyLabelFromKey(key)
+            : prettyLabelFromKey(key),
+          rows: value,
+        };
+      } else if (value && typeof value === "object" && "rows" in value) {
+        out[key] = {
+          label: value.label || prettyLabelFromKey(key),
+          rows: value.rows || [],
+        };
+      }
+    }
+  }
+
+  // Fallback: legacy top-level NBA keys
+  if (Object.keys(out).length === 0) {
+    if (data.points) out.points = { label: "Points", rows: data.points };
+    if (data.rebounds)
+      out.rebounds = { label: "Rebounds", rows: data.rebounds };
+    if (data.assists) out.assists = { label: "Assists", rows: data.assists };
+  }
+
+  return out;
+}
+
+function prettyLabelFromKey(key: string): string {
+  const map: Record<string, string> = {
+    points: "Points",
+    rebounds: "Rebounds",
+    assists: "Assists",
+    threes: "Threes",
+    steals: "Steals",
+    blocks: "Blocks",
+    pitcher_strikeouts: "Pitcher Strikeouts",
+    batter_hits: "Batter Hits",
+    batter_rbis: "Batter RBIs",
+    batter_home_runs: "Batter Home Runs",
+    skater_goals: "Skater Goals",
+    skater_points: "Skater Points",
+    skater_shots: "Shots on Goal",
+  };
+  return map[key] || key.replace(/_/g, " ");
+}
+
+function defaultCategoryFor(sport: Sport): string {
+  if (sport === "mlb") return "pitcher_strikeouts";
+  if (sport === "nhl") return "skater_goals";
+  return "points";
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PropsPage() {
   const { isPro, tier, isAdmin } = useAuth();
+  const [sport, setSport] = useState<Sport>("nba");
   const [data, setData] = useState<PropsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("points");
+  const [tab, setTab] = useState<string>("points");
   const [copied, setCopied] = useState<string | null>(null);
 
   // VIP+ gate — VIP, admin, or explicit admin bypass
   const hasVipAccess = isAdmin || tier === "vip" || tier === "admin";
 
+  const categories = useMemo<Record<string, PropCategory>>(
+    () => (data ? normalizeCategories(data) : {}),
+    [data],
+  );
+
+  const categoryKeys = useMemo<string[]>(
+    () => Object.keys(categories),
+    [categories],
+  );
+
   const fetchProps = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/props");
+      const res = await fetch(`/api/props?sport=${sport}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: PropsResponse = await res.json();
       if (json.error) throw new Error(json.error);
@@ -96,19 +220,38 @@ export default function PropsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sport]);
 
   useEffect(() => {
     fetchProps();
   }, [fetchProps]);
 
-  const rows: PropRow[] = data ? data[tab] : [];
-  // Non-VIP: show top 3 only, rest locked
+  // When sport changes OR data first loads for a sport, reset tab to the
+  // first available category for that sport.
+  useEffect(() => {
+    const preferred = defaultCategoryFor(sport);
+    if (categoryKeys.length === 0) return;
+    if (categoryKeys.includes(tab)) return;
+    setTab(
+      categoryKeys.includes(preferred) ? preferred : categoryKeys[0],
+    );
+  }, [sport, categoryKeys, tab]);
+
+  const currentCategory = categories[tab];
+  const currentDisplay = CATEGORY_DISPLAY[tab] || {
+    unit: "",
+    gamesLabel: "GP",
+    averageLabel: "Per game",
+  };
+
+  const rows: PropRow[] = currentCategory?.rows || [];
   const visibleRows = hasVipAccess ? rows : rows.slice(0, 3);
   const lockedRows = hasVipAccess ? [] : rows.slice(3);
 
   async function copyPick(row: PropRow) {
-    const text = `${row.player} OVER ${row.typicalLine} ${row.stat} (${row.team}) — avg ${row.average} over ${row.games} games`;
+    const unit = currentDisplay.unit;
+    const gamesLbl = currentDisplay.gamesLabel;
+    const text = `${row.player} OVER ${row.typicalLine} ${unit} (${row.team}) — avg ${formatAvg(row.average)} over ${row.games} ${gamesLbl}`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(`${tab}-${row.player}`);
@@ -117,6 +260,41 @@ export default function PropsPage() {
       // ignore
     }
   }
+
+  const howItWorks = (() => {
+    if (sport === "nba") {
+      return (
+        <>
+          These are players whose season averages significantly exceed typical
+          prop lines. Example: if LeBron averages{" "}
+          <span className="text-white font-medium">27 PPG</span>, his{" "}
+          <span className="text-[#FF3B3B] font-medium">
+            over 24.5 points
+          </span>{" "}
+          prop has an 80%+ hit rate historically. We flag the biggest gaps
+          across the league.
+        </>
+      );
+    }
+    if (sport === "mlb") {
+      return (
+        <>
+          MLB props from season totals — pitcher K/9 vs typical strikeout
+          lines, per-game hits/RBIs, and per-game HR rate for{" "}
+          <span className="text-[#FF3B3B] font-medium">anytime HR</span> bets.
+          Small samples (early April) get sample-size adjusted edge.
+        </>
+      );
+    }
+    return (
+      <>
+        NHL props from season totals — per-game goals, points, and shots on
+        goal. Great for{" "}
+        <span className="text-[#FF3B3B] font-medium">anytime goal</span> bets
+        and over-shot picks on high-volume shooters.
+      </>
+    );
+  })();
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
@@ -159,6 +337,26 @@ export default function PropsPage() {
           </p>
         </div>
 
+        {/* ─── Sport Toggle ───────────────────────────────────────────── */}
+        <div className="mb-6 inline-flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-1">
+          {(["nba", "mlb", "nhl"] as Sport[]).map((s) => {
+            const active = sport === s;
+            return (
+              <button
+                key={s}
+                onClick={() => setSport(s)}
+                className={`rounded-md px-5 py-2 text-xs font-bold uppercase tracking-[0.15em] transition ${
+                  active
+                    ? "bg-[#FF3B3B] text-[#0a0a0a]"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
+                {SPORT_LABELS[s]}
+              </button>
+            );
+          })}
+        </div>
+
         {/* ─── How This Works Card ────────────────────────────────────── */}
         <div className="mb-10 rounded-xl border border-white/[0.06] bg-gradient-to-br from-[#FF3B3B]/[0.04] to-transparent px-5 py-5 md:px-7 md:py-6">
           <div className="flex items-start gap-4">
@@ -173,45 +371,48 @@ export default function PropsPage() {
                 How this works
               </h3>
               <p className="mt-1.5 text-sm text-white/60 leading-relaxed">
-                These are players whose season averages significantly exceed
-                typical prop lines. Example: if LeBron averages{" "}
-                <span className="text-white font-medium">27 PPG</span>, his{" "}
-                <span className="text-[#FF3B3B] font-medium">
-                  over 24.5 points
-                </span>{" "}
-                prop has an 80%+ hit rate historically. We flag the biggest
-                gaps across the league.
+                {howItWorks}
               </p>
             </div>
           </div>
         </div>
 
         {/* ─── Stat Tabs ──────────────────────────────────────────────── */}
-        <div className="mb-8 flex gap-2 overflow-x-auto scrollbar-hide">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`rounded-lg px-5 py-3 text-sm font-semibold transition whitespace-nowrap ${
-                tab === t.key
-                  ? "bg-[#FF3B3B] text-[#0a0a0a]"
-                  : "bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white"
-              }`}
-            >
-              <div>{t.label}</div>
-              <div className={`text-[10px] font-normal ${tab === t.key ? "text-[#0a0a0a]/60" : "text-white/30"}`}>
-                {t.sublabel}
-              </div>
-            </button>
-          ))}
-        </div>
+        {categoryKeys.length > 0 && (
+          <div className="mb-8 flex gap-2 overflow-x-auto scrollbar-hide">
+            {categoryKeys.map((k) => {
+              const cat = categories[k];
+              const active = tab === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => setTab(k)}
+                  className={`rounded-lg px-5 py-3 text-sm font-semibold transition whitespace-nowrap ${
+                    active
+                      ? "bg-[#FF3B3B] text-[#0a0a0a]"
+                      : "bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white"
+                  }`}
+                >
+                  <div>{cat.label}</div>
+                  <div
+                    className={`text-[10px] font-normal ${
+                      active ? "text-[#0a0a0a]/60" : "text-white/30"
+                    }`}
+                  >
+                    Top {cat.rows.length || 10}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* ─── Loading State ──────────────────────────────────────────── */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-32">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[#FF3B3B]" />
             <p className="mt-4 text-sm text-white/30">
-              Pulling season averages from ESPN...
+              Pulling {SPORT_LABELS[sport]} season stats from ESPN...
             </p>
           </div>
         )}
@@ -235,10 +436,13 @@ export default function PropsPage() {
         {!loading && !error && rows.length === 0 && (
           <div className="flex flex-col items-center justify-center py-32">
             <p className="text-lg text-white/20">
-              No {tab} data available right now.
+              No {(currentCategory?.label || "").toLowerCase()} data available
+              right now.
             </p>
             <p className="mt-2 text-sm text-white/10">
-              Check back after tonight&apos;s games.
+              {sport === "nba"
+                ? "Check back after tonight's games."
+                : "Check back after today's games."}
             </p>
           </div>
         )}
@@ -247,7 +451,10 @@ export default function PropsPage() {
         {!loading && !error && rows.length > 0 && (
           <div className="grid gap-3 md:gap-4">
             {visibleRows.map((row, i) => {
-              const conf = confidenceFromGap(row.average, row.typicalLine);
+              const conf = confidenceFromRelativeEdge(
+                row.edge,
+                row.typicalLine,
+              );
               const isCopied = copied === `${tab}-${row.player}`;
               return (
                 <div
@@ -272,7 +479,7 @@ export default function PropsPage() {
                         {row.team || "—"}
                       </span>
                       <span className="text-[11px] text-white/30">
-                        {row.games} GP
+                        {row.games} {currentDisplay.gamesLabel}
                       </span>
                     </div>
                   </div>
@@ -280,13 +487,13 @@ export default function PropsPage() {
                   {/* Average */}
                   <div className="col-span-5 md:col-span-3 text-right md:text-left">
                     <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1">
-                      Season avg
+                      {currentDisplay.averageLabel}
                     </div>
                     <div
-                      className="text-3xl md:text-4xl font-bold text-[#FF3B3B] leading-none"
-                      style={{ fontFamily: "'DM Serif Display', serif" }}
+                      className="text-3xl md:text-4xl font-bold text-[#FF3B3B] leading-none font-mono"
+                      style={{ fontFamily: "'Geist Mono', monospace" }}
                     >
-                      {row.average.toFixed(1)}
+                      {formatAvg(row.average)}
                     </div>
                   </div>
 
@@ -295,11 +502,14 @@ export default function PropsPage() {
                     <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1">
                       Typical line
                     </div>
-                    <div className="text-lg font-semibold text-white/80">
+                    <div
+                      className="text-lg font-semibold text-white/80"
+                      style={{ fontFamily: "'Geist Mono', monospace" }}
+                    >
                       O {row.typicalLine}
                     </div>
                     <div className="text-[11px] text-white/40 mt-0.5">
-                      {statLabel(row.stat)}
+                      {currentDisplay.unit}
                     </div>
                   </div>
 
@@ -328,7 +538,10 @@ export default function PropsPage() {
                       <div className="text-[10px] uppercase tracking-wider text-white/30">
                         Line
                       </div>
-                      <div className="text-sm font-semibold text-white/80">
+                      <div
+                        className="text-sm font-semibold text-white/80"
+                        style={{ fontFamily: "'Geist Mono', monospace" }}
+                      >
                         O {row.typicalLine}
                       </div>
                     </div>
@@ -355,12 +568,12 @@ export default function PropsPage() {
                           {row.player}
                         </div>
                         <div className="text-[11px] text-white/30 mt-1">
-                          {row.team} · {row.games} GP
+                          {row.team} · {row.games} {currentDisplay.gamesLabel}
                         </div>
                       </div>
                       <div className="col-span-5 md:col-span-3 text-right md:text-left">
                         <div className="text-3xl md:text-4xl font-bold text-[#FF3B3B]">
-                          {row.average.toFixed(1)}
+                          {formatAvg(row.average)}
                         </div>
                       </div>
                     </div>
