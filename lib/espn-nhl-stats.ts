@@ -14,10 +14,13 @@ export interface NHLSkaterStats {
   assists: number;
   points: number;
   shotsOnGoal: number;
+  plusMinus: number;
+  penaltyMinutes: number;
   goalsPerGame: number;
   assistsPerGame: number;
   pointsPerGame: number;
   shotsPerGame: number;
+  pimPerGame: number;
 }
 
 // Cache stats for 6 hours — season totals change slowly.
@@ -139,6 +142,14 @@ export async function getNHLSkaterStats(): Promise<NHLSkaterStats[]> {
         const points = readVal(row, "offensive", "points", specIndex);
         // ESPN calls total shots `shotsTotal`, not `shotsOnGoal`.
         const shotsOnGoal = readVal(row, "offensive", "shotsTotal", specIndex);
+        // Plus/minus lives under "general"; PIM lives under "penalties".
+        const plusMinus = readVal(row, "general", "plusMinus", specIndex);
+        const penaltyMinutes = readVal(
+          row,
+          "penalties",
+          "penaltyMinutes",
+          specIndex,
+        );
         return {
           name: row.athlete.displayName || row.athlete.fullName || "",
           team: row.athlete.teamShortName || "",
@@ -147,10 +158,13 @@ export async function getNHLSkaterStats(): Promise<NHLSkaterStats[]> {
           assists,
           points,
           shotsOnGoal,
+          plusMinus,
+          penaltyMinutes,
           goalsPerGame: games > 0 ? goals / games : 0,
           assistsPerGame: games > 0 ? assists / games : 0,
           pointsPerGame: games > 0 ? points / games : 0,
           shotsPerGame: games > 0 ? shotsOnGoal / games : 0,
+          pimPerGame: games > 0 ? penaltyMinutes / games : 0,
         };
       })
       // Exclude goalies and players with no real ice time.

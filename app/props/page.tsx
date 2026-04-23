@@ -18,7 +18,7 @@ interface PropRow {
   games: number;
 }
 
-type Sport = "nba" | "mlb" | "nhl";
+type Sport = "nba" | "mlb" | "nhl" | "nfl";
 
 interface PropCategory {
   label: string;
@@ -58,16 +58,30 @@ const CATEGORY_DISPLAY: Record<string, CategoryDisplay> = {
   batter_hits: { unit: "H", gamesLabel: "GP", averageLabel: "Per game" },
   batter_rbis: { unit: "RBI", gamesLabel: "GP", averageLabel: "Per game" },
   batter_home_runs: { unit: "HR", gamesLabel: "GP", averageLabel: "Per game" },
+  batter_total_bases: { unit: "TB", gamesLabel: "GP", averageLabel: "Per game" },
+  batter_stolen_bases: { unit: "SB", gamesLabel: "GP", averageLabel: "Per game" },
+  batter_runs: { unit: "R", gamesLabel: "GP", averageLabel: "Per game" },
+  season_wins: { unit: "W", gamesLabel: "GS", averageLabel: "Season total" },
   // NHL
   skater_goals: { unit: "G", gamesLabel: "GP", averageLabel: "Per game" },
   skater_points: { unit: "PTS", gamesLabel: "GP", averageLabel: "Per game" },
   skater_shots: { unit: "SOG", gamesLabel: "GP", averageLabel: "Per game" },
+  skater_pim: { unit: "PIM", gamesLabel: "GP", averageLabel: "Per game" },
+  skater_plus_minus: { unit: "+/-", gamesLabel: "GP", averageLabel: "Season total" },
+  // NFL
+  qb_passing_yards: { unit: "YDS", gamesLabel: "GP", averageLabel: "Per game" },
+  qb_passing_tds: { unit: "TD", gamesLabel: "GP", averageLabel: "Per game" },
+  rb_rushing_yards: { unit: "YDS", gamesLabel: "GP", averageLabel: "Per game" },
+  wr_receiving_yards: { unit: "YDS", gamesLabel: "GP", averageLabel: "Per game" },
+  wr_receptions: { unit: "REC", gamesLabel: "GP", averageLabel: "Per game" },
+  wr_anytime_td: { unit: "TD", gamesLabel: "GP", averageLabel: "Per game" },
 };
 
 const SPORT_LABELS: Record<Sport, string> = {
   nba: "NBA",
   mlb: "MLB",
   nhl: "NHL",
+  nfl: "NFL",
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -169,9 +183,21 @@ function prettyLabelFromKey(key: string): string {
     batter_hits: "Batter Hits",
     batter_rbis: "Batter RBIs",
     batter_home_runs: "Batter Home Runs",
+    batter_total_bases: "Batter Total Bases",
+    batter_stolen_bases: "Batter Stolen Bases",
+    batter_runs: "Batter Runs",
+    season_wins: "Pitcher Season Wins",
     skater_goals: "Skater Goals",
     skater_points: "Skater Points",
     skater_shots: "Shots on Goal",
+    skater_pim: "Penalty Minutes",
+    skater_plus_minus: "Plus / Minus",
+    qb_passing_yards: "QB Passing Yards",
+    qb_passing_tds: "QB Passing TDs",
+    rb_rushing_yards: "RB Rushing Yards",
+    wr_receiving_yards: "WR Receiving Yards",
+    wr_receptions: "WR Receptions",
+    wr_anytime_td: "WR Anytime TD",
   };
   return map[key] || key.replace(/_/g, " ");
 }
@@ -179,6 +205,7 @@ function prettyLabelFromKey(key: string): string {
 function defaultCategoryFor(sport: Sport): string {
   if (sport === "mlb") return "pitcher_strikeouts";
   if (sport === "nhl") return "skater_goals";
+  if (sport === "nfl") return "qb_passing_yards";
   return "points";
 }
 
@@ -286,12 +313,22 @@ export default function PropsPage() {
         </>
       );
     }
+    if (sport === "nhl") {
+      return (
+        <>
+          NHL props from season totals — per-game goals, points, and shots on
+          goal. Great for{" "}
+          <span className="text-[#FF3B3B] font-medium">anytime goal</span> bets
+          and over-shot picks on high-volume shooters.
+        </>
+      );
+    }
     return (
       <>
-        NHL props from season totals — per-game goals, points, and shots on
-        goal. Great for{" "}
-        <span className="text-[#FF3B3B] font-medium">anytime goal</span> bets
-        and over-shot picks on high-volume shooters.
+        NFL props from the last full regular season — QB passing yards + TDs,
+        RB rushing yards, WR receiving yards, receptions, and{" "}
+        <span className="text-[#FF3B3B] font-medium">anytime TD</span> bets on
+        high-volume targets. Sportsbook-style lines rounded to 5-yard steps.
       </>
     );
   })();
@@ -339,7 +376,7 @@ export default function PropsPage() {
 
         {/* ─── Sport Toggle ───────────────────────────────────────────── */}
         <div className="mb-6 inline-flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-1">
-          {(["nba", "mlb", "nhl"] as Sport[]).map((s) => {
+          {(["nba", "mlb", "nhl", "nfl"] as Sport[]).map((s) => {
             const active = sport === s;
             return (
               <button

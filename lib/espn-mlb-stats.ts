@@ -14,6 +14,8 @@ export interface MLBPitcherStats {
   whip: number;
   starts: number;
   kPer9: number;
+  wins: number;
+  qualityStarts: number;
 }
 
 export interface MLBBatterStats {
@@ -24,9 +26,15 @@ export interface MLBBatterStats {
   rbi: number;
   hits: number;
   avg: number;
+  totalBases: number;
+  stolenBases: number;
+  runs: number;
   hrPerGame: number;
   rbiPerGame: number;
   hitsPerGame: number;
+  totalBasesPerGame: number;
+  stolenBasesPerGame: number;
+  runsPerGame: number;
 }
 
 // Cache stats for 6 hours — season totals change slowly.
@@ -165,6 +173,13 @@ export async function getMLBPitcherStats(): Promise<MLBPitcherStats[]> {
             : inningsPitched > 0
               ? (strikeouts * 9) / inningsPitched
               : 0;
+        const wins = readVal(row, "pitching", "wins", specIndex);
+        const qualityStarts = readVal(
+          row,
+          "pitching",
+          "qualityStarts",
+          specIndex,
+        );
         return {
           name: row.athlete.displayName || row.athlete.fullName || "",
           team: row.athlete.teamShortName || "",
@@ -174,6 +189,8 @@ export async function getMLBPitcherStats(): Promise<MLBPitcherStats[]> {
           whip,
           starts,
           kPer9,
+          wins,
+          qualityStarts,
         };
       })
       // Keep only starters with meaningful workload
@@ -227,6 +244,9 @@ export async function getMLBBatterStats(): Promise<MLBBatterStats[]> {
         const rbi = readVal(row, "batting", "RBIs", specIndex);
         const hits = readVal(row, "batting", "hits", specIndex);
         const avg = readVal(row, "batting", "avg", specIndex);
+        const totalBases = readVal(row, "batting", "totalBases", specIndex);
+        const stolenBases = readVal(row, "batting", "stolenBases", specIndex);
+        const runs = readVal(row, "batting", "runs", specIndex);
         return {
           name: row.athlete.displayName || row.athlete.fullName || "",
           team: row.athlete.teamShortName || "",
@@ -235,9 +255,15 @@ export async function getMLBBatterStats(): Promise<MLBBatterStats[]> {
           rbi,
           hits,
           avg,
+          totalBases,
+          stolenBases,
+          runs,
           hrPerGame: games > 0 ? homeRuns / games : 0,
           rbiPerGame: games > 0 ? rbi / games : 0,
           hitsPerGame: games > 0 ? hits / games : 0,
+          totalBasesPerGame: games > 0 ? totalBases / games : 0,
+          stolenBasesPerGame: games > 0 ? stolenBases / games : 0,
+          runsPerGame: games > 0 ? runs / games : 0,
         };
       })
       // Only batters with real playing time

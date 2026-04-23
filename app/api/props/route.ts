@@ -10,6 +10,14 @@ import {
   getNHLSkaterStats,
   type NHLSkaterStats,
 } from "@/lib/espn-nhl-stats";
+import {
+  getNFLPassingStats,
+  getNFLRushingStats,
+  getNFLReceivingStats,
+  type NFLPassingStats,
+  type NFLRushingStats,
+  type NFLReceivingStats,
+} from "@/lib/espn-nfl-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +150,96 @@ function topBatterRBIs(batters: MLBBatterStats[], limit = 10): PropRow[] {
     });
 }
 
+// batter_total_bases: line = floor(avg) + 0.5, edge = avg - line
+function topBatterTotalBases(batters: MLBBatterStats[], limit = 10): PropRow[] {
+  return [...batters]
+    .filter((b) => b.totalBasesPerGame > 0)
+    .sort((a, b) => b.totalBasesPerGame - a.totalBasesPerGame)
+    .slice(0, limit)
+    .map((b) => {
+      const avg = b.totalBasesPerGame;
+      const line = Math.floor(avg) + 0.5;
+      return {
+        player: b.name,
+        team: b.team,
+        stat: "totalBases",
+        average: r(avg, 2),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: b.games,
+      };
+    });
+}
+
+// batter_stolen_bases: line = 0.5 (standard), edge = sbPerGame * 0.7
+function topBatterStolenBases(
+  batters: MLBBatterStats[],
+  limit = 10,
+): PropRow[] {
+  return [...batters]
+    .filter((b) => b.stolenBasesPerGame > 0)
+    .sort((a, b) => b.stolenBasesPerGame - a.stolenBasesPerGame)
+    .slice(0, limit)
+    .map((b) => {
+      const avg = b.stolenBasesPerGame;
+      return {
+        player: b.name,
+        team: b.team,
+        stat: "stolenBases",
+        average: r(avg, 3),
+        typicalLine: 0.5,
+        edge: r(avg * 0.7, 3),
+        games: b.games,
+      };
+    });
+}
+
+// batter_runs: line = floor(avg) + 0.5, edge = avg - line
+function topBatterRuns(batters: MLBBatterStats[], limit = 10): PropRow[] {
+  return [...batters]
+    .filter((b) => b.runsPerGame > 0)
+    .sort((a, b) => b.runsPerGame - a.runsPerGame)
+    .slice(0, limit)
+    .map((b) => {
+      const avg = b.runsPerGame;
+      const line = Math.floor(avg) + 0.5;
+      return {
+        player: b.name,
+        team: b.team,
+        stat: "runs",
+        average: r(avg, 2),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: b.games,
+      };
+    });
+}
+
+// season_wins: futures-style. line = wins - 2, edge = wins - line (always 2).
+// Shown as season totals, not per-game.
+function topPitcherSeasonWins(
+  pitchers: MLBPitcherStats[],
+  limit = 10,
+): PropRow[] {
+  return [...pitchers]
+    .filter((p) => p.wins > 0 && p.starts >= 3)
+    .sort((a, b) => b.wins - a.wins)
+    .slice(0, limit)
+    .map((p) => {
+      const wins = p.wins;
+      const line = Math.max(0.5, wins - 2);
+      return {
+        player: p.name,
+        team: p.team,
+        stat: "wins",
+        average: wins,
+        typicalLine: line,
+        edge: r(wins - line, 2),
+        games: p.starts,
+      };
+    });
+}
+
 // batter_home_runs: line = 0.5 (standard "to hit a HR" line), edge = hrPerGame * 0.8
 function topBatterHomeRuns(batters: MLBBatterStats[], limit = 10): PropRow[] {
   return [...batters]
@@ -205,6 +303,50 @@ function topSkaterPoints(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
     });
 }
 
+// skater_pim: line = 0.5 (fighters/grinders hit fighting majors = 5 PIMs),
+// edge = pimPerGame * 0.5
+function topSkaterPIM(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
+  return [...skaters]
+    .filter((s) => s.pimPerGame > 0)
+    .sort((a, b) => b.pimPerGame - a.pimPerGame)
+    .slice(0, limit)
+    .map((s) => {
+      const avg = s.pimPerGame;
+      return {
+        player: s.name,
+        team: s.team,
+        stat: "pim",
+        average: r(avg, 2),
+        typicalLine: 0.5,
+        edge: r(avg * 0.5, 2),
+        games: s.games,
+      };
+    });
+}
+
+// skater_plus_minus: season total, not per-game. Line = +/- rounded to nearest
+// 0.5, edge flows from the raw value. Positive +/- = value signal.
+function topSkaterPlusMinus(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
+  return [...skaters]
+    .filter((s) => Math.abs(s.plusMinus) > 0)
+    .sort((a, b) => b.plusMinus - a.plusMinus)
+    .slice(0, limit)
+    .map((s) => {
+      const pm = s.plusMinus;
+      // Round to nearest 0.5
+      const line = Math.round(pm * 2) / 2 - 0.5;
+      return {
+        player: s.name,
+        team: s.team,
+        stat: "plusMinus",
+        average: pm,
+        typicalLine: line,
+        edge: r(pm - line, 2),
+        games: s.games,
+      };
+    });
+}
+
 // skater_shots: line = shotsPerGame - 1 (half-step), edge = avg - line
 function topSkaterShots(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
   return [...skaters]
@@ -226,13 +368,155 @@ function topSkaterShots(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
     });
 }
 
+// ─── NFL builders ────────────────────────────────────────────────────────────
+
+// Round sportsbook-style: floor(x / 5) * 5 — keeps lines at nice 5-yd steps.
+function roundedDown5(x: number): number {
+  return Math.floor(x / 5) * 5;
+}
+
+// qb_passing_yards: sportsbook-style line at (yardsPerGame / 5 floor) - 10.
+// Floors prevent edge from being too lopsided on star QBs.
+function topQBPassingYards(qbs: NFLPassingStats[], limit = 10): PropRow[] {
+  return [...qbs]
+    .filter((q) => q.yardsPerGame > 0)
+    .sort((a, b) => b.yardsPerGame - a.yardsPerGame)
+    .slice(0, limit)
+    .map((q) => {
+      const avg = q.yardsPerGame;
+      const rounded = Math.max(0, roundedDown5(avg) - 10);
+      const line = rounded + 0.5;
+      return {
+        player: q.name,
+        team: q.team,
+        stat: "passingYards",
+        average: r(avg, 1),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: q.games,
+      };
+    });
+}
+
+// qb_passing_tds: line = 1.5, edge = tdsPerGame * 0.8
+function topQBPassingTDs(qbs: NFLPassingStats[], limit = 10): PropRow[] {
+  return [...qbs]
+    .filter((q) => q.tdsPerGame > 0)
+    .sort((a, b) => b.tdsPerGame - a.tdsPerGame)
+    .slice(0, limit)
+    .map((q) => {
+      const avg = q.tdsPerGame;
+      return {
+        player: q.name,
+        team: q.team,
+        stat: "passingTds",
+        average: r(avg, 2),
+        typicalLine: 1.5,
+        edge: r(avg * 0.8, 2),
+        games: q.games,
+      };
+    });
+}
+
+// rb_rushing_yards: line = floor(ypg/5)*5 + 0.5, edge = avg - line
+function topRBRushingYards(rbs: NFLRushingStats[], limit = 10): PropRow[] {
+  return [...rbs]
+    .filter((r) => r.yardsPerGame > 0)
+    .sort((a, b) => b.yardsPerGame - a.yardsPerGame)
+    .slice(0, limit)
+    .map((rb) => {
+      const avg = rb.yardsPerGame;
+      const line = roundedDown5(avg) + 0.5;
+      return {
+        player: rb.name,
+        team: rb.team,
+        stat: "rushingYards",
+        average: r(avg, 1),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: rb.games,
+      };
+    });
+}
+
+// wr_receiving_yards: same rounded-5 line logic
+function topWRReceivingYards(
+  wrs: NFLReceivingStats[],
+  limit = 10,
+): PropRow[] {
+  return [...wrs]
+    .filter((w) => w.yardsPerGame > 0)
+    .sort((a, b) => b.yardsPerGame - a.yardsPerGame)
+    .slice(0, limit)
+    .map((w) => {
+      const avg = w.yardsPerGame;
+      const line = roundedDown5(avg) + 0.5;
+      return {
+        player: w.name,
+        team: w.team,
+        stat: "receivingYards",
+        average: r(avg, 1),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: w.games,
+      };
+    });
+}
+
+// wr_receptions: line = floor(recs) + 0.5, edge = avg - line
+function topWRReceptions(wrs: NFLReceivingStats[], limit = 10): PropRow[] {
+  return [...wrs]
+    .filter((w) => w.recsPerGame > 0)
+    .sort((a, b) => b.recsPerGame - a.recsPerGame)
+    .slice(0, limit)
+    .map((w) => {
+      const avg = w.recsPerGame;
+      const line = Math.floor(avg) + 0.5;
+      return {
+        player: w.name,
+        team: w.team,
+        stat: "receptions",
+        average: r(avg, 2),
+        typicalLine: line,
+        edge: r(avg - line, 2),
+        games: w.games,
+      };
+    });
+}
+
+// wr_anytime_td: 0.5 line, edge = tdsPerGame * 0.6
+function topWRAnytimeTD(wrs: NFLReceivingStats[], limit = 10): PropRow[] {
+  return [...wrs]
+    .filter((w) => w.tdsPerGame > 0)
+    .sort((a, b) => b.tdsPerGame - a.tdsPerGame)
+    .slice(0, limit)
+    .map((w) => {
+      const avg = w.tdsPerGame;
+      return {
+        player: w.name,
+        team: w.team,
+        stat: "receivingTds",
+        average: r(avg, 3),
+        typicalLine: 0.5,
+        edge: r(avg * 0.6, 3),
+        games: w.games,
+      };
+    });
+}
+
 // ─── Route ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const sportParam = url.searchParams.get("sport")?.toLowerCase() || "nba";
-  const sport: "nba" | "mlb" | "nhl" =
-    sportParam === "mlb" ? "mlb" : sportParam === "nhl" ? "nhl" : "nba";
+  const sport: "nba" | "mlb" | "nhl" | "nfl" =
+    sportParam === "mlb"
+      ? "mlb"
+      : sportParam === "nhl"
+        ? "nhl"
+        : sportParam === "nfl"
+          ? "nfl"
+          : "nba";
   const updated = new Date().toISOString();
 
   if (sport === "mlb") {
@@ -266,6 +550,19 @@ export async function GET(req: Request) {
         label: "Batter Home Runs",
         rows: topBatterHomeRuns(batters),
       },
+      batter_total_bases: {
+        label: "Batter Total Bases",
+        rows: topBatterTotalBases(batters),
+      },
+      batter_stolen_bases: {
+        label: "Batter Stolen Bases",
+        rows: topBatterStolenBases(batters),
+      },
+      batter_runs: { label: "Batter Runs", rows: topBatterRuns(batters) },
+      season_wins: {
+        label: "Pitcher Season Wins",
+        rows: topPitcherSeasonWins(pitchers),
+      },
     };
 
     return NextResponse.json({ sport: "mlb", updated, categories });
@@ -291,9 +588,74 @@ export async function GET(req: Request) {
       skater_goals: { label: "Skater Goals", rows: topSkaterGoals(skaters) },
       skater_points: { label: "Skater Points", rows: topSkaterPoints(skaters) },
       skater_shots: { label: "Shots on Goal", rows: topSkaterShots(skaters) },
+      skater_pim: {
+        label: "Penalty Minutes",
+        rows: topSkaterPIM(skaters),
+      },
+      skater_plus_minus: {
+        label: "Plus / Minus",
+        rows: topSkaterPlusMinus(skaters),
+      },
     };
 
     return NextResponse.json({ sport: "nhl", updated, categories });
+  }
+
+  if (sport === "nfl") {
+    const [passing, rushing, receiving] = await Promise.all([
+      getNFLPassingStats(),
+      getNFLRushingStats(),
+      getNFLReceivingStats(),
+    ]);
+
+    if (
+      passing.length === 0 &&
+      rushing.length === 0 &&
+      receiving.length === 0
+    ) {
+      return NextResponse.json({
+        sport: "nfl",
+        updated,
+        categories: {
+          qb_passing_yards: { label: "QB Passing Yards", rows: [] },
+          qb_passing_tds: { label: "QB Passing TDs", rows: [] },
+          rb_rushing_yards: { label: "RB Rushing Yards", rows: [] },
+          wr_receiving_yards: { label: "WR Receiving Yards", rows: [] },
+          wr_receptions: { label: "WR Receptions", rows: [] },
+          wr_anytime_td: { label: "WR Anytime TD", rows: [] },
+        },
+        error: "Unable to fetch NFL player stats",
+      });
+    }
+
+    const categories: Record<string, PropCategory> = {
+      qb_passing_yards: {
+        label: "QB Passing Yards",
+        rows: topQBPassingYards(passing),
+      },
+      qb_passing_tds: {
+        label: "QB Passing TDs",
+        rows: topQBPassingTDs(passing),
+      },
+      rb_rushing_yards: {
+        label: "RB Rushing Yards",
+        rows: topRBRushingYards(rushing),
+      },
+      wr_receiving_yards: {
+        label: "WR Receiving Yards",
+        rows: topWRReceivingYards(receiving),
+      },
+      wr_receptions: {
+        label: "WR Receptions",
+        rows: topWRReceptions(receiving),
+      },
+      wr_anytime_td: {
+        label: "WR Anytime TD",
+        rows: topWRAnytimeTD(receiving),
+      },
+    };
+
+    return NextResponse.json({ sport: "nfl", updated, categories });
   }
 
   // NBA (default) ────────────────────────────────────────────────────────────
