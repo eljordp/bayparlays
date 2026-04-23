@@ -217,15 +217,32 @@ export async function GET() {
 
       const profit = newStatus === "won" ? parlay.payout - parlay.stake : -parlay.stake;
 
-      // Update sim parlay immediately (one row, no race).
-      await supabase
+      // CONDITIONAL UPDATE — only flip to won/lost if the row is still
+      // pending. If a concurrent invocation of the resolver got here first,
+      // the row will no longer match `status=pending` and Supabase returns
+      // zero rows, so we skip the bankroll delta entirely. This is the
+      // guardrail that prevents double-counting: a parlay's bankroll delta
+      // is applied exactly once, by whichever resolver won the race.
+      const { data: flipped, error: flipErr } = await supabase
         .from("sim_parlays")
         .update({
           status: newStatus,
           profit,
           resolved_at: new Date().toISOString(),
         })
-        .eq("id", parlay.id);
+        .eq("id", parlay.id)
+        .eq("status", "pending")
+        .select("id");
+
+      if (flipErr) {
+        console.error(`sim_parlays update error for ${parlay.id}:`, flipErr);
+        continue;
+      }
+      if (!flipped || flipped.length === 0) {
+        // Another resolver instance already resolved this parlay. Don't
+        // double-count against the bankroll.
+        continue;
+      }
 
       // Accumulate bankroll delta for this user.
       const d = getDelta(parlay.user_id);
