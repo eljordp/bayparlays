@@ -26,12 +26,25 @@ interface ScoreGame {
 interface ParlayLeg {
   sport: string;
   game: string;
+  gameId?: string;
+  commenceTime?: string;
   pick: string;
   market: string;
   odds: number;
   book: string;
   impliedProb: number;
   edgeScore: number;
+}
+
+interface OpeningLine {
+  gameId: string;
+  market: string;
+  pick: string;
+  odds: number;
+  book: string;
+  impliedProb: number;
+  fairProb?: number;
+  capturedAt: string;
 }
 
 interface ParlayRow {
@@ -42,6 +55,12 @@ interface ParlayRow {
   stake: number;
   sports: string[];
   status: string;
+  opening_lines?: OpeningLine[];
+}
+
+function americanToDecimal(odds: number): number {
+  if (odds > 0) return odds / 100 + 1;
+  return 100 / Math.abs(odds) + 1;
 }
 
 // Cache fetched scores per sport key to avoid duplicate API calls
@@ -282,14 +301,74 @@ async function checkScores() {
       const stake = parlay.stake ?? 100;
       const profit = newStatus === "won" ? parlay.payout - stake : -stake;
 
+      // Compute CLV: for each leg, find the line_history row closest to (but
+      // not after) commence_time and compare to the opening price. Positive
+      // CLV = we beat the closing line = model is sharp. Consistent positive
+      // CLV is the only sharpness signal that isn't just variance.
+      let clvPercent: number | null = null;
+      const closingLines: Array<{ gameId: string; market: string; pick: string; closingOdds: number | null; clv: number | null }> = [];
+      try {
+        const perLegClvs: number[] = [];
+        for (const leg of legs) {
+          if (!leg.gameId || !leg.commenceTime) continue;
+          const { data: historyRows } = await supabase
+            .from("line_history")
+            .select("best_odds, captured_at")
+            .eq("game_id", leg.gameId)
+            .eq("market", leg.market)
+            .eq("team", leg.pick)
+            .lte("captured_at", leg.commenceTime)
+            .order("captured_at", { ascending: false })
+            .limit(1);
+          const closingOdds = historyRows?.[0]?.best_odds ?? null;
+          const openingLine = (parlay.opening_lines ?? []).find(
+            (o) => o.gameId === leg.gameId && o.market === leg.market && o.pick === leg.pick,
+          );
+          const openingOdds = openingLine?.odds ?? leg.odds;
+          if (closingOdds !== null && openingOdds) {
+            const openDec = americanToDecimal(openingOdds);
+            const closeDec = americanToDecimal(closingOdds);
+            // CLV = how much better your opening price is vs closing. Higher
+            // decimal odds at open = you got a better price = positive CLV.
+            const legClv = (openDec / closeDec - 1) * 100;
+            perLegClvs.push(legClv);
+            closingLines.push({ gameId: leg.gameId, market: leg.market, pick: leg.pick, closingOdds, clv: legClv });
+          } else {
+            closingLines.push({ gameId: leg.gameId, market: leg.market, pick: leg.pick, closingOdds, clv: null });
+          }
+        }
+        if (perLegClvs.length > 0) {
+          clvPercent = perLegClvs.reduce((s, x) => s + x, 0) / perLegClvs.length;
+          clvPercent = Math.round(clvPercent * 100) / 100;
+        }
+      } catch (err) {
+        console.error(`CLV calc failed for parlay ${parlay.id}:`, err);
+      }
+
+      const updatePayload: Record<string, unknown> = { status: newStatus, profit };
+      if (clvPercent !== null) updatePayload.clv_percent = clvPercent;
+      if (closingLines.length > 0) updatePayload.closing_lines = closingLines;
+
       const { error: updateError } = await supabase
         .from("parlays")
-        .update({ status: newStatus, profit })
+        .update(updatePayload)
         .eq("id", parlay.id);
 
       if (updateError) {
-        console.error(`Failed to update parlay ${parlay.id}:`, updateError);
-        continue;
+        // If the CLV columns haven't been migrated yet, retry without them.
+        if (/column .*(clv_percent|closing_lines)/i.test(updateError.message || "")) {
+          const { error: retryErr } = await supabase
+            .from("parlays")
+            .update({ status: newStatus, profit })
+            .eq("id", parlay.id);
+          if (retryErr) {
+            console.error(`Failed to update parlay ${parlay.id}:`, retryErr);
+            continue;
+          }
+        } else {
+          console.error(`Failed to update parlay ${parlay.id}:`, updateError);
+          continue;
+        }
       }
 
       updates.push({ id: parlay.id, status: newStatus, profit });

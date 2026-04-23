@@ -24,6 +24,7 @@ interface ParlayRow {
   status: string;
   profit: number | null;
   category: ParlayCategory | null;
+  clv_percent: number | null;
 }
 
 // Public track record only counts parlays the AI would actually stand behind.
@@ -108,6 +109,23 @@ export async function GET() {
       wonParlays.length > 0
         ? Math.max(...wonParlays.map((p) => p.payout ?? 0))
         : 0;
+
+    // --- Avg CLV (Closing Line Value) ---
+    // This is the north-star sharpness metric. Positive CLV over a real sample
+    // means the model consistently gets better prices than the closing line —
+    // the only proof of edge that isn't just variance. Null if no resolved
+    // parlays have CLV data yet (pre-v012 migration).
+    const clvRows = rows.filter(
+      (p) => p.status !== "pending" && typeof p.clv_percent === "number",
+    );
+    const avgClv =
+      clvRows.length > 0
+        ? Math.round(
+            (clvRows.reduce((s, p) => s + (p.clv_percent ?? 0), 0) /
+              clvRows.length) * 100,
+          ) / 100
+        : null;
+    const clvSample = clvRows.length;
 
     // --- Last 7 days ---
     const sevenDaysAgo = new Date();
@@ -237,6 +255,8 @@ export async function GET() {
           last7Days,
           resolvedSample: resolved,
           smallSample: resolved < SMALL_SAMPLE_THRESHOLD,
+          avgClv,
+          clvSample,
         },
         sportBreakdown,
         categoryBreakdown,

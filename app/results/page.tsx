@@ -38,6 +38,8 @@ interface Stats {
   last7Days: { won: number; lost: number; profit: number };
   resolvedSample?: number;
   smallSample?: boolean;
+  avgClv?: number | null;
+  clvSample?: number;
 }
 
 interface SportBreakdown {
@@ -358,7 +360,31 @@ export default function ResultsPage() {
                     sublabel="Single parlay"
                     delay={0.25}
                   />
+                  {typeof stats.avgClv === "number" && (stats.clvSample ?? 0) > 0 && (
+                    <StatCard
+                      icon={<BarChart3 size={16} />}
+                      label="Avg CLV"
+                      value={`${stats.avgClv > 0 ? "+" : ""}${stats.avgClv.toFixed(2)}%`}
+                      valueColor={stats.avgClv > 0 ? "#22c55e" : "#ef4444"}
+                      sublabel={`${stats.clvSample} graded · ${stats.avgClv > 0 ? "beating close" : "losing to close"}`}
+                      delay={0.3}
+                    />
+                  )}
                 </motion.div>
+
+                {/* CLV explainer — only shown if we have CLV data, since users
+                    don't know what CLV is and will google it if we don't explain. */}
+                {typeof stats.avgClv === "number" && (stats.clvSample ?? 0) > 0 && (
+                  <motion.p
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.35 }}
+                    className="mt-4 text-xs md:text-sm"
+                    style={{ color: "rgba(255,255,255,0.5)", maxWidth: 720 }}
+                  >
+                    CLV = Closing Line Value. Measures how much better our opening price was vs the line right before the game started. Positive CLV over time is the only real proof a model has edge. Hit rate is noise; CLV is signal.
+                  </motion.p>
+                )}
 
                 {/* ─── Sport Breakdown ─── */}
                 {sportBreakdown.length > 0 && (

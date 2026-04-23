@@ -21,6 +21,15 @@ import {
   playoffDampedEloProb,
   totalProbability,
 } from "@/lib/game-model";
+import { detectSharpEdge } from "@/lib/fair-odds";
+import { fetchGameWeather, type WeatherSignal } from "@/lib/weather";
+import {
+  fetchProbablePitchers,
+  findGameLineup,
+  pitcherMatchupBias,
+  type GameLineup,
+} from "@/lib/mlb-lineups";
+import { readQuotaHeaders, persistQuota, canFetch } from "@/lib/odds-quota";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -96,11 +105,18 @@ interface ScoredLeg {
   homeTeam: string;
   awayTeam: string;
   teamRecord?: TeamRecordInfo;
+  // ── New signals (Apr 2026) ───────────────────────────────────────────
+  fairProb?: number;     // de-vigged no-vig consensus across books
+  sharpEdge?: boolean;   // best book is >2% EV vs no-vig consensus
+  evVsFair?: number;     // decimal EV of best odds against fair prob
+  weatherNote?: string | null;  // e.g. "90F heat, 18mph wind"
+  pitcherNote?: string | null;  // e.g. "ace-vs-ace (avg ERA <3.25)"
 }
 
 interface ParlayLeg {
   sport: string;
   game: string;
+  gameId?: string;
   commenceTime?: string;
   pick: string;
   market: string;
@@ -114,6 +130,11 @@ interface ParlayLeg {
   scored?: boolean;        // true if we had real model signal for this leg
   teamRecord?: TeamRecordInfo;
   reasons?: string[];      // plain-English bullets explaining why we took it
+  fairProb?: number;
+  sharpEdge?: boolean;
+  evVsFair?: number;
+  weatherNote?: string | null;
+  pitcherNote?: string | null;
 }
 
 type ParlayCategory = "ev" | "payout" | "confidence";
@@ -305,12 +326,77 @@ function calculateEdgeScore(
 
 // ─── Leg Extraction ──────────────────────────────────────────────────────────
 
+/**
+ * For a given outcome, figure out the opposite side of the two-way market.
+ * Used to de-vig each book's prices into a no-vig fair probability.
+ */
+function findOppositeOutcome(
+  game: OddsGame,
+  marketKey: string,
+  outcomeName: string,
+  outcomePoint?: number
+): { name: string; point?: number } | null {
+  if (marketKey === "h2h") {
+    if (outcomeName === game.home_team) return { name: game.away_team };
+    if (outcomeName === game.away_team) return { name: game.home_team };
+    return null;
+  }
+  if (marketKey === "spreads" && outcomePoint !== undefined) {
+    const otherTeam =
+      outcomeName === game.home_team ? game.away_team : game.home_team;
+    return { name: otherTeam, point: -outcomePoint };
+  }
+  if (marketKey === "totals" && outcomePoint !== undefined) {
+    const oppName =
+      outcomeName.toLowerCase() === "over" ? "Under" : "Over";
+    return { name: oppName, point: outcomePoint };
+  }
+  return null;
+}
+
+/**
+ * Return paired [side, opposite] odds for each book that prices both sides
+ * of this two-way market. Used for proper per-book de-vigging.
+ */
+function findTwoWayBookPairs(
+  bookmakers: OddsBookmaker[],
+  marketKey: string,
+  sideName: string,
+  sidePoint: number | undefined,
+  oppName: string,
+  oppPoint: number | undefined
+): { side: number; opposite: number }[] {
+  const pairs: { side: number; opposite: number }[] = [];
+  for (const bm of bookmakers) {
+    const market = bm.markets.find((m) => m.key === marketKey);
+    if (!market) continue;
+    const side = market.outcomes.find(
+      (o) =>
+        o.name === sideName &&
+        (sidePoint === undefined || o.point === sidePoint)
+    );
+    const opp = market.outcomes.find(
+      (o) =>
+        o.name === oppName &&
+        (oppPoint === undefined || o.point === oppPoint)
+    );
+    if (side && opp) pairs.push({ side: side.price, opposite: opp.price });
+  }
+  return pairs;
+}
+
+interface ExtractCtx {
+  weather?: WeatherSignal | null;
+  lineup?: GameLineup | null;
+}
+
 function extractLegsFromGame(
   game: OddsGame,
   sportLabel: string,
   teamRecords?: Map<string, TeamRecord>,
   eloRatings?: Map<string, EloRating>,
-  recentGames?: NormalizedGame[]
+  recentGames?: NormalizedGame[],
+  ctx?: ExtractCtx
 ): ScoredLeg[] {
   // Skip games that have already started. Sportsbooks sometimes keep live
   // odds in the /odds feed after tip-off — we don't want those in new parlays
@@ -468,14 +554,42 @@ function extractLegsFromGame(
       // Clamp to 0-100
       edgeScore = Math.max(0, Math.min(100, edgeScore));
 
-      // ── Our probability estimate ────────────────────────────────
-      // Compose a true-probability estimate from the signals the book
-      // doesn't price: Elo win probability, recent form, home advantage.
-      // Tuning is sport-specific because each league has different variance
-      // profiles and different home-court effects.
-      //
-      // Starting point: de-vig the book's implied prob (US books run 4-5% vig).
-      let ourProb = impliedProb / 1.045;
+      // ── No-vig fair probability + sharp-edge detection ──────────
+      // Pair each book's side/opposite odds, de-vig per book, take the
+      // median across books as the no-vig consensus. This is a much better
+      // prior than the flat /1.045 hack we used before — vig varies by
+      // market (sides ~4%, totals ~4.5%, heavy favorites can be 6%+).
+      const oppositeInfo = findOppositeOutcome(
+        game,
+        marketKey,
+        outcomeInfo.name,
+        outcomeInfo.point,
+      );
+      let fairProb: number | null = null;
+      let sharpEdgeFlag = false;
+      let evVsFairNum = 0;
+      if (oppositeInfo) {
+        const pairs = findTwoWayBookPairs(
+          game.bookmakers,
+          marketKey,
+          outcomeInfo.name,
+          outcomeInfo.point,
+          oppositeInfo.name,
+          oppositeInfo.point,
+        );
+        if (pairs.length >= 2) {
+          const sharp = detectSharpEdge(best.bestOdds, pairs);
+          fairProb = sharp.fairProb;
+          sharpEdgeFlag = sharp.isSharpEdge;
+          evVsFairNum = sharp.bestEv;
+          if (sharp.isSharpEdge) {
+            edgeScore = Math.min(100, edgeScore + sharp.confidenceBoost);
+          }
+        }
+      }
+      // Starting ourProb: no-vig fair prob if we have it, otherwise fall
+      // back to the old flat-vig approximation.
+      let ourProb = fairProb !== null ? fairProb : impliedProb / 1.045;
 
       // Sport-specific weights
       const sportTune: Record<string, { eloWeight: number; homeBonus: number }> = {
@@ -608,13 +722,27 @@ function extractLegsFromGame(
           inPlayoffs,
         );
         if (expTotal !== null) {
-          // outcomeInfo.name is "Over" or "Under" for totals market.
+          // MLB-only: apply weather + probable-pitcher biases to the expected
+          // total before computing P(over) / P(under). Both bias values are
+          // conservative (+/-0.25 max) so the Normal-distribution math stays
+          // well-behaved. Other sports fall through with base expTotal.
+          let adjustedTotal = expTotal;
+          if (sportLabel === "MLB") {
+            if (ctx?.weather?.run_bias) {
+              adjustedTotal += ctx.weather.run_bias;
+            }
+            if (ctx?.lineup) {
+              const { bias } = pitcherMatchupBias(ctx.lineup);
+              adjustedTotal += bias;
+            }
+          }
+
           const pickIsOver = outcomeInfo.name.toLowerCase() === "over";
           ourProb = totalProbability(
             sportLabel,
             pickIsOver,
             outcomeInfo.point,
-            expTotal,
+            adjustedTotal,
             inPlayoffs,
           );
           wasScored = true;
@@ -624,6 +752,17 @@ function extractLegsFromGame(
       // Clamp ourProb to realistic range
       ourProb = Math.max(0.05, Math.min(0.95, ourProb));
       const trueEdge = ourProb - impliedProb;
+
+      // Pitcher note — only meaningful for MLB legs
+      let pitcherNote: string | null = null;
+      if (sportLabel === "MLB" && ctx?.lineup) {
+        const { reason } = pitcherMatchupBias(ctx.lineup);
+        pitcherNote = reason;
+      }
+      const weatherNote =
+        sportLabel === "MLB" && ctx?.weather?.reason
+          ? ctx.weather.reason
+          : null;
 
       legs.push({
         sport: sportLabel,
@@ -645,6 +784,11 @@ function extractLegsFromGame(
         homeTeam: game.home_team,
         awayTeam: game.away_team,
         teamRecord: teamRecordInfo,
+        fairProb: fairProb !== null ? Math.round(fairProb * 10000) / 10000 : undefined,
+        sharpEdge: sharpEdgeFlag,
+        evVsFair: Math.round(evVsFairNum * 10000) / 10000,
+        weatherNote,
+        pitcherNote,
       });
     }
   }
@@ -708,6 +852,25 @@ function buildReasons(leg: ScoredLeg): string[] {
     reasons.push(
       `Best price across ${leg.bookCount} sportsbooks at ${leg.book} — ${leg.odds > 0 ? "+" : ""}${leg.odds}.`,
     );
+  }
+
+  // 4. Sharp-edge flag — best book's price beats no-vig consensus by 2%+
+  if (leg.sharpEdge && leg.evVsFair !== undefined && leg.fairProb !== undefined) {
+    const evPct = (leg.evVsFair * 100).toFixed(1);
+    const fairPct = (leg.fairProb * 100).toFixed(1);
+    reasons.push(
+      `Sharp edge flagged: ${leg.book} priced this at ${evPct}% EV vs no-vig consensus of ${fairPct}%. Retail books can be slow to tighten lines after sharp moves elsewhere.`,
+    );
+  }
+
+  // 5. Weather note (MLB totals — only when outdoor + meaningful conditions)
+  if (leg.weatherNote && leg.market === "total") {
+    reasons.push(`Weather read: ${leg.weatherNote}.`);
+  }
+
+  // 6. Pitcher matchup note (MLB)
+  if (leg.pitcherNote) {
+    reasons.push(`Pitching: ${leg.pitcherNote}.`);
   }
 
   return reasons;
@@ -904,6 +1067,7 @@ function buildParlays(
       legs: selected.map((l) => ({
         sport: l.sport,
         game: l.game,
+        gameId: l.gameId,
         commenceTime: l.commenceTime,
         pick: l.pick,
         market: l.market,
@@ -917,6 +1081,11 @@ function buildParlays(
         scored: l.scored,
         reasons: buildReasons(l),
         ...(l.teamRecord ? { teamRecord: l.teamRecord } : {}),
+        ...(l.fairProb !== undefined ? { fairProb: l.fairProb } : {}),
+        ...(l.sharpEdge ? { sharpEdge: true } : {}),
+        ...(l.evVsFair !== undefined ? { evVsFair: l.evVsFair } : {}),
+        ...(l.weatherNote ? { weatherNote: l.weatherNote } : {}),
+        ...(l.pitcherNote ? { pitcherNote: l.pitcherNote } : {}),
       })),
       combinedOdds: formatAmericanOdds(combinedAmerican),
       combinedDecimal: Math.round(combinedDecimal * 100) / 100,
@@ -949,9 +1118,24 @@ function buildParlays(
 // ─── API Data Fetching ───────────────────────────────────────────────────────
 
 async function fetchOddsForSport(sportKey: string): Promise<OddsGame[]> {
+  // Gate: if we're within 10 credits of the monthly cap, skip live fetch and
+  // let the upstream cache/mock path handle the response. Protects against
+  // accidentally burning our buffer during high-traffic moments.
+  const safeToFetch = await canFetch(10);
+  if (!safeToFetch) {
+    console.warn(`Odds API quota low — skipping fetch for ${sportKey}`);
+    return [];
+  }
+
   const url = `${BASE_URL}/sports/${sportKey}/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
 
   const res = await fetch(url, { next: { revalidate: 1800 } });
+
+  // Persist quota headers on every response (success or error — both count).
+  const snap = readQuotaHeaders(res.headers);
+  if (snap) {
+    void persistQuota(snap);
+  }
 
   if (!res.ok) {
     console.error(
@@ -1208,7 +1392,16 @@ export async function GET(request: NextRequest) {
       ]);
     });
 
-    const results = await Promise.allSettled(sportFetches);
+    // MLB lineups & weather: free APIs, fetched once per request when MLB is
+    // in the sport list. Probable pitchers keyed by home+away for lookup.
+    const mlbLineupsPromise: Promise<GameLineup[]> = sports.includes("mlb")
+      ? fetchProbablePitchers(new Date().toISOString().slice(0, 10))
+      : Promise.resolve([]);
+
+    const [results, mlbLineups] = await Promise.all([
+      Promise.allSettled(sportFetches),
+      mlbLineupsPromise,
+    ]);
 
     // Collect all games and extract scored legs
     const allLegs: ScoredLeg[] = [];
@@ -1243,12 +1436,37 @@ export async function GET(request: NextRequest) {
       totalGames += games.length;
 
       for (const game of games) {
+        // Build per-game context (MLB only — other sports get undefined ctx)
+        let ctx: ExtractCtx | undefined;
+        if (sport === "mlb") {
+          const lineup = findGameLineup(
+            mlbLineups,
+            game.home_team,
+            game.away_team,
+          );
+          // Weather fetch is async, cached in Supabase (6hr TTL) so sequential
+          // loop stays fast after first pass. Wrapped in try/catch — failures
+          // shouldn't break the whole pipeline.
+          let weather: WeatherSignal | null = null;
+          try {
+            weather = await fetchGameWeather(
+              game.home_team,
+              game.id,
+              game.commence_time,
+            );
+          } catch {
+            weather = null;
+          }
+          ctx = { weather, lineup };
+        }
+
         const gameLegs = extractLegsFromGame(
           game,
           sport.toUpperCase(),
           teamRecords,
           eloRatings,
-          normalized
+          normalized,
+          ctx,
         );
         allLegs.push(...gameLegs);
 
@@ -1324,6 +1542,7 @@ export async function GET(request: NextRequest) {
         const trackable = parlays.filter((p) => p.evPercent >= MIN_EV_TO_TRACK);
 
         if (trackable.length > 0) {
+          const nowIso = new Date().toISOString();
           const baseRows = trackable.map((p) => ({
             legs: p.legs,
             combined_odds: p.combinedOdds,
@@ -1335,19 +1554,39 @@ export async function GET(request: NextRequest) {
             legs_total: p.legs.length,
             sports: [...new Set(p.legs.map((l) => l.sport))],
           }));
+          // Compact opening-lines snapshot — compared to closing-line at
+          // score-check time to compute CLV (the real sharpness metric).
+          const openingLinesByParlay = trackable.map((p) =>
+            p.legs.map((l) => ({
+              gameId: l.gameId,
+              market: l.market,
+              pick: l.pick,
+              odds: l.odds,
+              book: l.book,
+              impliedProb: l.impliedProb,
+              fairProb: l.fairProb,
+              capturedAt: nowIso,
+            })),
+          );
           const rowsWithCategory = baseRows.map((r, i) => ({
             ...r,
             category: trackable[i].category,
+            opening_lines: openingLinesByParlay[i],
           }));
 
-          // Try with category first; fall back without it if the column
-          // migration (010_parlay_category.sql) hasn't been applied.
+          // Try the full payload first; if column migrations (010, 012) have
+          // not been applied, fall back to dropping the new columns.
           const { error: insertErr } = await supabase
             .from("parlays")
             .insert(rowsWithCategory);
 
-          if (insertErr && /category/i.test(insertErr.message || "")) {
-            await supabase.from("parlays").insert(baseRows);
+          if (insertErr && /column .*(category|opening_lines)/i.test(insertErr.message || "")) {
+            // Fall back step 1: try without opening_lines but with category.
+            const withCat = baseRows.map((r, i) => ({ ...r, category: trackable[i].category }));
+            const { error: catErr } = await supabase.from("parlays").insert(withCat);
+            if (catErr && /category/i.test(catErr.message || "")) {
+              await supabase.from("parlays").insert(baseRows);
+            }
           }
         }
 
