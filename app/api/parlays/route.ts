@@ -665,7 +665,13 @@ function extractLegsFromGame(
           const totalW = modelEstimates.reduce((s, x) => s + x.w, 0);
           const modelProb =
             modelEstimates.reduce((s, x) => s + x.p * x.w, 0) / totalW;
-          ourProb = modelProb * 0.7 + ourProb * 0.3;
+          // Blend model vs de-vigged book prior. Previously 70/30 model-heavy
+          // which over-weighted Elo/record estimates that aren't calibrated
+          // yet against real outcomes. 45/55 keeps the book as a sanity
+          // anchor so the model's swings don't produce absurd claims like
+          // "82% to cover vs book's 52%". Can widen back to 0.7 once CLV
+          // data proves the model is consistently sharp.
+          ourProb = modelProb * 0.45 + ourProb * 0.55;
           wasScored = true;
         }
 
@@ -751,6 +757,24 @@ function extractLegsFromGame(
 
       // Clamp ourProb to realistic range
       ourProb = Math.max(0.05, Math.min(0.95, ourProb));
+
+      // Hard cap on per-leg edge vs book. An un-calibrated model can claim
+      // 20pt disagreements with the market that are almost never real — real
+      // single-leg sharp edges live in the 1-5pt range, with 5%+ being rare.
+      // Claims above that are calibration artifacts, not exploitable edges.
+      // We cap at ±8pts so the parlay EV math stays honest (compounded 8pt
+      // edges across legs already produce ~24% EV, which is a big claim).
+      //
+      // Un-scored legs (no model signal) are left alone — their ourProb is
+      // just the de-vigged book prior and structurally ≈ impliedProb already.
+      const MAX_EDGE_PER_LEG = 0.08;
+      if (wasScored) {
+        const rawEdge = ourProb - impliedProb;
+        if (Math.abs(rawEdge) > MAX_EDGE_PER_LEG) {
+          ourProb = impliedProb + Math.sign(rawEdge) * MAX_EDGE_PER_LEG;
+        }
+      }
+
       const trueEdge = ourProb - impliedProb;
 
       // Pitcher note — only meaningful for MLB legs
