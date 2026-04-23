@@ -1354,6 +1354,10 @@ export async function GET(request: NextRequest) {
     const numLegs = Math.min(6, Math.max(2, parseInt(searchParams.get("legs") || "3", 10)));
     const count = Math.min(30, Math.max(1, parseInt(searchParams.get("count") || "5", 10)));
     const sortMode = (searchParams.get("sort") || "ev") as "ev" | "payout" | "confidence";
+    // format=legs returns the scored leg pool instead of parlays — powers
+    // the /edges feed which hunts single-leg +EV picks. Shares the same
+    // fetch pipeline so there's no additional Odds API credit cost.
+    const format = (searchParams.get("format") || "parlays").toLowerCase();
     // Tier controls pre-filter strictness + pool size. Higher tiers get
     // access to more legs (less aggressive culling) since VIPs/admins want
     // the wider slate. Free users get the tightest-quality pool.
@@ -1509,6 +1513,66 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(mockData, {
         headers: {
           "X-Data-Source": "mock-fallback",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+        },
+      });
+    }
+
+    // format=legs branch — return scored legs (not parlays) for the /edges
+    // feed. Surfaces single-leg sharp-edge picks which is a strictly honest
+    // product: "here's where the book is mispricing today."
+    if (format === "legs") {
+      // Filter to meaningful picks only. We want either sharpEdge flag OR a
+      // positive modeled edge >= 1.5%. Skip legs with trueEdge < 0 (anti-picks).
+      const MIN_EDGE = 0.015;
+      const edgeLegs = allLegs.filter(
+        (l) =>
+          l.bookCount >= 3 && // require broad-market consensus
+          l.commenceTime && // must have a kickoff
+          (l.sharpEdge === true || l.trueEdge >= MIN_EDGE),
+      );
+      // Sort by the honest metric: EV vs no-vig fair (bigger = better).
+      // Fall back to trueEdge if evVsFair isn't populated.
+      edgeLegs.sort((a, b) => {
+        const aEv = typeof a.evVsFair === "number" ? a.evVsFair : a.trueEdge;
+        const bEv = typeof b.evVsFair === "number" ? b.evVsFair : b.trueEdge;
+        return bEv - aEv;
+      });
+      const legsResponse = {
+        legs: edgeLegs.slice(0, count * 4).map((l) => ({
+          sport: l.sport,
+          game: l.game,
+          gameId: l.gameId,
+          commenceTime: l.commenceTime,
+          pick: l.pick,
+          market: l.market,
+          odds: l.odds,
+          book: l.book,
+          bookCount: l.bookCount,
+          impliedProb: l.impliedProb,
+          ourProb: l.ourProb,
+          trueEdge: l.trueEdge,
+          scored: l.scored,
+          fairProb: l.fairProb,
+          sharpEdge: l.sharpEdge,
+          evVsFair: l.evVsFair,
+          weatherNote: l.weatherNote ?? null,
+          pitcherNote: l.pitcherNote ?? null,
+          reasons: buildReasons(l),
+        })),
+        meta: {
+          sportsScanned: sports.map((s) => s.toUpperCase()),
+          gamesAnalyzed: totalGames,
+          legsEvaluated: allLegs.length,
+          legsScored: allLegs.filter((x) => x.scored).length,
+          edgesFound: edgeLegs.length,
+          generatedAt: new Date().toISOString(),
+        },
+      };
+      return NextResponse.json(legsResponse, {
+        headers: {
+          "X-Cache": "MISS",
+          "X-Data-Source": "live",
           "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
         },
       });

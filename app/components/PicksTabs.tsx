@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 
 const PICKS_TABS = [
   { href: "/parlays", label: "AI Parlays" },
+  { href: "/edges", label: "Sharp Edges" },
   { href: "/odds", label: "Odds Board" },
   { href: "/builder", label: "Builder" },
   { href: "/props", label: "Player Props" },
