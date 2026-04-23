@@ -1522,13 +1522,16 @@ export async function GET(request: NextRequest) {
     // feed. Surfaces single-leg sharp-edge picks which is a strictly honest
     // product: "here's where the book is mispricing today."
     if (format === "legs") {
-      // Filter to meaningful picks only. We want either sharpEdge flag OR a
-      // positive modeled edge >= 1.5%. Skip legs with trueEdge < 0 (anti-picks).
-      // Also require the game to start within 3 days — sharp action happens
-      // in the 72hr window before kickoff. Longer-dated games (futures,
-      // offseason series) get priced loose by retail books and produce noisy
-      // "edges" that aren't real opportunities.
-      const MIN_EDGE = 0.015;
+      // Filter to real market mispricings only — legs where the best book
+      // is pricing above the de-vigged consensus across the market. That
+      // is the only honest claim we can make. Model-edge-only picks (where
+      // our internal model disagrees with book but the market agrees with
+      // book) aren't shown here — those belong to a different product.
+      //
+      // Also require game starts within 3 days — sharp action happens in
+      // the 72hr window. Longer-dated games get priced loose by retail
+      // books and produce noise that isn't exploitable.
+      const MIN_EV_VS_FAIR = 0.005; // 0.5% minimum; sharp edges are flagged at 2%+
       const MAX_DAYS_AHEAD = 3;
       const now = Date.now();
       const cutoff = now + MAX_DAYS_AHEAD * 24 * 60 * 60 * 1000;
@@ -1537,7 +1540,9 @@ export async function GET(request: NextRequest) {
         if (!l.commenceTime) return false;
         const t = new Date(l.commenceTime).getTime();
         if (t < now || t > cutoff) return false;
-        return l.sharpEdge === true || l.trueEdge >= MIN_EDGE;
+        // Only show picks with real positive EV vs no-vig consensus.
+        if (typeof l.evVsFair !== "number") return false;
+        return l.evVsFair >= MIN_EV_VS_FAIR;
       });
       // Sort by the honest metric: EV vs no-vig fair (bigger = better).
       // Fall back to trueEdge if evVsFair isn't populated.
