@@ -1639,11 +1639,14 @@ export async function GET(request: NextRequest) {
           }));
         if (archiveRows.length > 0) {
           const { supabase } = await import("@/lib/supabase");
-          // upsert with onConflict=dedupe_key so re-detections within the
-          // same UTC day are silent no-ops, not errors.
+          // upsert with onConflict=(game_id,market,pick) so re-detections
+          // of the same edge are silent no-ops instead of duplicate rows.
           await supabase
             .from("edge_picks")
-            .upsert(archiveRows, { onConflict: "dedupe_key", ignoreDuplicates: true });
+            .upsert(archiveRows, {
+              onConflict: "game_id,market,pick",
+              ignoreDuplicates: true,
+            });
         }
       } catch (err) {
         console.error("Failed to archive edge_picks:", err);
