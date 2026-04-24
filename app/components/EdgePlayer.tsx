@@ -1,6 +1,7 @@
 "use client";
 
-import { Player } from "@remotion/player";
+import { forwardRef } from "react";
+import { Player, type PlayerRef } from "@remotion/player";
 import { EdgeShareVideoComposition } from "./EdgeShareVideo";
 import type { EdgeLegData } from "./EdgeShareVideo";
 
@@ -11,12 +12,10 @@ interface EdgePlayerProps {
   maxWidth?: number;
 }
 
-export function EdgePlayer({
-  leg,
-  format = "square",
-  showControls,
-  maxWidth,
-}: EdgePlayerProps) {
+export const EdgePlayer = forwardRef<PlayerRef, EdgePlayerProps>(function EdgePlayer(
+  { leg, format = "square", showControls, maxWidth },
+  ref,
+) {
   const isStory = format === "story";
   const compositionWidth = 1080;
   const compositionHeight = isStory ? 1920 : 1080;
@@ -24,6 +23,7 @@ export function EdgePlayer({
 
   return (
     <Player
+      ref={ref}
       component={EdgeShareVideoComposition}
       inputProps={{ leg, format }}
       durationInFrames={120}
@@ -43,4 +43,4 @@ export function EdgePlayer({
       loop
     />
   );
-}
+});

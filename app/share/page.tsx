@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Share2, ExternalLink } from "lucide-react";
+import { ArrowUpRight, Share2, ExternalLink, Download } from "lucide-react";
+import type { PlayerRef } from "@remotion/player";
 import { AppNav } from "@/app/components/AppNav";
 import { ParlayPlayer } from "../components/ParlayPlayer";
 import type { ParlayLeg } from "../components/ParlayVideo";
@@ -50,6 +51,45 @@ export default function SharePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [format, setFormat] = useState<"square" | "story">("square");
+  const [downloading, setDownloading] = useState(false);
+  const playerRef = useRef<PlayerRef>(null);
+  const playerWrapperRef = useRef<HTMLDivElement>(null);
+
+  async function handleDownloadImage() {
+    if (!playerWrapperRef.current || !parlay) return;
+    setDownloading(true);
+    try {
+      // Seek to a late frame so all elements (legs, odds, stats) have
+      // finished their fade-in before we capture. ParlayVideo runs 180
+      // frames at 30fps = 6s total; frame 140 is a safe "everything visible".
+      if (playerRef.current) {
+        playerRef.current.pause();
+        playerRef.current.seekTo(140);
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(playerWrapperRef.current, {
+        pixelRatio: 2,
+        cacheBust: true,
+        backgroundColor: "#0a0a0a",
+      });
+      const a = document.createElement("a");
+      a.download = `bayparlays-parlay-${parlay.combinedOdds}-${format}.png`;
+      a.href = dataUrl;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("PNG export failed:", err);
+      alert("Couldn't generate the image. Try screenshotting the card instead.");
+    } finally {
+      if (playerRef.current) {
+        playerRef.current.seekTo(0);
+        playerRef.current.play();
+      }
+      setDownloading(false);
+    }
+  }
 
   useEffect(() => {
     async function fetchTopParlay() {
@@ -214,16 +254,19 @@ export default function SharePage() {
             )}
 
             {!loading && !error && parlay && (
-              <ParlayPlayer
-                legs={videoLegs}
-                combinedOdds={parlay.combinedOdds}
-                evPercent={parlay.evPercent}
-                confidence={parlay.confidence}
-                payout={parlay.payout}
-                format={format}
-                showControls={true}
-                maxWidth={format === "story" ? 340 : 500}
-              />
+              <div ref={playerWrapperRef}>
+                <ParlayPlayer
+                  ref={playerRef}
+                  legs={videoLegs}
+                  combinedOdds={parlay.combinedOdds}
+                  evPercent={parlay.evPercent}
+                  confidence={parlay.confidence}
+                  payout={parlay.payout}
+                  format={format}
+                  showControls={true}
+                  maxWidth={format === "story" ? 340 : 500}
+                />
+              </div>
             )}
           </motion.div>
 
@@ -250,6 +293,20 @@ export default function SharePage() {
             transition={{ delay: 0.6, duration: 0.5 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
+            <button
+              onClick={handleDownloadImage}
+              disabled={downloading || !parlay || loading}
+              className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-50"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                color: "rgba(255,255,255,0.8)",
+                border: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <Download size={14} />
+              {downloading ? "Rendering…" : "Download image"}
+            </button>
+
             <Link
               href="/parlays"
               className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
@@ -257,16 +314,6 @@ export default function SharePage() {
                 background: "rgba(255,255,255,0.05)",
                 color: "rgba(255,255,255,0.8)",
                 border: "1px solid rgba(255,255,255,0.1)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.08)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
-                e.currentTarget.style.color = "#ededed";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
-                e.currentTarget.style.color = "rgba(255,255,255,0.8)";
               }}
             >
               <ExternalLink size={14} />

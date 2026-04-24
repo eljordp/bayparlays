@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -12,6 +12,7 @@ import {
   Download,
   Camera,
 } from "lucide-react";
+import type { PlayerRef } from "@remotion/player";
 import { AppNav } from "@/app/components/AppNav";
 import { EdgePlayer } from "@/app/components/EdgePlayer";
 import type { EdgeLegData } from "@/app/components/EdgeShareVideo";
@@ -53,6 +54,9 @@ export default function ShareEdgePage() {
   const [error, setError] = useState<string | null>(null);
   const [format, setFormat] = useState<"square" | "story">("square");
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const playerRef = useRef<PlayerRef>(null);
+  const playerWrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function fetchTopEdge() {
@@ -101,6 +105,52 @@ export default function ShareEdgePage() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* noop */
+    }
+  }
+
+  async function handleDownloadImage() {
+    if (!playerWrapperRef.current || !leg) return;
+    setDownloading(true);
+    try {
+      // Freeze the animation at frame ~90 so all elements (including stats +
+      // CTA) have faded in before we snapshot. Without pausing the player
+      // could capture an in-flight frame with half-visible text.
+      if (playerRef.current) {
+        playerRef.current.pauseAndReturnToPlayStart?.();
+        playerRef.current.seekTo(90);
+        playerRef.current.pause();
+        // Give the DOM one paint to settle on the new frame.
+        await new Promise((r) => setTimeout(r, 120));
+      }
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(playerWrapperRef.current, {
+        pixelRatio: 2, // 2x for crisp IG rendering
+        cacheBust: true,
+        backgroundColor: "#0a0a0a",
+      });
+      const a = document.createElement("a");
+      const safeSport = (leg.sport || "edge").toLowerCase();
+      const safePick = leg.pick
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .slice(0, 40);
+      a.download = `bayparlays-${safeSport}-${safePick}-${format}.png`;
+      a.href = dataUrl;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("PNG export failed:", err);
+      alert(
+        "Couldn't generate the image. Try screenshotting the card instead.",
+      );
+    } finally {
+      // Restart the animation
+      if (playerRef.current) {
+        playerRef.current.seekTo(0);
+        playerRef.current.play();
+      }
+      setDownloading(false);
     }
   }
 
@@ -239,12 +289,15 @@ export default function ShareEdgePage() {
             )}
 
             {!loading && !error && leg && (
-              <EdgePlayer
-                leg={leg}
-                format={format}
-                showControls={true}
-                maxWidth={format === "story" ? 360 : 520}
-              />
+              <div ref={playerWrapperRef}>
+                <EdgePlayer
+                  ref={playerRef}
+                  leg={leg}
+                  format={format}
+                  showControls={true}
+                  maxWidth={format === "story" ? 360 : 520}
+                />
+              </div>
             )}
           </motion.div>
 
@@ -296,14 +349,9 @@ export default function ShareEdgePage() {
             </button>
 
             <button
-              onClick={() => {
-                // TODO: real video export via Remotion Lambda or server-side render.
-                // For v1, open a helper alert.
-                alert(
-                  "Video export coming soon. For now — use your device's screen recorder while the card plays. On iOS: Control Center → Record. On Android: Screen Recorder.",
-                );
-              }}
-              className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
+              onClick={handleDownloadImage}
+              disabled={downloading || !leg || loading}
+              className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-50"
               style={{
                 background: "rgba(255,255,255,0.05)",
                 color: "rgba(255,255,255,0.8)",
@@ -311,7 +359,7 @@ export default function ShareEdgePage() {
               }}
             >
               <Download size={14} />
-              Download video
+              {downloading ? "Rendering…" : "Download image"}
             </button>
 
             <Link
