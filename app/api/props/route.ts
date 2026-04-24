@@ -140,6 +140,10 @@ function overlayUnderdogLines(
 
 // Apply overlay to every category in a response bundle. Called from each
 // sport branch once categories are built.
+// After overlay: prioritize Underdog-matched rows (real market lines for
+// today's slate) over heuristic rows (season leaders sitting tonight).
+// Builders pass in up to 40 candidates; we return top 10 with Underdog
+// rows first, then the best heuristic rows to fill.
 function applyOverlay(
   categories: Record<string, PropCategory>,
   sportKey: string,
@@ -147,6 +151,14 @@ function applyOverlay(
 ): void {
   for (const [catKey, cat] of Object.entries(categories)) {
     overlayUnderdogLines(cat.rows, sportKey, catKey, index);
+    cat.rows.sort((a, b) => {
+      const aLive = a.source === "underdog" ? 0 : 1;
+      const bLive = b.source === "underdog" ? 0 : 1;
+      if (aLive !== bLive) return aLive - bLive;
+      // Within each group, higher edge first
+      return (b.edge ?? 0) - (a.edge ?? 0);
+    });
+    cat.rows.splice(10);
   }
 }
 
@@ -159,7 +171,7 @@ function topNBA(
   stat: NBAStat,
   buffer: number,
   edge: number,
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...players]
     .filter((p) => p.gamesPlayed >= 10 && (p.stats[stat] || 0) > 0)
@@ -185,7 +197,7 @@ function topNBA(
 // scales with sample size so short-sample kings (1 start hot flash) don't win.
 function topPitcherStrikeouts(
   pitchers: MLBPitcherStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...pitchers]
     .filter((p) => p.kPer9 > 0 && p.starts >= 3)
@@ -210,7 +222,7 @@ function topPitcherStrikeouts(
 }
 
 // batter_hits: top 10 by hitsPerGame, line = floor(avg) + 0.5, edge = avg - line
-function topBatterHits(batters: MLBBatterStats[], limit = 10): PropRow[] {
+function topBatterHits(batters: MLBBatterStats[], limit = 40): PropRow[] {
   return [...batters]
     .filter((b) => b.hitsPerGame > 0)
     .sort((a, b) => b.hitsPerGame - a.hitsPerGame)
@@ -231,7 +243,7 @@ function topBatterHits(batters: MLBBatterStats[], limit = 10): PropRow[] {
 }
 
 // batter_rbis: line = 0.5, edge = rbiPerGame * small factor
-function topBatterRBIs(batters: MLBBatterStats[], limit = 10): PropRow[] {
+function topBatterRBIs(batters: MLBBatterStats[], limit = 40): PropRow[] {
   return [...batters]
     .filter((b) => b.rbiPerGame > 0)
     .sort((a, b) => b.rbiPerGame - a.rbiPerGame)
@@ -251,7 +263,7 @@ function topBatterRBIs(batters: MLBBatterStats[], limit = 10): PropRow[] {
 }
 
 // batter_total_bases: line = floor(avg) + 0.5, edge = avg - line
-function topBatterTotalBases(batters: MLBBatterStats[], limit = 10): PropRow[] {
+function topBatterTotalBases(batters: MLBBatterStats[], limit = 40): PropRow[] {
   return [...batters]
     .filter((b) => b.totalBasesPerGame > 0)
     .sort((a, b) => b.totalBasesPerGame - a.totalBasesPerGame)
@@ -274,7 +286,7 @@ function topBatterTotalBases(batters: MLBBatterStats[], limit = 10): PropRow[] {
 // batter_stolen_bases: line = 0.5 (standard), edge = sbPerGame * 0.7
 function topBatterStolenBases(
   batters: MLBBatterStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...batters]
     .filter((b) => b.stolenBasesPerGame > 0)
@@ -295,7 +307,7 @@ function topBatterStolenBases(
 }
 
 // batter_runs: line = floor(avg) + 0.5, edge = avg - line
-function topBatterRuns(batters: MLBBatterStats[], limit = 10): PropRow[] {
+function topBatterRuns(batters: MLBBatterStats[], limit = 40): PropRow[] {
   return [...batters]
     .filter((b) => b.runsPerGame > 0)
     .sort((a, b) => b.runsPerGame - a.runsPerGame)
@@ -319,7 +331,7 @@ function topBatterRuns(batters: MLBBatterStats[], limit = 10): PropRow[] {
 // Shown as season totals, not per-game.
 function topPitcherSeasonWins(
   pitchers: MLBPitcherStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...pitchers]
     .filter((p) => p.wins > 0 && p.starts >= 3)
@@ -341,7 +353,7 @@ function topPitcherSeasonWins(
 }
 
 // batter_home_runs: line = 0.5 (standard "to hit a HR" line), edge = hrPerGame * 0.8
-function topBatterHomeRuns(batters: MLBBatterStats[], limit = 10): PropRow[] {
+function topBatterHomeRuns(batters: MLBBatterStats[], limit = 40): PropRow[] {
   return [...batters]
     .filter((b) => b.hrPerGame > 0)
     .sort((a, b) => b.hrPerGame - a.hrPerGame)
@@ -363,7 +375,7 @@ function topBatterHomeRuns(batters: MLBBatterStats[], limit = 10): PropRow[] {
 // ─── NHL builders ────────────────────────────────────────────────────────────
 
 // skater_goals: line = 0.5, edge = goalsPerGame * 0.7
-function topSkaterGoals(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
+function topSkaterGoals(skaters: NHLSkaterStats[], limit = 40): PropRow[] {
   return [...skaters]
     .filter((s) => s.goalsPerGame > 0)
     .sort((a, b) => b.goalsPerGame - a.goalsPerGame)
@@ -383,7 +395,7 @@ function topSkaterGoals(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
 }
 
 // skater_points: line = floor(avg) + 0.5, edge = avg - line
-function topSkaterPoints(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
+function topSkaterPoints(skaters: NHLSkaterStats[], limit = 40): PropRow[] {
   return [...skaters]
     .filter((s) => s.pointsPerGame > 0)
     .sort((a, b) => b.pointsPerGame - a.pointsPerGame)
@@ -405,7 +417,7 @@ function topSkaterPoints(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
 
 // skater_pim: line = 0.5 (fighters/grinders hit fighting majors = 5 PIMs),
 // edge = pimPerGame * 0.5
-function topSkaterPIM(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
+function topSkaterPIM(skaters: NHLSkaterStats[], limit = 40): PropRow[] {
   return [...skaters]
     .filter((s) => s.pimPerGame > 0)
     .sort((a, b) => b.pimPerGame - a.pimPerGame)
@@ -426,7 +438,7 @@ function topSkaterPIM(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
 
 // skater_plus_minus: season total, not per-game. Line = +/- rounded to nearest
 // 0.5, edge flows from the raw value. Positive +/- = value signal.
-function topSkaterPlusMinus(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
+function topSkaterPlusMinus(skaters: NHLSkaterStats[], limit = 40): PropRow[] {
   return [...skaters]
     .filter((s) => Math.abs(s.plusMinus) > 0)
     .sort((a, b) => b.plusMinus - a.plusMinus)
@@ -448,7 +460,7 @@ function topSkaterPlusMinus(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
 }
 
 // skater_shots: line = shotsPerGame - 1 (half-step), edge = avg - line
-function topSkaterShots(skaters: NHLSkaterStats[], limit = 10): PropRow[] {
+function topSkaterShots(skaters: NHLSkaterStats[], limit = 40): PropRow[] {
   return [...skaters]
     .filter((s) => s.shotsPerGame > 0)
     .sort((a, b) => b.shotsPerGame - a.shotsPerGame)
@@ -477,7 +489,7 @@ function roundedDown5(x: number): number {
 
 // qb_passing_yards: sportsbook-style line at (yardsPerGame / 5 floor) - 10.
 // Floors prevent edge from being too lopsided on star QBs.
-function topQBPassingYards(qbs: NFLPassingStats[], limit = 10): PropRow[] {
+function topQBPassingYards(qbs: NFLPassingStats[], limit = 40): PropRow[] {
   return [...qbs]
     .filter((q) => q.yardsPerGame > 0)
     .sort((a, b) => b.yardsPerGame - a.yardsPerGame)
@@ -499,7 +511,7 @@ function topQBPassingYards(qbs: NFLPassingStats[], limit = 10): PropRow[] {
 }
 
 // qb_passing_tds: line = 1.5, edge = tdsPerGame * 0.8
-function topQBPassingTDs(qbs: NFLPassingStats[], limit = 10): PropRow[] {
+function topQBPassingTDs(qbs: NFLPassingStats[], limit = 40): PropRow[] {
   return [...qbs]
     .filter((q) => q.tdsPerGame > 0)
     .sort((a, b) => b.tdsPerGame - a.tdsPerGame)
@@ -519,7 +531,7 @@ function topQBPassingTDs(qbs: NFLPassingStats[], limit = 10): PropRow[] {
 }
 
 // rb_rushing_yards: line = floor(ypg/5)*5 + 0.5, edge = avg - line
-function topRBRushingYards(rbs: NFLRushingStats[], limit = 10): PropRow[] {
+function topRBRushingYards(rbs: NFLRushingStats[], limit = 40): PropRow[] {
   return [...rbs]
     .filter((r) => r.yardsPerGame > 0)
     .sort((a, b) => b.yardsPerGame - a.yardsPerGame)
@@ -542,7 +554,7 @@ function topRBRushingYards(rbs: NFLRushingStats[], limit = 10): PropRow[] {
 // wr_receiving_yards: same rounded-5 line logic
 function topWRReceivingYards(
   wrs: NFLReceivingStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...wrs]
     .filter((w) => w.yardsPerGame > 0)
@@ -564,7 +576,7 @@ function topWRReceivingYards(
 }
 
 // wr_receptions: line = floor(recs) + 0.5, edge = avg - line
-function topWRReceptions(wrs: NFLReceivingStats[], limit = 10): PropRow[] {
+function topWRReceptions(wrs: NFLReceivingStats[], limit = 40): PropRow[] {
   return [...wrs]
     .filter((w) => w.recsPerGame > 0)
     .sort((a, b) => b.recsPerGame - a.recsPerGame)
@@ -585,7 +597,7 @@ function topWRReceptions(wrs: NFLReceivingStats[], limit = 10): PropRow[] {
 }
 
 // wr_anytime_td: 0.5 line, edge = tdsPerGame * 0.6
-function topWRAnytimeTD(wrs: NFLReceivingStats[], limit = 10): PropRow[] {
+function topWRAnytimeTD(wrs: NFLReceivingStats[], limit = 40): PropRow[] {
   return [...wrs]
     .filter((w) => w.tdsPerGame > 0)
     .sort((a, b) => b.tdsPerGame - a.tdsPerGame)
@@ -609,7 +621,7 @@ function topWRAnytimeTD(wrs: NFLReceivingStats[], limit = 10): PropRow[] {
 // goals: line = 0.5 (anytime-goalscorer), edge = goalsPerGame * 0.8
 function topSoccerGoals(
   players: SoccerPlayerStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...players]
     .filter((p) => p.goalsPerGame > 0)
@@ -632,7 +644,7 @@ function topSoccerGoals(
 // assists: line = 0.5 (anytime-assist), edge = assistsPerGame * 0.7
 function topSoccerAssists(
   players: SoccerPlayerStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...players]
     .filter((p) => p.assistsPerGame > 0)
@@ -655,7 +667,7 @@ function topSoccerAssists(
 // shots_on_target: line = floor(avg) + 0.5, edge = avg - line
 function topSoccerShotsOnTarget(
   players: SoccerPlayerStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...players]
     .filter((p) => p.shotsOnTargetPerGame > 0)
@@ -679,7 +691,7 @@ function topSoccerShotsOnTarget(
 // total_shots: line = floor(avg) + 0.5, edge = avg - line
 function topSoccerTotalShots(
   players: SoccerPlayerStats[],
-  limit = 10,
+  limit = 40,
 ): PropRow[] {
   return [...players]
     .filter((p) => p.shotsPerGame > 0)

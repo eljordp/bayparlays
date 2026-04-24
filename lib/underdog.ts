@@ -102,7 +102,9 @@ const STAT_KEY_MAP: Record<string, string> = {
   assists: "assists",
   three_point_field_goals_made: "threes",
   three_pointers_made: "threes",
+  three_points_made: "threes",
   threes_made: "threes",
+  pts_rebs_asts: "pra",
   steals: "steals",
   blocks: "blocks",
 
