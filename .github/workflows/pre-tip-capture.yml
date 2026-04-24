@@ -1,0 +1,31 @@
+name: BayParlays Pre-Tip Line Capture
+
+# Captures closing-line-ish snapshots for games starting in the next 5-30 min.
+# Without this, CLV math uses whatever the last /api/parlays call captured,
+# which can be hours stale. This makes CLV actually reflect the closing line.
+#
+# Runs every 10 min. Endpoint filters by commence_time window — most runs
+# are no-ops during off-hours. Quota-gated on the Odds API free tier.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /api/cron/pre-tip-capture
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/pre-tip-capture" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              --max-time 90
+          else
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/pre-tip-capture" \
+              --max-time 90
+          fi

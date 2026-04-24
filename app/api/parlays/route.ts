@@ -30,6 +30,20 @@ import {
   type GameLineup,
 } from "@/lib/mlb-lineups";
 import { readQuotaHeaders, persistQuota, canFetch } from "@/lib/odds-quota";
+import {
+  fetchInjuries,
+  lookupTeam as lookupInjuredTeam,
+  type InjuryEntry,
+  type InjuryMap,
+} from "@/lib/espn-injuries";
+import {
+  fetchLastGames,
+  formatRestNote,
+  lookupLastGame,
+  computeRest,
+  type LastGameMap,
+  type RestInfo,
+} from "@/lib/espn-rest-days";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -111,6 +125,8 @@ interface ScoredLeg {
   evVsFair?: number;     // decimal EV of best odds against fair prob
   weatherNote?: string | null;  // e.g. "90F heat, 18mph wind"
   pitcherNote?: string | null;  // e.g. "ace-vs-ace (avg ERA <3.25)"
+  injuryNote?: string | null;   // e.g. "Warriors: Kuminga (Out); Lakers: Reaves (Day-To-Day)"
+  restNote?: string | null;     // e.g. "Lakers: B2B (1d rest) · Warriors: 3d rest" (NBA/NHL)
 }
 
 interface ParlayLeg {
@@ -135,6 +151,8 @@ interface ParlayLeg {
   evVsFair?: number;
   weatherNote?: string | null;
   pitcherNote?: string | null;
+  injuryNote?: string | null;
+  restNote?: string | null;
 }
 
 type ParlayCategory = "ev" | "payout" | "confidence";
@@ -388,6 +406,59 @@ function findTwoWayBookPairs(
 interface ExtractCtx {
   weather?: WeatherSignal | null;
   lineup?: GameLineup | null;
+  injuries?: InjuryMap | null;
+  lastGames?: LastGameMap | null;  // NBA/NHL only — teams' most recent completed game
+}
+
+// ─── Confidence-bias pipeline ────────────────────────────────────────────────
+// Aggregates free-data signals (ESPN injuries, ESPN rest days) into a single
+// probability adjustment with a hard cap. The cap matters: a leg hit by
+// multiple signals (injury + rest + future weather + umpire) could otherwise
+// stack into a fake 10%+ edge. We cap total bias at ±2.5pp so model-driven
+// estimates stay dominant and signals only nudge.
+//
+// Weights are intentionally conservative. Without calibration data (need 50+
+// resolved bets) we undershoot. Widen after CLV data proves the direction.
+
+const INJURY_WEIGHT: Record<string, number> = {
+  Out: 0.004,
+  Doubtful: 0.003,
+  "Day-To-Day": 0.002,
+  Questionable: 0.0015,
+};
+
+const BIAS_CAP = 0.025;
+
+function sumInjuryWeight(rows: InjuryEntry[] | null): number {
+  if (!rows) return 0;
+  return rows.reduce((s, r) => s + (INJURY_WEIGHT[r.status] ?? 0), 0);
+}
+
+// Returns rest-based probability delta for a SIDE pick (ML or spread). Positive
+// = favors the picked team. Zero when both teams have similar rest.
+function restBiasForSide(pickRest: RestInfo, oppRest: RestInfo): number {
+  if (pickRest.daysSinceLastGame < 0 || oppRest.daysSinceLastGame < 0) return 0;
+  const pickB2B = pickRest.b2b;
+  const oppB2B = oppRest.b2b;
+  if (pickB2B && !oppB2B && oppRest.daysSinceLastGame >= 2) return -0.008;
+  if (oppB2B && !pickB2B && pickRest.daysSinceLastGame >= 2) return 0.008;
+  const diff = oppRest.daysSinceLastGame - pickRest.daysSinceLastGame;
+  if (Math.abs(diff) >= 3) return diff > 0 ? 0.005 : -0.005;
+  return 0;
+}
+
+// Returns rest-based probability delta for an OVER total. Negative = favors
+// the Under (tired teams score less). Applied with flipped sign to Unders.
+function restBiasForTotal(
+  homeRest: RestInfo,
+  awayRest: RestInfo,
+  pickIsOver: boolean,
+): number {
+  if (homeRest.daysSinceLastGame < 0 && awayRest.daysSinceLastGame < 0) return 0;
+  let overDelta = 0;
+  if (homeRest.b2b) overDelta -= 0.003;
+  if (awayRest.b2b) overDelta -= 0.003;
+  return pickIsOver ? overDelta : -overDelta;
 }
 
 function extractLegsFromGame(
@@ -755,6 +826,95 @@ function extractLegsFromGame(
         }
       }
 
+      // ── Confidence bias pipeline ───────────────────────────────────────
+      // Fold free-data signals (injuries, rest-days) into ourProb BEFORE the
+      // realistic-range clamp and the ±8% edge cap. Total adjustment is
+      // capped at ±BIAS_CAP so stacked signals can't manufacture fake edge.
+      // Only applies to scored legs — un-scored legs don't have model signal
+      // to bias in the first place.
+      let biasApplied = 0;
+      const biasReasons: string[] = [];
+      if (wasScored) {
+        let sideDelta = 0;
+        let totalDelta = 0;
+
+        // Injuries: probability points per injured player, weighted by status.
+        // For side picks: own injuries hurt us, opp injuries help (at 70% —
+        // opposing team's star absence is real signal, but backups exist).
+        // For totals: any team's key outs nudge toward Under (lower scoring).
+        if (ctx?.injuries) {
+          if (marketKey === "h2h" || marketKey === "spreads") {
+            const ownInj = lookupInjuredTeam(outcomeInfo.name, ctx.injuries);
+            const opp =
+              outcomeInfo.name === game.home_team
+                ? game.away_team
+                : game.home_team;
+            const oppInj = lookupInjuredTeam(opp, ctx.injuries);
+            const ownW = sumInjuryWeight(ownInj);
+            const oppW = sumInjuryWeight(oppInj) * 0.7;
+            const d = -ownW + oppW;
+            if (Math.abs(d) >= 0.0015) {
+              sideDelta += d;
+              biasReasons.push(`injuries ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
+            }
+          } else if (marketKey === "totals" && outcomeInfo.point !== undefined) {
+            const homeInj = lookupInjuredTeam(game.home_team, ctx.injuries);
+            const awayInj = lookupInjuredTeam(game.away_team, ctx.injuries);
+            const combined = sumInjuryWeight(homeInj) + sumInjuryWeight(awayInj);
+            // Nudge toward Under by 0.5× the side weight — totals are less
+            // responsive to single-player absence than sides are.
+            const pickIsOver = outcomeInfo.name.toLowerCase() === "over";
+            const d = pickIsOver ? -combined * 0.5 : combined * 0.5;
+            if (Math.abs(d) >= 0.0015) {
+              totalDelta += d;
+              biasReasons.push(`injuries ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
+            }
+          }
+        }
+
+        // Rest days: NBA + NHL only, where B2B-vs-rested is known to matter.
+        if (ctx?.lastGames && (sportLabel === "NBA" || sportLabel === "NHL")) {
+          if (marketKey === "h2h" || marketKey === "spreads") {
+            const opp =
+              outcomeInfo.name === game.home_team
+                ? game.away_team
+                : game.home_team;
+            const pickRest = computeRest(
+              lookupLastGame(outcomeInfo.name, ctx.lastGames),
+              game.commence_time,
+            );
+            const oppRest = computeRest(
+              lookupLastGame(opp, ctx.lastGames),
+              game.commence_time,
+            );
+            const d = restBiasForSide(pickRest, oppRest);
+            if (Math.abs(d) >= 0.0015) {
+              sideDelta += d;
+              biasReasons.push(`rest ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
+            }
+          } else if (marketKey === "totals") {
+            const homeRest = computeRest(
+              lookupLastGame(game.home_team, ctx.lastGames),
+              game.commence_time,
+            );
+            const awayRest = computeRest(
+              lookupLastGame(game.away_team, ctx.lastGames),
+              game.commence_time,
+            );
+            const pickIsOver = outcomeInfo.name.toLowerCase() === "over";
+            const d = restBiasForTotal(homeRest, awayRest, pickIsOver);
+            if (Math.abs(d) >= 0.0015) {
+              totalDelta += d;
+              biasReasons.push(`rest ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
+            }
+          }
+        }
+
+        const rawBias = sideDelta + totalDelta;
+        biasApplied = Math.max(-BIAS_CAP, Math.min(BIAS_CAP, rawBias));
+        ourProb += biasApplied;
+      }
+
       // Clamp ourProb to realistic range
       ourProb = Math.max(0.05, Math.min(0.95, ourProb));
 
@@ -788,6 +948,39 @@ function extractLegsFromGame(
           ? ctx.weather.reason
           : null;
 
+      // Injury note — show recent (last 72h) Out/Doubtful/Day-to-Day/Questionable
+      // for both teams in the game. Data-only for now; no confidence math impact.
+      // Confidence integration comes in the next queued upgrade (#2b).
+      let injuryNote: string | null = null;
+      if (ctx?.injuries) {
+        const parts: string[] = [];
+        const home = lookupInjuredTeam(game.home_team, ctx.injuries);
+        const away = lookupInjuredTeam(game.away_team, ctx.injuries);
+        if (home && home.length > 0) {
+          const names = home.slice(0, 2).map((r) => `${r.name} (${r.status})`).join(", ");
+          const extra = home.length > 2 ? ` +${home.length - 2}` : "";
+          parts.push(`${game.home_team}: ${names}${extra}`);
+        }
+        if (away && away.length > 0) {
+          const names = away.slice(0, 2).map((r) => `${r.name} (${r.status})`).join(", ");
+          const extra = away.length > 2 ? ` +${away.length - 2}` : "";
+          parts.push(`${game.away_team}: ${names}${extra}`);
+        }
+        if (parts.length > 0) injuryNote = parts.join("; ");
+      }
+
+      // Rest-day note — NBA/NHL only. Only surfaces when notable disparity
+      // (B2B for either team or 2+ day rest gap). No confidence math yet.
+      let restNote: string | null = null;
+      if (ctx?.lastGames && (sportLabel === "NBA" || sportLabel === "NHL")) {
+        restNote = formatRestNote(
+          game.home_team,
+          game.away_team,
+          ctx.lastGames,
+          game.commence_time,
+        );
+      }
+
       legs.push({
         sport: sportLabel,
         sportKey: game.sport_key,
@@ -813,6 +1006,8 @@ function extractLegsFromGame(
         evVsFair: Math.round(evVsFairNum * 10000) / 10000,
         weatherNote,
         pitcherNote,
+        injuryNote,
+        restNote,
       });
     }
   }
@@ -895,6 +1090,16 @@ function buildReasons(leg: ScoredLeg): string[] {
   // 6. Pitcher matchup note (MLB)
   if (leg.pitcherNote) {
     reasons.push(`Pitching: ${leg.pitcherNote}.`);
+  }
+
+  // 7. Injury context (NBA/NFL/NHL/MLB — last 72h reported, rotation-relevant)
+  if (leg.injuryNote) {
+    reasons.push(`Key injuries — ${leg.injuryNote}.`);
+  }
+
+  // 8. Rest / back-to-back context (NBA/NHL — only shows when notable gap)
+  if (leg.restNote) {
+    reasons.push(`Rest: ${leg.restNote}.`);
   }
 
   return reasons;
@@ -1110,6 +1315,8 @@ function buildParlays(
         ...(l.evVsFair !== undefined ? { evVsFair: l.evVsFair } : {}),
         ...(l.weatherNote ? { weatherNote: l.weatherNote } : {}),
         ...(l.pitcherNote ? { pitcherNote: l.pitcherNote } : {}),
+        ...(l.injuryNote ? { injuryNote: l.injuryNote } : {}),
+        ...(l.restNote ? { restNote: l.restNote } : {}),
       })),
       combinedOdds: formatAmericanOdds(combinedAmerican),
       combinedDecimal: Math.round(combinedDecimal * 100) / 100,
@@ -1426,9 +1633,28 @@ export async function GET(request: NextRequest) {
       ? fetchProbablePitchers(new Date().toISOString().slice(0, 10))
       : Promise.resolve([]);
 
-    const [results, mlbLineups] = await Promise.all([
+    // ESPN injuries — free, cached in-process for 60 min. Fetch once per sport
+    // that ESPN supports. Sports not in the map (ufc, ncaab, ncaaf, soccer)
+    // resolve to null and get skipped at the lookup level.
+    const injurySports = sports.filter((s) =>
+      ["nba", "nfl", "nhl", "mlb"].includes(s),
+    );
+    const injuryPromise: Promise<Map<string, InjuryMap>> = Promise.all(
+      injurySports.map(async (s) => [s, await fetchInjuries(s)] as const),
+    ).then((pairs) => new Map(pairs));
+
+    // ESPN rest-day map — NBA/NHL only. Last 7 days of completed games per
+    // team; caller computes days-of-rest against each upcoming game.
+    const restSports = sports.filter((s) => ["nba", "nhl"].includes(s));
+    const restPromise: Promise<Map<string, LastGameMap>> = Promise.all(
+      restSports.map(async (s) => [s, await fetchLastGames(s)] as const),
+    ).then((pairs) => new Map(pairs));
+
+    const [results, mlbLineups, injuryBySport, lastGamesBySport] = await Promise.all([
       Promise.allSettled(sportFetches),
       mlbLineupsPromise,
+      injuryPromise,
+      restPromise,
     ]);
 
     // Collect all games and extract scored legs
@@ -1464,8 +1690,13 @@ export async function GET(request: NextRequest) {
       totalGames += games.length;
 
       for (const game of games) {
-        // Build per-game context (MLB only — other sports get undefined ctx)
-        let ctx: ExtractCtx | undefined;
+        // Build per-game context. MLB gets weather + pitcher lineup; all
+        // supported sports get the ESPN injury map for their sport; NBA/NHL
+        // also get the last-games map for rest-day computation.
+        const injuries = injuryBySport.get(sport) || null;
+        const lastGames = lastGamesBySport.get(sport) || null;
+        let ctx: ExtractCtx | undefined =
+          injuries || lastGames ? { injuries, lastGames } : undefined;
         if (sport === "mlb") {
           const lineup = findGameLineup(
             mlbLineups,
@@ -1485,7 +1716,7 @@ export async function GET(request: NextRequest) {
           } catch {
             weather = null;
           }
-          ctx = { weather, lineup };
+          ctx = { ...(ctx || {}), weather, lineup };
         }
 
         const gameLegs = extractLegsFromGame(
@@ -1595,6 +1826,8 @@ export async function GET(request: NextRequest) {
           evVsFair: l.evVsFair,
           weatherNote: l.weatherNote ?? null,
           pitcherNote: l.pitcherNote ?? null,
+          injuryNote: l.injuryNote ?? null,
+          restNote: l.restNote ?? null,
           reasons: buildReasons(l),
         })),
         meta: {

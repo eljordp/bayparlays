@@ -118,6 +118,53 @@ const MARKET_LABELS: Record<string, string> = {
 
 const MAX_LEGS = 10;
 
+// ─── Same-game conflict detection ────────────────────────────────────────────
+// Blocks impossible combinations (guaranteed-losing parlays) and surfaces a
+// soft warning on any other same-game leg stack so users know the displayed
+// EV doesn't account for correlation between legs.
+//
+// Impossible combos — at least one leg guaranteed to lose:
+//   1. Same game, both teams' moneylines (one team must lose)
+//   2. Same game, Over AND Under on the same total point
+//   3. Same game, opposing spreads that sum to zero (Lakers -3.5 + Warriors +3.5)
+//
+// Redundant but not impossible (soft warn): any other same-game stack.
+
+function detectConflict(existing: ParlayLeg[], candidate: ParlayLeg): string | null {
+  for (const leg of existing) {
+    if (leg.gameId !== candidate.gameId) continue;
+
+    // Rule 1: both teams' ML
+    if (leg.market === "h2h" && candidate.market === "h2h" && leg.pick !== candidate.pick) {
+      return "Can't add both teams' moneylines — one must lose.";
+    }
+
+    // Rule 2: Over + Under on same total
+    if (leg.market === "totals" && candidate.market === "totals") {
+      const samePoint = leg.point !== undefined && leg.point === candidate.point;
+      const opposite =
+        (leg.pick === "Over" && candidate.pick === "Under") ||
+        (leg.pick === "Under" && candidate.pick === "Over");
+      if (samePoint && opposite) {
+        return "Can't add Over and Under on the same total — one must lose.";
+      }
+    }
+
+    // Rule 3: Mirror spreads (Lakers -3.5 + Warriors +3.5)
+    if (leg.market === "spreads" && candidate.market === "spreads") {
+      const pointsCancel =
+        leg.point !== undefined &&
+        candidate.point !== undefined &&
+        Math.abs(leg.point + candidate.point) < 0.001;
+      const differentTeams = leg.pick !== candidate.pick;
+      if (pointsCancel && differentTeams) {
+        return "Can't add both sides of the same spread — one must lose.";
+      }
+    }
+  }
+  return null;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function BuilderPage() {
@@ -128,6 +175,7 @@ export default function BuilderPage() {
   const [legs, setLegs] = useState<ParlayLeg[]>([]);
   const [stake, setStake] = useState<string>("100");
   const [activeMarket, setActiveMarket] = useState<string>("h2h");
+  const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const slipRef = useRef<HTMLDivElement>(null);
 
   // Auth — builder is VIP/Admin only
@@ -186,24 +234,29 @@ export default function BuilderPage() {
       setLegs((prev) => {
         const exists = prev.find((l) => l.id === legId);
         if (exists) {
+          setConflictMessage(null);
           return prev.filter((l) => l.id !== legId);
         }
         if (prev.length >= MAX_LEGS) return prev;
-        return [
-          ...prev,
-          {
-            id: legId,
-            gameId: game.id,
-            sport: activeSport.toUpperCase(),
-            homeTeam: game.homeTeam,
-            awayTeam: game.awayTeam,
-            market,
-            pick: outcome.outcomeName,
-            odds: outcome.bestPrice,
-            point: outcome.bestPoint,
-            book: outcome.bestBook,
-          },
-        ];
+        const candidate: ParlayLeg = {
+          id: legId,
+          gameId: game.id,
+          sport: activeSport.toUpperCase(),
+          homeTeam: game.homeTeam,
+          awayTeam: game.awayTeam,
+          market,
+          pick: outcome.outcomeName,
+          odds: outcome.bestPrice,
+          point: outcome.bestPoint,
+          book: outcome.bestBook,
+        };
+        const conflict = detectConflict(prev, candidate);
+        if (conflict) {
+          setConflictMessage(conflict);
+          return prev;
+        }
+        setConflictMessage(null);
+        return [...prev, candidate];
       });
     },
     [activeSport, makeLegId, isVipAccess]
@@ -211,7 +264,20 @@ export default function BuilderPage() {
 
   const removeLeg = useCallback((legId: string) => {
     setLegs((prev) => prev.filter((l) => l.id !== legId));
+    setConflictMessage(null);
   }, []);
+
+  // Soft warning — any game contributing 2+ legs. Not impossible, but the
+  // displayed EV assumes leg independence; same-game legs are correlated, so
+  // the real probability is different from the simple product shown.
+  const sameGameWarning = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const l of legs) counts.set(l.gameId, (counts.get(l.gameId) || 0) + 1);
+    const stacked = Array.from(counts.values()).filter((n) => n >= 2).length;
+    return stacked > 0
+      ? "Same-game parlay detected — displayed EV assumes leg independence. Correlation between same-game legs is not modeled."
+      : null;
+  }, [legs]);
 
   // Parlay calculations
   const calculations = useMemo(() => {
@@ -690,6 +756,20 @@ export default function BuilderPage() {
                   {legs.length === 1 && (
                     <div className="px-5 py-4 text-center text-white/30 text-xs border-t border-white/[0.04]">
                       Add at least one more leg to see parlay odds
+                    </div>
+                  )}
+
+                  {/* Conflict alert — impossible combo blocked on last add */}
+                  {conflictMessage && (
+                    <div className="px-5 py-3 text-xs border-t border-[#FF3B3B]/40 bg-[#FF3B3B]/10 text-[#FF3B3B]">
+                      {conflictMessage}
+                    </div>
+                  )}
+
+                  {/* Same-game warning — not impossible, but EV math assumes independence */}
+                  {sameGameWarning && (
+                    <div className="px-5 py-3 text-[11px] border-t border-amber-500/30 bg-amber-500/[0.08] text-amber-300/90">
+                      {sameGameWarning}
                     </div>
                   )}
 
