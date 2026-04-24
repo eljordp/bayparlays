@@ -78,6 +78,50 @@ function impliedHitRate(decimalOdds: number | undefined): number | null {
   return Math.round((1 / decimalOdds) * 10000) / 100;
 }
 
+/* ─── Game status (live feed for pending bets) ──────────────────────── */
+
+interface GameStatusRow {
+  key: string;
+  homeTeam: string;
+  awayTeam: string;
+  state: "pre" | "in" | "post";
+  statusDetail: string;
+  startsAt: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  period: number | null;
+  displayClock: string | null;
+}
+
+function normalizeGameKey(teamA: string, teamB: string): string {
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const [a, b] = [norm(teamA), norm(teamB)].sort();
+  return `${a}__${b}`;
+}
+
+function gameStringKey(game: string): string | null {
+  if (!game) return null;
+  const m = game.match(/^(.+?)\s+(?:vs|@|at)\s+(.+)$/i);
+  if (!m) return null;
+  return normalizeGameKey(m[1], m[2]);
+}
+
+function formatStartTime(iso: string): string {
+  const d = new Date(iso);
+  const now = Date.now();
+  const diffMin = Math.round((d.getTime() - now) / 60000);
+  if (diffMin <= 0) return "starting";
+  if (diffMin < 60) return `in ${diffMin}m`;
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  if (h < 12) return m > 0 ? `in ${h}h ${m}m` : `in ${h}h`;
+  // Longer than 12 hours — show wall-clock in the local tz
+  return d.toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 interface MyStatsData {
   stats: Stats;
   sportBreakdown: SportBreakdown[];
@@ -159,6 +203,9 @@ export default function MyStatsPage() {
   const [expandedBet, setExpandedBet] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [gameStatuses, setGameStatuses] = useState<Map<string, GameStatusRow>>(
+    new Map(),
+  );
 
   const fetchStats = useCallback(async () => {
     if (!user) return;
@@ -188,6 +235,40 @@ export default function MyStatsPage() {
       setRefreshing(false);
     }
   }
+
+  // Pull live game status for every unique sport that appears in the user's
+  // bet history. One call covers today + yesterday across all sports.
+  const fetchGameStatuses = useCallback(async () => {
+    if (!data?.recentBets?.length) return;
+    const sports = new Set<string>();
+    for (const bet of data.recentBets) {
+      for (const leg of (bet.legs ?? []) as Array<{ sport?: string }>) {
+        if (leg.sport) sports.add(leg.sport.toUpperCase());
+      }
+    }
+    if (sports.size === 0) return;
+    try {
+      const res = await fetch(
+        `/api/track/game-status?sports=${Array.from(sports).join(",")}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) return;
+      const json: { games: GameStatusRow[] } = await res.json();
+      const map = new Map<string, GameStatusRow>();
+      for (const g of json.games) map.set(g.key, g);
+      setGameStatuses(map);
+    } catch {
+      // Non-fatal — expanded view falls back to no status chip
+    }
+  }, [data]);
+
+  useEffect(() => {
+    fetchGameStatuses();
+    // Refresh live statuses every 60s while the page is open — covers
+    // in-progress games updating their clock/score.
+    const id = setInterval(fetchGameStatuses, 60_000);
+    return () => clearInterval(id);
+  }, [fetchGameStatuses]);
 
   useEffect(() => {
     if (!user) return;
@@ -1019,7 +1100,11 @@ export default function MyStatsPage() {
                                   }}
                                 >
                                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                  {bet.legs.map((leg: any, li: number) => (
+                                  {bet.legs.map((leg: any, li: number) => {
+                                    const gameLabel = leg.game || leg.matchup || "";
+                                    const gkey = gameStringKey(gameLabel);
+                                    const status = gkey ? gameStatuses.get(gkey) : null;
+                                    return (
                                     <div
                                       key={li}
                                       className="flex items-center justify-between px-4 md:px-6 py-3"
@@ -1031,7 +1116,7 @@ export default function MyStatsPage() {
                                       }}
                                     >
                                       <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                           {leg.sport && (
                                             <span
                                               className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
@@ -1046,13 +1131,71 @@ export default function MyStatsPage() {
                                               {leg.sport}
                                             </span>
                                           )}
+                                          {status && (
+                                            <span
+                                              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded flex items-center gap-1"
+                                              style={{
+                                                background:
+                                                  status.state === "in"
+                                                    ? "rgba(34,197,94,0.12)"
+                                                    : status.state === "post"
+                                                      ? "rgba(255,255,255,0.06)"
+                                                      : "rgba(59,130,246,0.10)",
+                                                color:
+                                                  status.state === "in"
+                                                    ? "#22c55e"
+                                                    : status.state === "post"
+                                                      ? "rgba(255,255,255,0.6)"
+                                                      : "#60a5fa",
+                                                border: `1px solid ${
+                                                  status.state === "in"
+                                                    ? "rgba(34,197,94,0.25)"
+                                                    : status.state === "post"
+                                                      ? "rgba(255,255,255,0.1)"
+                                                      : "rgba(59,130,246,0.2)"
+                                                }`,
+                                              }}
+                                              title={
+                                                status.homeScore !== null &&
+                                                status.awayScore !== null
+                                                  ? `${status.awayTeam} ${status.awayScore} - ${status.homeScore} ${status.homeTeam}`
+                                                  : undefined
+                                              }
+                                            >
+                                              {status.state === "in" && (
+                                                <span
+                                                  className="w-1.5 h-1.5 rounded-full"
+                                                  style={{ background: "#22c55e" }}
+                                                />
+                                              )}
+                                              {status.state === "in"
+                                                ? `LIVE · ${status.statusDetail}${status.homeScore !== null && status.awayScore !== null ? ` · ${status.awayScore}-${status.homeScore}` : ""}`
+                                                : status.state === "post"
+                                                  ? `Final · ${status.awayScore ?? "?"}-${status.homeScore ?? "?"}`
+                                                  : status.startsAt
+                                                    ? `Starts ${formatStartTime(status.startsAt)}`
+                                                    : "Scheduled"}
+                                            </span>
+                                          )}
+                                          {!status && leg.commenceTime && (
+                                            <span
+                                              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
+                                              style={{
+                                                background: "rgba(59,130,246,0.08)",
+                                                color: "#60a5fa",
+                                                border: "1px solid rgba(59,130,246,0.15)",
+                                              }}
+                                            >
+                                              Starts {formatStartTime(leg.commenceTime)}
+                                            </span>
+                                          )}
                                           <span
                                             className="text-xs truncate"
                                             style={{
                                               color: "rgba(255,255,255,0.4)",
                                             }}
                                           >
-                                            {leg.game || leg.matchup || ""}
+                                            {gameLabel}
                                           </span>
                                         </div>
                                         <div
@@ -1082,7 +1225,8 @@ export default function MyStatsPage() {
                                           )}
                                       </div>
                                     </div>
-                                  ))}
+                                    );
+                                  })}
 
                                   {/* Payout row */}
                                   {bet.payout > 0 && (
