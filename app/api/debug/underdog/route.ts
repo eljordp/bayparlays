@@ -60,6 +60,18 @@ export async function GET() {
       let libRawLineCount = 0;
       let libRawStatus = 0;
       let libRawHasData = false;
+      const rej = {
+        no_stat: 0,
+        no_app: 0,
+        bad_line_value: 0,
+        not_player_prop: 0,
+        no_app_lookup: 0,
+        no_player_lookup: 0,
+        no_name_or_sport: 0,
+        kept: 0,
+      };
+      let firstLineSample: unknown = null;
+      let firstKeptLineSample: unknown = null;
       try {
         const libRaw = await fetch(
           "https://api.underdogfantasy.com/beta/v5/over_under_lines",
@@ -74,11 +86,56 @@ export async function GET() {
           },
         );
         libRawStatus = libRaw.status;
-        const j = (await libRaw.json()) as { over_under_lines?: unknown[] };
+        type LibLine = {
+          stat_value?: unknown;
+          over_under?: {
+            category?: string;
+            appearance_stat?: {
+              stat?: string;
+              appearance_id?: string;
+            };
+          };
+        };
+        type LibApp = { id: string; player_id?: string };
+        type LibPlayer = {
+          id: string;
+          first_name?: string;
+          last_name?: string;
+          sport_id?: string;
+        };
+        type LibResp = {
+          over_under_lines?: LibLine[];
+          appearances?: LibApp[];
+          players?: LibPlayer[];
+        };
+        const j = (await libRaw.json()) as LibResp;
         libRawHasData = true;
         libRawLineCount = Array.isArray(j.over_under_lines)
           ? j.over_under_lines.length
           : 0;
+        firstLineSample = j.over_under_lines?.[0] ?? null;
+
+        // Run the EXACT library filter loop and count rejections
+        const appsMap = new Map<string, LibApp>();
+        for (const a of j.appearances ?? []) appsMap.set(a.id, a);
+        const playersMap = new Map<string, LibPlayer>();
+        for (const p of j.players ?? []) playersMap.set(p.id, p);
+        for (const line of j.over_under_lines ?? []) {
+          const statRaw = line.over_under?.appearance_stat?.stat;
+          const appId = line.over_under?.appearance_stat?.appearance_id;
+          const lineValue = line.stat_value;
+          if (!statRaw) { rej.no_stat++; continue; }
+          if (!appId) { rej.no_app++; continue; }
+          if (typeof lineValue !== "number") { rej.bad_line_value++; continue; }
+          if (line.over_under?.category !== "player_prop") { rej.not_player_prop++; continue; }
+          const app = appsMap.get(appId);
+          if (!app?.player_id) { rej.no_app_lookup++; continue; }
+          const p = playersMap.get(app.player_id);
+          if (!p) { rej.no_player_lookup++; continue; }
+          if (!p.first_name || !p.last_name || !p.sport_id) { rej.no_name_or_sport++; continue; }
+          rej.kept++;
+          if (!firstKeptLineSample) firstKeptLineSample = { line, player: p };
+        }
       } catch (e) {
         libRawStatus = -1;
         libRawHasData = false;
@@ -119,6 +176,14 @@ export async function GET() {
         libRawStatus,
         libRawHasData,
         libRawLineCount,
+        rejections: rej,
+        firstLineSample: typeof firstLineSample === "object" && firstLineSample
+          ? JSON.stringify(firstLineSample).slice(0, 1200)
+          : null,
+        firstKeptLineSample:
+          typeof firstKeptLineSample === "object" && firstKeptLineSample
+            ? JSON.stringify(firstKeptLineSample).slice(0, 1500)
+            : null,
         lineCountFromLib: lines.length,
         sportsAvailable,
         indexSize: byKey.size,
