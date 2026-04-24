@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import {
   fetchUnderdogLines,
   buildUnderdogIndex,
-  findUnderdogLine,
   normalizePlayerKey,
 } from "@/lib/underdog";
 
