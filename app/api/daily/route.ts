@@ -43,17 +43,26 @@ export async function GET(req: NextRequest) {
     { sports: "nba,mlb,nhl", legs: 2, sort: "payout" },
     { sports: "nba,mlb,nhl", legs: 3, sort: "ev" },
     { sports: "nba,mlb,nhl", legs: 3, sort: "confidence" },
+    // "Craziest Parlay of the Day" — 3-leg longshot generator. Tier=admin
+    // relaxes edge/quality filters so legs with high odds (underdogs) can
+    // make it into the pool. sort=payout picks the highest combined_decimal
+    // from the pool. Widen sports to include college + NCAAB for more
+    // longshot candidates since NBA/MLB favorites are usually tightly priced.
+    { sports: "nba,mlb,nhl,ncaab,ncaaf", legs: 3, sort: "payout" },
   ];
 
   const generated: { sports: string; legs: number; sort: string; count: number }[] = [];
 
   for (const combo of sportCombos) {
     try {
-      // Tracked record uses "sharp" tier — balances pool size with quality
-      // filters (scored + 3+ books per leg). Tight enough to not pollute
-      // the public track record, loose enough to actually surface picks.
+      // Tracked record uses "sharp" tier for regular picks. The crazy
+      // 3-leg longshot combo uses "admin" tier to widen the pool enough
+      // for heavy-underdog legs to survive filtering — otherwise the
+      // standard edge floor keeps them all out.
+      const tier =
+        combo.legs === 3 && combo.sort === "payout" ? "admin" : "sharp";
       const res = await fetch(
-        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=5&tier=sharp`
+        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=5&tier=${tier}`
       );
       if (res.ok) {
         const data = await res.json();
