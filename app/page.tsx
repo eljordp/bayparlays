@@ -286,17 +286,7 @@ export default function Home() {
                 ease: [0.25, 0.1, 0.25, 1],
               }}
             >
-              <ParlayPlayer
-                legs={[
-                  { sport: "NBA", pick: "Celtics ML", odds: -145, book: "FanDuel", game: "PHI @ BOS" },
-                  { sport: "MLB", pick: "Dodgers -1.5", odds: 110, book: "DraftKings", game: "LAD @ COL" },
-                  { sport: "NHL", pick: "Over 5.5", odds: 105, book: "BetMGM", game: "STL @ UTA" },
-                ]}
-                combinedOdds="+487"
-                evPercent={7.2}
-                confidence={82}
-                payout={587}
-              />
+              <LiveHeroParlay />
             </motion.div>
           </div>
         </div>
@@ -990,5 +980,80 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+}
+
+/* ─── Live Hero Parlay ─────────────────────────────────────────────────────
+ * Replaces the hardcoded 3-leg demo in the hero. Fetches today's real AI
+ * parlay from /api/parlays and hands it to the ParlayPlayer. Falls back to
+ * a tasteful static parlay if the API is cold or errors — never shows an
+ * empty placeholder. */
+
+interface HeroApiLeg {
+  sport: string;
+  game: string;
+  pick: string;
+  odds: number;
+  book: string;
+}
+
+interface HeroApiParlay {
+  legs: HeroApiLeg[];
+  combinedOdds: string;
+  evPercent: number;
+  confidence: number;
+  payout: number;
+}
+
+interface HeroApiResponse {
+  parlays: HeroApiParlay[];
+}
+
+const HERO_FALLBACK: HeroApiParlay = {
+  legs: [
+    { sport: "NBA", pick: "Celtics ML", odds: -145, book: "FanDuel", game: "PHI @ BOS" },
+    { sport: "MLB", pick: "Dodgers -1.5", odds: 110, book: "DraftKings", game: "LAD @ COL" },
+    { sport: "NHL", pick: "Over 5.5", odds: 105, book: "BetMGM", game: "STL @ UTA" },
+  ],
+  combinedOdds: "+487",
+  evPercent: 7.2,
+  confidence: 82,
+  payout: 587,
+};
+
+function LiveHeroParlay() {
+  const [parlay, setParlay] = useState<HeroApiParlay>(HERO_FALLBACK);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch(
+          "/api/parlays?sports=nba,mlb,nhl,ncaab&legs=3&count=1&sort=ev&tier=admin",
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data: HeroApiResponse = await res.json();
+        const p = data.parlays?.[0];
+        if (!p || !p.legs || p.legs.length === 0) return;
+        if (!cancelled) setParlay(p);
+      } catch {
+        // Keep fallback on network errors
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <ParlayPlayer
+      legs={parlay.legs}
+      combinedOdds={parlay.combinedOdds}
+      evPercent={parlay.evPercent}
+      confidence={parlay.confidence}
+      payout={parlay.payout}
+    />
   );
 }

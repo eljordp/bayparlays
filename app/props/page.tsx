@@ -631,6 +631,17 @@ export default function PropsPage() {
                     >
                       {isCopied ? "Copied" : "Copy pick"}
                     </button>
+                    {row.source === "underdog" && (
+                      <a
+                        href="https://underdogfantasy.com/pick-em/higher-lower"
+                        target="_blank"
+                        rel="noopener noreferrer sponsored"
+                        className="hidden md:inline text-[11px] text-[#22c55e]/70 hover:text-[#22c55e] transition-colors"
+                        title="Place this pick at Underdog Fantasy"
+                      >
+                        Bet on Underdog →
+                      </a>
+                    )}
 
                     {/* Mobile line row */}
                     <div className="md:hidden ml-auto text-right">
