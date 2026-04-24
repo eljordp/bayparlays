@@ -171,11 +171,18 @@ export async function fetchUnderdogLines(): Promise<UnderdogLine[]> {
       "https://api.underdogfantasy.com/beta/v5/over_under_lines",
       {
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; BayParlays/1.0)",
-          Accept: "application/json",
+          // Cloudflare rejects Node-ish or "bot"-ish user agents on this
+          // endpoint even though the request is public/unauthed. A standard
+          // desktop Chrome UA gets through. Found via debug endpoint that a
+          // custom UA returned 0 lines while a browser UA returned 7,200+.
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
         },
-        // Next.js fetch cache as a secondary layer (15min)
-        next: { revalidate: 900 },
+        // In-memory cache (20min) is the primary layer; disable Next.js fetch
+        // cache to avoid serving a stale bad response across deploys.
+        cache: "no-store",
       },
     );
     if (!res.ok) {
