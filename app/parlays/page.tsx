@@ -150,12 +150,22 @@ export default function ParlaysPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingSimSigs, setPendingSimSigs] = useState<Set<string>>(new Set());
+  // Tracks whether the pending-sims fetch has completed. Without this the
+  // button briefly renders as "Try $10 in Simulator" before the fetch
+  // resolves and flips it to "Already in Sim" — users who click fast enough
+  // hit a 409 instead of seeing the blocked state upfront.
+  const [pendingSimsLoaded, setPendingSimsLoaded] = useState(false);
 
   const { user, isPro, isAdmin: isAuthAdmin, tier } = useAuth();
 
   // Fetch pending sim bets to mark parlays already placed
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Logged-out users have no sims by definition — mark as loaded so the
+      // button renders its normal state instead of an indefinite "Checking".
+      setPendingSimsLoaded(true);
+      return;
+    }
     async function fetchPendingSims() {
       try {
         const res = await fetch(`/api/sim?user_id=${user!.id}`);
@@ -175,6 +185,8 @@ export default function ParlaysPage() {
         }
       } catch {
         // silent
+      } finally {
+        setPendingSimsLoaded(true);
       }
     }
     fetchPendingSims();
@@ -606,6 +618,7 @@ export default function ParlaysPage() {
                       onCopy={handleCopy}
                       onSaveCard={handleSaveCard}
                       pendingSimSigs={pendingSimSigs}
+                      pendingSimsLoaded={pendingSimsLoaded}
                       isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -630,6 +643,7 @@ export default function ParlaysPage() {
                         onCopy={handleCopy}
                       onSaveCard={handleSaveCard}
                         pendingSimSigs={pendingSimSigs}
+                      pendingSimsLoaded={pendingSimsLoaded}
                         isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -692,6 +706,7 @@ export default function ParlaysPage() {
                         onCopy={handleCopy}
                       onSaveCard={handleSaveCard}
                         pendingSimSigs={pendingSimSigs}
+                      pendingSimsLoaded={pendingSimsLoaded}
                         isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -770,6 +785,7 @@ function ParlayCard({
   onCopy,
   onSaveCard,
   pendingSimSigs,
+  pendingSimsLoaded,
   isLockOfDay,
 }: {
   parlay: Parlay;
@@ -778,6 +794,7 @@ function ParlayCard({
   onCopy: (p: Parlay) => void;
   onSaveCard: (p: Parlay) => void;
   pendingSimSigs?: Set<string>;
+  pendingSimsLoaded?: boolean;
   isLockOfDay?: boolean;
 }) {
   const { user, isPro } = useAuth();
@@ -1074,32 +1091,46 @@ function ParlayCard({
         </button>
         </div>
 
-        {/* Try in Sim */}
+        {/* Try in Sim — button state resolves once pendingSims fetch lands.
+             Until then it shows "Checking..." so a fast click can't slip
+             through before we know whether this parlay is already placed. */}
         {user && isPro && (
           <button
             onClick={tryInSim}
-            disabled={simPlacing || !!simResult || isDuplicate}
+            disabled={simPlacing || !!simResult || isDuplicate || !pendingSimsLoaded}
             className="w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 mt-2"
             style={{
-              background: isDuplicate
+              background: !pendingSimsLoaded
+                ? "rgba(255,255,255,0.04)"
+                : isDuplicate
                 ? "rgba(255,255,255,0.04)"
                 : simResult
                 ? "rgba(34,197,94,0.1)"
                 : "rgba(255,59,59,0.08)",
-              color: isDuplicate
+              color: !pendingSimsLoaded
+                ? "rgba(255,255,255,0.3)"
+                : isDuplicate
                 ? "rgba(255,255,255,0.3)"
                 : simResult
                 ? "#22C55E"
                 : "#FF3B3B",
-              border: isDuplicate
+              border: !pendingSimsLoaded
+                ? "1px solid rgba(255,255,255,0.06)"
+                : isDuplicate
                 ? "1px solid rgba(255,255,255,0.06)"
                 : simResult
                 ? "1px solid rgba(34,197,94,0.2)"
                 : "1px solid rgba(255,59,59,0.15)",
-              cursor: isDuplicate ? "not-allowed" : undefined,
+              cursor: isDuplicate || !pendingSimsLoaded ? "not-allowed" : undefined,
             }}
           >
-            {simPlacing ? "Placing..." : isDuplicate ? "Already in Sim" : simResult || "Try $10 in Simulator"}
+            {!pendingSimsLoaded
+              ? "Checking..."
+              : simPlacing
+              ? "Placing..."
+              : isDuplicate
+              ? "Already in Sim"
+              : simResult || "Try $10 in Simulator"}
           </button>
         )}
 
