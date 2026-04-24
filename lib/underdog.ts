@@ -54,7 +54,9 @@ interface RawFeedOption {
 
 interface RawFeedLine {
   id: string;
-  stat_value?: number;
+  // Underdog's API returns stat_value as a string ("22.5") in production even
+  // though it's numeric. Always coerce via Number() at use.
+  stat_value?: number | string;
   options?: RawFeedOption[];
   over_under?: {
     appearance_stat?: {
@@ -205,8 +207,11 @@ export async function fetchUnderdogLines(): Promise<UnderdogLine[]> {
     for (const line of data.over_under_lines || []) {
       const statRaw = line.over_under?.appearance_stat?.stat;
       const appId = line.over_under?.appearance_stat?.appearance_id;
-      const lineValue = line.stat_value;
-      if (!statRaw || !appId || typeof lineValue !== "number") continue;
+      // stat_value arrives as a string ("22.5") from Underdog's API in
+      // production. Coerce to number and verify finiteness; a bare typeof
+      // check rejects 100% of real lines.
+      const lineValue = Number(line.stat_value);
+      if (!statRaw || !appId || !Number.isFinite(lineValue)) continue;
       // Only real player props; skip combos, prediction markets, etc.
       if (line.over_under?.category !== "player_prop") continue;
 
