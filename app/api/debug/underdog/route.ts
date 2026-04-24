@@ -55,6 +55,37 @@ export async function GET() {
     // Also run the actual library path to see why matches fail
     let libReport: Record<string, unknown> | null = null;
     try {
+      // ALSO do a raw fetch that matches the library's signature exactly,
+      // so we can compare what the LIBRARY sees vs the debug's direct fetch.
+      let libRawLineCount = 0;
+      let libRawStatus = 0;
+      let libRawHasData = false;
+      try {
+        const libRaw = await fetch(
+          "https://api.underdogfantasy.com/beta/v5/over_under_lines",
+          {
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+              Accept: "application/json, text/plain, */*",
+              "Accept-Language": "en-US,en;q=0.9",
+            },
+            cache: "no-store",
+          },
+        );
+        libRawStatus = libRaw.status;
+        const j = (await libRaw.json()) as { over_under_lines?: unknown[] };
+        libRawHasData = true;
+        libRawLineCount = Array.isArray(j.over_under_lines)
+          ? j.over_under_lines.length
+          : 0;
+      } catch (e) {
+        libRawStatus = -1;
+        libRawHasData = false;
+        libRawLineCount = -1;
+        console.error("libRaw fetch failed:", e);
+      }
+
       const lines = await fetchUnderdogLines();
       const index = buildUnderdogIndex(lines);
       const byKey = index.byPlayerStat;
@@ -85,6 +116,9 @@ export async function GET() {
         }
       }
       libReport = {
+        libRawStatus,
+        libRawHasData,
+        libRawLineCount,
         lineCountFromLib: lines.length,
         sportsAvailable,
         indexSize: byKey.size,
