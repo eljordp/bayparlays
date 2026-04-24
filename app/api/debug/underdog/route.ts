@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import {
+  fetchUnderdogLines,
+  buildUnderdogIndex,
+  findUnderdogLine,
+  normalizePlayerKey,
+} from "@/lib/underdog";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -47,6 +53,49 @@ export async function GET() {
       const text = await res.text();
       bodyPreview = text.slice(0, 800);
     }
+    // Also run the actual library path to see why matches fail
+    let libReport: Record<string, unknown> | null = null;
+    try {
+      const lines = await fetchUnderdogLines();
+      const index = buildUnderdogIndex(lines);
+      const byKey = index.byPlayerStat;
+      const sportsAvailable = Array.from(index.sportAvailable);
+      // Sample a few NBA + MLB + NHL players to see what keys look like
+      const nbaProbes = [
+        "Shai Gilgeous-Alexander",
+        "Jayson Tatum",
+        "Luka Doncic",
+      ];
+      const probeResults = nbaProbes.map((name) => {
+        const key = `NBA|${normalizePlayerKey(name)}|points`;
+        const hit = byKey.get(key);
+        return {
+          name,
+          lookupKey: key,
+          found: !!hit,
+          matched: hit ? { stat: hit.stat, line: hit.lineValue } : null,
+        };
+      });
+      // Show first 5 keys in the index for cross-reference
+      const firstFiveKeys: string[] = [];
+      let i = 0;
+      for (const k of byKey.keys()) {
+        if (k.startsWith("NBA|")) {
+          firstFiveKeys.push(k);
+          if (++i >= 10) break;
+        }
+      }
+      libReport = {
+        lineCountFromLib: lines.length,
+        sportsAvailable,
+        indexSize: byKey.size,
+        firstNBAKeys: firstFiveKeys,
+        probeResults,
+      };
+    } catch (e) {
+      libReport = { libError: String(e) };
+    }
+
     return NextResponse.json({
       status: res.status,
       ok: res.ok,
@@ -55,6 +104,7 @@ export async function GET() {
       headers,
       parsedShape,
       bodyPreview,
+      libReport,
     });
   } catch (e) {
     return NextResponse.json(
