@@ -13,6 +13,7 @@ import {
   BarChart3,
   Target,
   Shield,
+  Download,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -293,6 +294,43 @@ export default function ParlaysPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleSaveCard = async (parlay: Parlay) => {
+    // Build an OG image URL with the parlay encoded as a JSON query param,
+    // fetch the PNG blob, and trigger a download. Static-image share cards
+    // replace the old Remotion video flow — same info, 1/10 the code, loads
+    // instantly, pattern-breaks dark-mode timelines.
+    const compactLegs = parlay.legs.map((l) => ({
+      sport: l.sport,
+      pick: l.pick,
+      game: l.game,
+      odds: formatOdds(l.odds),
+    }));
+    const params = new URLSearchParams({
+      legs: JSON.stringify(compactLegs),
+      combined: parlay.combinedOdds,
+      payout: `$${Math.round(parlay.payout)}`,
+      ev: parlay.evPercent.toFixed(1),
+      confidence: parlay.confidence.toFixed(0),
+    });
+    const url = `/api/og/parlay?${params.toString()}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = `bayparlays-${parlay.id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(href);
+    } catch {
+      // Fall back to opening the image in a new tab if blob download fails.
+      window.open(url, "_blank");
+    }
+  };
+
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
       <AppNav />
@@ -566,6 +604,7 @@ export default function ParlaysPage() {
                       index={idx}
                       copiedId={copiedId}
                       onCopy={handleCopy}
+                      onSaveCard={handleSaveCard}
                       pendingSimSigs={pendingSimSigs}
                       isLockOfDay={
                         idx === 0 &&
@@ -589,6 +628,7 @@ export default function ParlaysPage() {
                         index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
+                      onSaveCard={handleSaveCard}
                         pendingSimSigs={pendingSimSigs}
                         isLockOfDay={
                         idx === 0 &&
@@ -650,6 +690,7 @@ export default function ParlaysPage() {
                         index={idx}
                         copiedId={copiedId}
                         onCopy={handleCopy}
+                      onSaveCard={handleSaveCard}
                         pendingSimSigs={pendingSimSigs}
                         isLockOfDay={
                         idx === 0 &&
@@ -727,6 +768,7 @@ function ParlayCard({
   index,
   copiedId,
   onCopy,
+  onSaveCard,
   pendingSimSigs,
   isLockOfDay,
 }: {
@@ -734,6 +776,7 @@ function ParlayCard({
   index: number;
   copiedId: string | null;
   onCopy: (p: Parlay) => void;
+  onSaveCard: (p: Parlay) => void;
   pendingSimSigs?: Set<string>;
   isLockOfDay?: boolean;
 }) {
@@ -972,7 +1015,8 @@ function ParlayCard({
           </div>
         )}
 
-        {/* Copy button */}
+        {/* Action row — Copy picks + Save share card */}
+        <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => onCopy(parlay)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
@@ -1006,6 +1050,29 @@ function ParlayCard({
             </>
           )}
         </button>
+
+        {/* Save Card — static PNG share card, replaces Remotion video flow */}
+        <button
+          onClick={() => onSaveCard(parlay)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            color: "rgba(255,255,255,0.5)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.color = "#ededed";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+          }}
+        >
+          <Download size={14} />
+          Save Card
+        </button>
+        </div>
 
         {/* Try in Sim */}
         {user && isPro && (
