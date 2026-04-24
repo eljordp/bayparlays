@@ -634,8 +634,22 @@ export default function PropsPage() {
 
                     {/* Mobile line row */}
                     <div className="md:hidden ml-auto text-right">
-                      <div className="text-[10px] uppercase tracking-wider text-white/30">
-                        Line
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span className="text-[10px] uppercase tracking-wider text-white/30">
+                          {row.source === "underdog" ? "Underdog" : "Line"}
+                        </span>
+                        {row.source === "underdog" && (
+                          <span
+                            className="text-[8px] font-bold uppercase tracking-wider px-1 py-px rounded"
+                            style={{
+                              background: "rgba(34,197,94,0.12)",
+                              color: "#22c55e",
+                              border: "1px solid rgba(34,197,94,0.25)",
+                            }}
+                          >
+                            LIVE
+                          </span>
+                        )}
                       </div>
                       <div
                         className="text-sm font-semibold text-white/80"
