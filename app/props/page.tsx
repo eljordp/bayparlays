@@ -16,6 +16,9 @@ interface PropRow {
   typicalLine: number;
   edge: number;
   games: number;
+  source?: "underdog" | "heuristic";
+  overOdds?: number | null;
+  underOdds?: number | null;
 }
 
 type Sport = "nba" | "wnba" | "mlb" | "nhl" | "nfl" | "mls" | "epl";
@@ -577,8 +580,23 @@ export default function PropsPage() {
 
                   {/* Line */}
                   <div className="hidden md:block md:col-span-2">
-                    <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1">
-                      Typical line
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[10px] uppercase tracking-wider text-white/30">
+                        {row.source === "underdog" ? "Underdog line" : "Typical line"}
+                      </span>
+                      {row.source === "underdog" && (
+                        <span
+                          className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                          style={{
+                            background: "rgba(34,197,94,0.12)",
+                            color: "#22c55e",
+                            border: "1px solid rgba(34,197,94,0.25)",
+                          }}
+                          title="Real market line from Underdog Fantasy"
+                        >
+                          LIVE
+                        </span>
+                      )}
                     </div>
                     <div
                       className="text-lg font-semibold text-white/80"
@@ -588,6 +606,9 @@ export default function PropsPage() {
                     </div>
                     <div className="text-[11px] text-white/40 mt-0.5">
                       {currentDisplay.unit}
+                      {row.source === "underdog" && row.overOdds !== null && row.overOdds !== undefined && (
+                        <> · O {row.overOdds > 0 ? "+" : ""}{row.overOdds}</>
+                      )}
                     </div>
                   </div>
 

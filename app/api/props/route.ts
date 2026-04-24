@@ -24,6 +24,12 @@ import {
   getEPLPlayerStats,
   type SoccerPlayerStats,
 } from "@/lib/espn-soccer-stats";
+import {
+  fetchUnderdogLines,
+  buildUnderdogIndex,
+  findUnderdogLine,
+  type UnderdogIndex,
+} from "@/lib/underdog";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +43,11 @@ export type PropRow = {
   typicalLine: number;
   edge: number;
   games: number;
+  // When Underdog has a real market line for this player+stat, we overlay it
+  // here so the UI can show "real" vs "heuristic". Absent fields = heuristic.
+  source?: "underdog" | "heuristic";
+  overOdds?: number | null;
+  underOdds?: number | null;
 };
 
 export type PropCategory = {
@@ -54,6 +65,89 @@ function typicalLine(avg: number, buffer: number): number {
 function r(n: number, p = 2): number {
   const m = Math.pow(10, p);
   return Math.round(n * m) / m;
+}
+
+// Map our internal sport key to Underdog's sport_id values
+const UNDERDOG_SPORT_MAP: Record<string, string> = {
+  nba: "NBA",
+  wnba: "WNBA",
+  mlb: "MLB",
+  nhl: "NHL",
+  nfl: "NFL",
+};
+
+// Map each category key to the Underdog stat key it should look up.
+// Categories not in this map won't attempt an Underdog overlay.
+const CATEGORY_TO_UNDERDOG_STAT: Record<string, string> = {
+  // NBA / WNBA share category keys
+  points: "points",
+  rebounds: "rebounds",
+  assists: "assists",
+  threes: "threes",
+  steals: "steals",
+  blocks: "blocks",
+  // MLB
+  pitcher_strikeouts: "strikeouts",
+  batter_hits: "hits",
+  batter_rbis: "rbis",
+  batter_home_runs: "home_runs",
+  batter_total_bases: "total_bases",
+  batter_stolen_bases: "stolen_bases",
+  batter_runs: "runs",
+  // NHL
+  skater_goals: "goals",
+  skater_points: "points",
+  skater_shots: "shots",
+  // NFL
+  qb_passing_yards: "passing_yards",
+  qb_passing_tds: "passing_tds",
+  rb_rushing_yards: "rushing_yards",
+  wr_receiving_yards: "receiving_yards",
+  wr_receptions: "receptions",
+};
+
+/**
+ * Mutates each row in place: if Underdog has a real market line for
+ * (sport, player, stat), overwrite typicalLine with the real one and
+ * recompute edge against it. Tags source="underdog" when matched.
+ * Unmatched rows keep the heuristic line and tag source="heuristic".
+ */
+function overlayUnderdogLines(
+  rows: PropRow[],
+  sportKey: string,
+  categoryKey: string,
+  index: UnderdogIndex | null,
+): void {
+  const underdogSport = UNDERDOG_SPORT_MAP[sportKey];
+  const underdogStat = CATEGORY_TO_UNDERDOG_STAT[categoryKey];
+  if (!index || !underdogSport || !underdogStat) {
+    for (const row of rows) row.source = "heuristic";
+    return;
+  }
+  for (const row of rows) {
+    const line = findUnderdogLine(index, underdogSport, row.player, underdogStat);
+    if (line) {
+      row.typicalLine = line.lineValue;
+      row.edge = r(row.average - line.lineValue, 2);
+      row.source = "underdog";
+      row.overOdds = line.overOdds;
+      row.underOdds = line.underOdds;
+    } else {
+      row.source = "heuristic";
+    }
+  }
+}
+
+// Apply overlay to every category in a response bundle. Called from each
+// sport branch once categories are built.
+function applyOverlay(
+  categories: Record<string, PropCategory>,
+  sportKey: string,
+  index: UnderdogIndex | null,
+): void {
+  for (const [catKey, cat] of Object.entries(categories)) {
+    overlayUnderdogLines(cat.rows, sportKey, catKey, index);
+  }
 }
 
 // ─── NBA builders ────────────────────────────────────────────────────────────
@@ -627,6 +721,15 @@ export async function GET(req: Request) {
                 : "nba";
   const updated = new Date().toISOString();
 
+  // Underdog's public feed covers every US sport we care about (NBA, WNBA,
+  // MLB, NHL, NFL). Fetch in parallel with the sport-specific ESPN pulls.
+  // If Underdog is unreachable we silently fall back to heuristic lines.
+  const underdogPromise = UNDERDOG_SPORT_MAP[sport]
+    ? fetchUnderdogLines()
+        .then(buildUnderdogIndex)
+        .catch(() => null)
+    : Promise.resolve(null);
+
   if (sport === "mlb") {
     const [pitchers, batters] = await Promise.all([
       getMLBPitcherStats(),
@@ -673,6 +776,7 @@ export async function GET(req: Request) {
       },
     };
 
+    applyOverlay(categories, "mlb", await underdogPromise);
     return NextResponse.json({ sport: "mlb", updated, categories });
   }
 
@@ -706,6 +810,7 @@ export async function GET(req: Request) {
       },
     };
 
+    applyOverlay(categories, "nhl", await underdogPromise);
     return NextResponse.json({ sport: "nhl", updated, categories });
   }
 
@@ -763,6 +868,7 @@ export async function GET(req: Request) {
       },
     };
 
+    applyOverlay(categories, "nfl", await underdogPromise);
     return NextResponse.json({ sport: "nfl", updated, categories });
   }
 
@@ -786,23 +892,25 @@ export async function GET(req: Request) {
     }
 
     // Same buffer/edge tuning as NBA — stat distributions are very similar.
+    const wnbaCategories: Record<string, PropCategory> = {
+      points: { label: "Points", rows: topNBA(players, "points", 2.5, 3) },
+      rebounds: {
+        label: "Rebounds",
+        rows: topNBA(players, "rebounds", 1.5, 2),
+      },
+      assists: {
+        label: "Assists",
+        rows: topNBA(players, "assists", 1.5, 2),
+      },
+      threes: { label: "Threes", rows: topNBA(players, "threes", 2.5, 1.5) },
+      steals: { label: "Steals", rows: topNBA(players, "steals", 0.5, 0.5) },
+      blocks: { label: "Blocks", rows: topNBA(players, "blocks", 0.5, 0.5) },
+    };
+    applyOverlay(wnbaCategories, "wnba", await underdogPromise);
     return NextResponse.json({
       sport: "wnba",
       updated,
-      categories: {
-        points: { label: "Points", rows: topNBA(players, "points", 2.5, 3) },
-        rebounds: {
-          label: "Rebounds",
-          rows: topNBA(players, "rebounds", 1.5, 2),
-        },
-        assists: {
-          label: "Assists",
-          rows: topNBA(players, "assists", 1.5, 2),
-        },
-        threes: { label: "Threes", rows: topNBA(players, "threes", 2.5, 1.5) },
-        steals: { label: "Steals", rows: topNBA(players, "steals", 0.5, 0.5) },
-        blocks: { label: "Blocks", rows: topNBA(players, "blocks", 0.5, 0.5) },
-      },
+      categories: wnbaCategories,
     });
   }
 
@@ -873,17 +981,20 @@ export async function GET(req: Request) {
   const stealsRows = topNBA(players, "steals", 0.5, 0.5);
   const blocksRows = topNBA(players, "blocks", 0.5, 0.5);
 
+  const nbaCategories: Record<string, PropCategory> = {
+    points: { label: "Points", rows: pointsRows },
+    rebounds: { label: "Rebounds", rows: reboundsRows },
+    assists: { label: "Assists", rows: assistsRows },
+    threes: { label: "Threes", rows: threesRows },
+    steals: { label: "Steals", rows: stealsRows },
+    blocks: { label: "Blocks", rows: blocksRows },
+  };
+  applyOverlay(nbaCategories, "nba", await underdogPromise);
+
   return NextResponse.json({
     sport: "nba",
     updated,
-    categories: {
-      points: { label: "Points", rows: pointsRows },
-      rebounds: { label: "Rebounds", rows: reboundsRows },
-      assists: { label: "Assists", rows: assistsRows },
-      threes: { label: "Threes", rows: threesRows },
-      steals: { label: "Steals", rows: stealsRows },
-      blocks: { label: "Blocks", rows: blocksRows },
-    },
+    categories: nbaCategories,
     // Backwards-compat: keep legacy top-level keys so clients reading the old
     // shape (before the page update lands) continue to work.
     points: pointsRows,
