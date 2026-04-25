@@ -47,7 +47,7 @@ export default function SubscribePage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-white/20" />
+        <Loader2 className="w-6 h-6 animate-spin text-black/30" />
       </div>
     }>
       <SubscribeContent />
@@ -154,13 +154,13 @@ function SubscribeContent() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-16 left-0 right-0 z-40 bg-[#FF3B3B]/10 border-b border-[#FF3B3B]/20"
+            className="fixed top-16 left-0 right-0 z-40 bg-[#0a0a0a]/10 border-b border-[#0a0a0a]/20"
           >
             <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-4 flex items-center gap-3">
-              <div className="w-6 h-6 rounded-full bg-[#FF3B3B]/20 flex items-center justify-center flex-shrink-0">
-                <Check className="w-3.5 h-3.5 text-[#FF3B3B]" />
+              <div className="w-6 h-6 rounded-full bg-[#0a0a0a]/20 flex items-center justify-center flex-shrink-0">
+                <Check className="w-3.5 h-3.5 text-[#0a0a0a]" />
               </div>
-              <p className="text-sm text-[#FF3B3B]">
+              <p className="text-sm text-[#0a0a0a]">
                 You&apos;re in. Pro access is now active. Start building unlimited parlays.
               </p>
             </div>
@@ -171,10 +171,10 @@ function SubscribeContent() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-16 left-0 right-0 z-40 bg-white/[0.03] border-b border-white/[0.06]"
+            className="fixed top-16 left-0 right-0 z-40 bg-black/[0.04] border-b border-black/[0.06]"
           >
             <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-4">
-              <p className="text-sm text-white/50">
+              <p className="text-sm text-black/55">
                 Checkout canceled. No charge was made. You can start again whenever you&apos;re ready.
               </p>
             </div>
@@ -203,7 +203,7 @@ function SubscribeContent() {
             <motion.p
               variants={fadeUp}
               custom={1}
-              className="text-lg md:text-xl text-white/40 max-w-lg mx-auto leading-relaxed"
+              className="text-lg md:text-xl text-black/45 max-w-lg mx-auto leading-relaxed"
             >
               Unlimited parlays, full builder access, every edge calculated.
             </motion.p>
@@ -218,7 +218,7 @@ function SubscribeContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-center text-sm text-white/30 mb-10"
+            className="text-center text-sm text-black/40 mb-10"
           >
             Sharp includes a 7-day free trial. Cancel anytime before it ends — no charge.
           </motion.p>
@@ -237,15 +237,15 @@ function SubscribeContent() {
                 custom={i + 2}
                 className={`relative rounded-2xl p-7 md:p-8 ${
                   plan.highlight
-                    ? "border-2 border-[#FF3B3B]/30 bg-[#FF3B3B]/[0.04]"
-                    : "border border-white/[0.06] bg-white/[0.015]"
+                    ? "border-2 border-[#0a0a0a]/30 bg-[#0a0a0a]/[0.04]"
+                    : "border border-black/[0.06] bg-black/[0.03]"
                 }`}
               >
                 {plan.highlight && (
                   <>
-                    <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-[#FF3B3B]/[0.1] to-transparent pointer-events-none" />
+                    <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-[#0a0a0a]/[0.1] to-transparent pointer-events-none" />
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B] text-[#0a0a0a] px-4 py-1.5 rounded-full">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#0a0a0a] text-white px-4 py-1.5 rounded-full">
                         Most Popular
                       </span>
                     </div>
@@ -255,7 +255,7 @@ function SubscribeContent() {
                 <div className="relative">
                   <div className="mb-6">
                     <span className={`text-xs font-bold uppercase tracking-[0.2em] ${
-                      plan.highlight ? "text-[#FF3B3B]" : "text-white/40"
+                      plan.highlight ? "text-[#0a0a0a]" : "text-black/45"
                     }`}>
                       {plan.name}
                     </span>
@@ -263,26 +263,26 @@ function SubscribeContent() {
 
                   <div className="mb-2">
                     <span
-                      className="text-5xl font-black tracking-tight text-white"
+                      className="text-5xl font-black tracking-tight text-black"
                       style={{ fontFamily: "var(--font-geist-mono)" }}
                     >
                       {plan.price}
                     </span>
-                    <span className="text-sm text-white/30 ml-1">{plan.period}</span>
+                    <span className="text-sm text-black/40 ml-1">{plan.period}</span>
                   </div>
-                  <p className="text-sm text-white/35 mb-8">{plan.desc}</p>
+                  <p className="text-sm text-black/45 mb-8">{plan.desc}</p>
 
                   <div className="space-y-3 mb-8">
                     {plan.features.map((item) => (
                       <div key={item} className="flex items-start gap-3">
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          plan.highlight ? "bg-[#FF3B3B]/15" : "bg-white/[0.06]"
+                          plan.highlight ? "bg-[#0a0a0a]/15" : "bg-black/[0.06]"
                         }`}>
                           <Check className={`w-3 h-3 ${
-                            plan.highlight ? "text-[#FF3B3B]" : "text-white/40"
+                            plan.highlight ? "text-[#0a0a0a]" : "text-black/45"
                           }`} />
                         </div>
-                        <span className="text-sm text-white/60 leading-relaxed">{item}</span>
+                        <span className="text-sm text-black/60 leading-relaxed">{item}</span>
                       </div>
                     ))}
                   </div>
@@ -290,7 +290,7 @@ function SubscribeContent() {
                   {"isInquiry" in plan && plan.isInquiry ? (
                     <a
                       href="mailto:eljordp@gmail.com?subject=BayParlays Enterprise Inquiry"
-                      className="w-full py-3.5 rounded-full text-sm font-semibold bg-white/[0.06] text-white/80 hover:bg-white/[0.1] border border-white/[0.08] transition-colors duration-200 flex items-center justify-center gap-2"
+                      className="w-full py-3.5 rounded-full text-sm font-semibold bg-black/[0.06] text-black/80 hover:bg-black/[0.1] border border-black/[0.08] transition-colors duration-200 flex items-center justify-center gap-2"
                     >
                       {plan.cta}
                     </a>
@@ -300,8 +300,8 @@ function SubscribeContent() {
                       disabled={checkoutLoading === plan.id}
                       className={`w-full py-3.5 rounded-full text-sm font-semibold transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
                         plan.highlight
-                          ? "bg-[#FF3B3B] text-[#0a0a0a] hover:bg-[#FF5252]"
-                          : "bg-white/[0.06] text-white/80 hover:bg-white/[0.1] border border-white/[0.08]"
+                          ? "bg-[#0a0a0a] text-white hover:bg-[#222]"
+                          : "bg-black/[0.06] text-black/80 hover:bg-black/[0.1] border border-black/[0.08]"
                       }`}
                     >
                       {checkoutLoading === plan.id ? (
@@ -315,7 +315,7 @@ function SubscribeContent() {
                     </button>
                   )}
 
-                  <p className="text-xs text-white/20 text-center mt-4">
+                  <p className="text-xs text-black/30 text-center mt-4">
                     {plan.id === "sharp" ? "7-day free trial. Cancel anytime." : "Cancel anytime."}
                   </p>
                 </div>
@@ -326,7 +326,7 @@ function SubscribeContent() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="py-16 md:py-32 border-t border-white/[0.04]">
+      <section className="py-16 md:py-32 border-t border-black/[0.04]">
         <div className="w-full max-w-[720px] mx-auto px-6 md:px-10">
           <motion.div
             initial="hidden"
@@ -337,7 +337,7 @@ function SubscribeContent() {
             <motion.p
               variants={fadeUp}
               custom={0}
-              className="text-xs font-medium uppercase tracking-[0.2em] text-[#FF3B3B]/60 mb-4"
+              className="text-xs font-medium uppercase tracking-[0.2em] text-[#0a0a0a]/60 mb-4"
             >
               FAQ
             </motion.p>
@@ -356,15 +356,15 @@ function SubscribeContent() {
                   key={i}
                   variants={fadeUp}
                   custom={i + 2}
-                  className="border border-white/[0.06] rounded-xl overflow-hidden"
+                  className="border border-black/[0.06] rounded-xl overflow-hidden"
                 >
                   <button
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-white/[0.02] transition-colors duration-200"
+                    className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-black/[0.04] transition-colors duration-200"
                   >
-                    <span className="text-sm font-medium text-white/80 pr-4">{faq.q}</span>
+                    <span className="text-sm font-medium text-black/80 pr-4">{faq.q}</span>
                     <ChevronDown
-                      className={`w-4 h-4 text-white/30 flex-shrink-0 transition-transform duration-300 ${
+                      className={`w-4 h-4 text-black/40 flex-shrink-0 transition-transform duration-300 ${
                         openFaq === i ? "rotate-180" : ""
                       }`}
                     />
@@ -379,7 +379,7 @@ function SubscribeContent() {
                         className="overflow-hidden"
                       >
                         <div className="px-6 pb-5">
-                          <p className="text-sm text-white/35 leading-relaxed">{faq.a}</p>
+                          <p className="text-sm text-black/45 leading-relaxed">{faq.a}</p>
                         </div>
                       </motion.div>
                     )}
@@ -392,19 +392,19 @@ function SubscribeContent() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/[0.04] py-16 md:py-20">
+      <footer className="border-t border-black/[0.04] py-16 md:py-20">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-8 mb-16">
             <div className="md:col-span-2">
               <Logo size="sm" />
-              <p className="text-sm text-white/30 mt-3 max-w-sm leading-relaxed">
+              <p className="text-sm text-black/40 mt-3 max-w-sm leading-relaxed">
                 AI-powered parlay optimization. We find the best odds across
                 every sportsbook so you can bet with a mathematical edge.
               </p>
             </div>
 
             <div>
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/20 mb-4 font-medium">
+              <h4 className="text-xs uppercase tracking-[0.15em] text-black/30 mb-4 font-medium">
                 Product
               </h4>
               <div className="space-y-3">
@@ -412,7 +412,7 @@ function SubscribeContent() {
                   <Link
                     key={link}
                     href={`/${link.toLowerCase()}`}
-                    className="block text-sm text-white/40 hover:text-white/70 transition-colors"
+                    className="block text-sm text-black/45 hover:text-black/70 transition-colors"
                   >
                     {link}
                   </Link>
@@ -421,7 +421,7 @@ function SubscribeContent() {
             </div>
 
             <div>
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/20 mb-4 font-medium">
+              <h4 className="text-xs uppercase tracking-[0.15em] text-black/30 mb-4 font-medium">
                 Company
               </h4>
               <div className="space-y-3">
@@ -429,7 +429,7 @@ function SubscribeContent() {
                   <Link
                     key={link}
                     href={`/${link.toLowerCase()}`}
-                    className="block text-sm text-white/40 hover:text-white/70 transition-colors"
+                    className="block text-sm text-black/45 hover:text-black/70 transition-colors"
                   >
                     {link}
                   </Link>
@@ -438,11 +438,11 @@ function SubscribeContent() {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-white/20">
+          <div className="pt-8 border-t border-black/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-black/30">
               &copy; {new Date().getFullYear()} BayParlays. All rights reserved.
             </p>
-            <p className="text-xs text-white/15 max-w-lg text-center md:text-right leading-relaxed">
+            <p className="text-xs text-black/25 max-w-lg text-center md:text-right leading-relaxed">
               For entertainment purposes only. BayParlays does not accept or
               place bets. Please gamble responsibly. If you or someone you
               know has a gambling problem, call 1-800-GAMBLER.

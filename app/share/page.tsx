@@ -1,358 +1,224 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Share2, ExternalLink, Download } from "lucide-react";
-import type { PlayerRef } from "@remotion/player";
 import { AppNav } from "@/app/components/AppNav";
-import { ParlayPlayer } from "../components/ParlayPlayer";
-import type { ParlayLeg } from "../components/ParlayVideo";
 
-/* ─── Types matching the API response ─── */
+// Static share-card preview. Pulls today's top parlay from /api/parlays and
+// renders the OG image (the same edge-runtime route at /api/og/parlay) inline
+// so users can right-click → save, or click the explicit "Download" button.
+//
+// Replaces the prior Remotion video flow — static PNG cards pattern-break
+// dark-mode timelines on Twitter/IG much better than dark animated MP4s,
+// and a 1200x630 PNG saves cleanly to camera roll on mobile without any
+// screen-recording dance.
 
 interface ApiLeg {
   sport: string;
   game: string;
   pick: string;
-  market: string;
   odds: number;
-  book: string;
-  impliedProb: number;
-  edgeScore: number;
 }
 
 interface ApiParlay {
-  id: string;
   legs: ApiLeg[];
   combinedOdds: string;
-  combinedDecimal: number;
-  ev: number;
+  payout: number;
   evPercent: number;
   confidence: number;
-  payout: number;
-  timestamp: string;
 }
 
-interface ApiResponse {
-  parlays: ApiParlay[];
-  meta: {
-    sportsScanned: string[];
-    gamesAnalyzed: number;
-    legsEvaluated: number;
-    generatedAt: string;
-  };
+function formatOdds(odds: number): string {
+  return odds > 0 ? `+${odds}` : `${odds}`;
 }
-
-/* ─── Page ─── */
 
 export default function SharePage() {
   const [parlay, setParlay] = useState<ApiParlay | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [format, setFormat] = useState<"square" | "story">("square");
-  const [downloading, setDownloading] = useState(false);
-  const playerRef = useRef<PlayerRef>(null);
-  const playerWrapperRef = useRef<HTMLDivElement>(null);
-
-  async function handleDownloadImage() {
-    if (!playerWrapperRef.current || !parlay) return;
-    setDownloading(true);
-    try {
-      // Seek to a late frame so all elements (legs, odds, stats) have
-      // finished their fade-in before we capture. ParlayVideo runs 180
-      // frames at 30fps = 6s total; frame 140 is a safe "everything visible".
-      if (playerRef.current) {
-        playerRef.current.pause();
-        playerRef.current.seekTo(140);
-        await new Promise((r) => setTimeout(r, 150));
-      }
-      const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(playerWrapperRef.current, {
-        pixelRatio: 2,
-        cacheBust: true,
-        backgroundColor: "#0a0a0a",
-      });
-      const a = document.createElement("a");
-      a.download = `bayparlays-parlay-${parlay.combinedOdds}-${format}.png`;
-      a.href = dataUrl;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error("PNG export failed:", err);
-      alert("Couldn't generate the image. Try screenshotting the card instead.");
-    } finally {
-      if (playerRef.current) {
-        playerRef.current.seekTo(0);
-        playerRef.current.play();
-      }
-      setDownloading(false);
-    }
-  }
 
   useEffect(() => {
-    async function fetchTopParlay() {
+    async function load() {
       try {
-        const res = await fetch("/api/parlays?count=1&legs=3");
-        if (!res.ok) throw new Error("Failed to fetch");
-        const data: ApiResponse = await res.json();
-        if (data.parlays.length > 0) {
-          setParlay(data.parlays[0]);
-        } else {
-          setError("No parlays available right now.");
-        }
-      } catch {
-        setError("Unable to load parlay data.");
+        const res = await fetch(
+          "/api/parlays?sports=nba,mlb,nhl&legs=3&count=1&sort=confidence",
+        );
+        if (!res.ok) throw new Error("Failed to load parlay");
+        const data = await res.json();
+        if (data.parlays?.length > 0) setParlay(data.parlays[0]);
+        else throw new Error("No parlay available right now");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
         setLoading(false);
       }
     }
-    fetchTopParlay();
+    load();
   }, []);
 
-  /* Transform API legs to ParlayVideo legs */
-  const videoLegs: ParlayLeg[] = parlay
-    ? parlay.legs.map((leg) => ({
-        sport: leg.sport,
-        pick: leg.pick,
-        odds: leg.odds,
-        book: leg.book,
-        game: leg.game,
-      }))
-    : [];
+  const ogParams = parlay
+    ? new URLSearchParams({
+        legs: JSON.stringify(
+          parlay.legs.map((l) => ({
+            sport: l.sport,
+            pick: l.pick,
+            game: l.game,
+            odds: formatOdds(l.odds),
+          })),
+        ),
+        combined: parlay.combinedOdds,
+        payout: `$${Math.round(parlay.payout)}`,
+        ev: parlay.evPercent.toFixed(1),
+        confidence: parlay.confidence.toFixed(0),
+      })
+    : null;
+
+  const ogUrl = ogParams ? `/api/og/parlay?${ogParams.toString()}` : null;
+  const absoluteOgUrl = ogParams
+    ? `https://bayparlays.vercel.app/api/og/parlay?${ogParams.toString()}`
+    : null;
+
+  async function downloadImage() {
+    if (!ogUrl) return;
+    try {
+      const res = await fetch(ogUrl);
+      const blob = await res.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = `bayparlays-share-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(href);
+    } catch {
+      if (ogUrl) window.open(ogUrl, "_blank");
+    }
+  }
 
   return (
     <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       <AppNav />
-
-      {/* ─── Content ─── */}
-      <main className="pt-28 pb-20 px-4 md:pt-36 md:pb-32 md:px-6">
-        <div className="max-w-[900px] mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+      <div className="max-w-3xl mx-auto px-6 pt-32 pb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="flex items-center gap-2 mb-4 text-sm" style={{ color: "rgba(0,0,0,0.5)" }}>
+            <Share2 size={14} />
+            <span className="uppercase tracking-widest font-semibold">Share Card</span>
+          </div>
+          <h1
+            className="text-4xl md:text-6xl mb-3 leading-[1.05]"
+            style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
           >
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <Share2 size={16} style={{ color: "#0a0a0a" }} />
-              <span
-                className="text-xs font-medium tracking-widest uppercase"
-                style={{ color: "#0a0a0a" }}
-              >
-                Share Card
+            Today&apos;s Top Pick
+          </h1>
+          <p className="text-base mb-12" style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}>
+            Static share card optimized for Twitter / IG / iMessage. Save it, post it,
+            DM it. Renders identically on every device.
+          </p>
+
+          {/* Card preview */}
+          {loading && (
+            <div
+              className="w-full aspect-[1200/630] rounded-2xl flex items-center justify-center"
+              style={{ background: "rgba(0,0,0,0.04)" }}
+            >
+              <span className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
+                Generating today&apos;s card…
               </span>
             </div>
-            <h1
-              className="text-4xl md:text-6xl font-normal leading-[1.1] mb-5"
+          )}
+
+          {error && (
+            <div
+              className="w-full p-6 rounded-2xl text-sm"
               style={{
-                fontFamily: "'DM Serif Display', serif",
-                color: "#0a0a0a",
+                background: "rgba(239,68,68,0.06)",
+                border: "1px solid rgba(239,68,68,0.2)",
+                color: "#991b1b",
               }}
             >
-              Share Today&apos;s Top Pick
-            </h1>
-            <p
-              className="text-base md:text-lg max-w-lg mx-auto"
-              style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}
-            >
-              Screenshot or screen-record the animated card below to share on
-              your social channels.
-            </p>
-          </motion.div>
+              {error}
+            </div>
+          )}
 
-          {/* Format toggle */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="flex items-center justify-center gap-3 mb-10"
-          >
-            {(["square", "story"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFormat(f)}
-                className="px-7 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-200"
-                style={{
-                  background:
-                    format === f ? "#0a0a0a" : "rgba(0,0,0,0.06)",
-                  color: format === f ? "#FAFAF7" : "rgba(0,0,0,0.6)",
-                  border:
-                    format === f
-                      ? "2px solid #0a0a0a"
-                      : "2px solid rgba(0,0,0,0.12)",
-                  boxShadow:
-                    format === f
-                      ? "0 0 20px rgba(0,0,0,0.18)"
-                      : "none",
-                }}
-              >
-                {f === "square" ? "Square (Feed)" : "Vertical (Story)"}
-              </button>
-            ))}
-          </motion.div>
-
-          {/* Player area */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-            className="flex justify-center mb-12"
-          >
-            {loading && (
+          {ogUrl && !loading && !error && (
+            <>
               <div
-                className="flex items-center justify-center rounded-xl"
+                className="w-full rounded-2xl overflow-hidden"
                 style={{
-                  width: format === "story" ? 300 : 400,
-                  height: format === "story" ? 533 : 400,
-                  background: "rgba(0,0,0,0.03)",
-                  border: "1px solid rgba(0,0,0,0.06)",
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
                 }}
               >
-                <div className="flex flex-col items-center gap-4">
-                  <div
-                    className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                    style={{ borderColor: "rgba(0,0,0,0.25)", borderTopColor: "transparent" }}
-                  />
-                  <span
-                    className="text-sm"
-                    style={{ color: "rgba(0,0,0,0.4)" }}
-                  >
-                    Loading today&apos;s pick...
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {!loading && error && (
-              <div
-                className="flex items-center justify-center rounded-xl"
-                style={{
-                  width: 400,
-                  height: 300,
-                  background: "rgba(0,0,0,0.03)",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                }}
-              >
-                <div className="text-center px-8">
-                  <p
-                    className="text-base font-medium mb-2"
-                    style={{ color: "rgba(0,0,0,0.6)" }}
-                  >
-                    {error}
-                  </p>
-                  <p
-                    className="text-sm"
-                    style={{ color: "rgba(0,0,0,0.4)" }}
-                  >
-                    Check back soon.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {!loading && !error && parlay && (
-              <div ref={playerWrapperRef}>
-                <ParlayPlayer
-                  ref={playerRef}
-                  legs={videoLegs}
-                  combinedOdds={parlay.combinedOdds}
-                  evPercent={parlay.evPercent}
-                  confidence={parlay.confidence}
-                  payout={parlay.payout}
-                  format={format}
-                  showControls={true}
-                  maxWidth={format === "story" ? 340 : 500}
+                {/* Static PNG preview — same image you'd save / post */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={ogUrl}
+                  alt="BayParlays share card"
+                  width={1200}
+                  height={630}
+                  style={{ width: "100%", height: "auto", display: "block" }}
                 />
               </div>
-            )}
-          </motion.div>
 
-          {/* Instructions */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="text-center mb-14"
-          >
-            <p
-              className="text-sm"
-              style={{ color: "rgba(0,0,0,0.4)", lineHeight: 1.7 }}
-            >
-              Tip: Use your device&apos;s screen recorder while the animation
-              plays for a video clip, or screenshot any frame for a static image.
-            </p>
-          </motion.div>
+              {/* Actions */}
+              <div className="flex flex-wrap gap-3 mt-6">
+                <button
+                  onClick={downloadImage}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold transition-colors"
+                  style={{
+                    background: "#0a0a0a",
+                    color: "#ffffff",
+                  }}
+                >
+                  <Download size={16} />
+                  Download image
+                </button>
+                {absoluteOgUrl && (
+                  <a
+                    href={absoluteOgUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold transition-colors"
+                    style={{
+                      background: "rgba(0,0,0,0.04)",
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      color: "#0a0a0a",
+                    }}
+                  >
+                    <ExternalLink size={16} />
+                    Open card URL
+                  </a>
+                )}
+                <Link
+                  href="/parlays"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold transition-colors"
+                  style={{
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    color: "#0a0a0a",
+                  }}
+                >
+                  <ArrowUpRight size={16} />
+                  See all parlays
+                </Link>
+              </div>
 
-          {/* Action buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
-          >
-            <button
-              onClick={handleDownloadImage}
-              disabled={downloading || !parlay || loading}
-              className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-50"
-              style={{
-                background: "rgba(0,0,0,0.06)",
-                color: "rgba(0,0,0,0.85)",
-                border: "1px solid rgba(0,0,0,0.1)",
-              }}
-            >
-              <Download size={14} />
-              {downloading ? "Rendering…" : "Download image"}
-            </button>
-
-            <Link
-              href="/parlays"
-              className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
-              style={{
-                background: "rgba(0,0,0,0.06)",
-                color: "rgba(0,0,0,0.85)",
-                border: "1px solid rgba(0,0,0,0.1)",
-              }}
-            >
-              <ExternalLink size={14} />
-              See All Parlays
-            </Link>
-            <Link
-              href="/builder"
-              className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
-              style={{ background: "#0a0a0a", color: "#FAFAF7" }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#1a1a1a";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#0a0a0a";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              Build Your Own
-              <ArrowUpRight size={14} strokeWidth={2.5} />
-            </Link>
-          </motion.div>
-        </div>
-      </main>
-
-      {/* ─── Footer ─── */}
-      <footer
-        className="px-6 py-12"
-        style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
-      >
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
-            BayParlays. AI-powered parlay optimization.
-          </p>
-          <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
-            Not financial advice. Gamble responsibly.
-          </p>
-        </div>
-      </footer>
+              <p className="text-xs mt-6" style={{ color: "rgba(0,0,0,0.4)", lineHeight: 1.6 }}>
+                Tip: paste the card URL in any social post — Twitter / iMessage /
+                Discord / Instagram DMs auto-generate the preview from the link.
+              </p>
+            </>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 }

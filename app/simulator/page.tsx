@@ -102,9 +102,9 @@ const CATEGORY_META: Record<PickCategory, { label: string; color: string; bg: st
   },
   payout: {
     label: "Highest Payout",
-    color: "text-[#FF3B3B]",
-    bg: "bg-[#FF3B3B]/10",
-    border: "border-[#FF3B3B]/20",
+    color: "text-[#0a0a0a]",
+    bg: "bg-[#0a0a0a]/10",
+    border: "border-[#0a0a0a]/20",
   },
   confidence: {
     label: "Most Confident",
@@ -376,28 +376,28 @@ export default function SimulatorPage() {
 
   if (authLoading || tierLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-black/40 animate-spin" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] flex flex-col items-center justify-center px-6">
-        <Lock className="w-10 h-10 text-white/20 mb-6" />
+      <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a] flex flex-col items-center justify-center px-6">
+        <Lock className="w-10 h-10 text-black/30 mb-6" />
         <h1
           className="text-3xl md:text-4xl mb-4 text-center"
           style={{ fontFamily: "'DM Serif Display', serif" }}
         >
           Sign in to access the Simulator
         </h1>
-        <p className="text-white/40 mb-8 text-center max-w-md">
+        <p className="text-black/45 mb-8 text-center max-w-md">
           Paper trade parlays with simulated money. Track your P&L over time.
         </p>
         <Link
           href="/login"
-          className="bg-[#FF3B3B] text-[#0a0a0a] px-8 py-3 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors"
+          className="bg-[#0a0a0a] text-white px-8 py-3 text-sm font-semibold rounded-full hover:bg-[#222] transition-colors"
         >
           Sign In
         </Link>
@@ -407,12 +407,12 @@ export default function SimulatorPage() {
 
   if (!isVip && !isAdmin) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
+      <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a]">
         <AppNav />
 
         <div className="pt-32 pb-20 flex flex-col items-center justify-center px-6 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 flex items-center justify-center mb-8">
-            <Lock className="w-8 h-8 text-[#FF3B3B]" />
+          <div className="w-20 h-20 rounded-2xl bg-[#0a0a0a]/10 border border-[#0a0a0a]/20 flex items-center justify-center mb-8">
+            <Lock className="w-8 h-8 text-[#0a0a0a]" />
           </div>
           <h1
             className="text-3xl md:text-5xl mb-4"
@@ -420,14 +420,14 @@ export default function SimulatorPage() {
           >
             Simulator is a Pro Feature
           </h1>
-          <p className="text-white/40 mb-10 max-w-lg leading-relaxed">
+          <p className="text-black/45 mb-10 max-w-lg leading-relaxed">
             Paper trade AI-generated parlays with simulated money.
             Sharp gets $1K. VIP gets $10K. See how you&apos;d perform
             before risking real cash.
           </p>
           <Link
             href="/subscribe"
-            className="bg-[#FF3B3B] text-[#0a0a0a] px-10 py-4 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors"
+            className="bg-[#0a0a0a] text-white px-10 py-4 text-sm font-semibold rounded-full hover:bg-[#222] transition-colors"
           >
             Subscribe — Starting at $50/mo
           </Link>
@@ -452,7 +452,7 @@ export default function SimulatorPage() {
   /* ─── Main View ─── */
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a] overflow-x-hidden">
       <AppNav />
 
       {/* Confirmation toast */}
@@ -461,7 +461,7 @@ export default function SimulatorPage() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-[#1a1a1a] border border-white/10 text-white text-sm px-6 py-3 rounded-full shadow-2xl"
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-[#1a1a1a] border border-black/10 text-white text-sm px-6 py-3 rounded-full shadow-2xl"
           style={{ fontFamily: "var(--font-geist-mono)" }}
         >
           {confirmation}
@@ -476,10 +476,10 @@ export default function SimulatorPage() {
           className="mb-16"
         >
           <motion.div variants={fadeUp} custom={0} className="flex items-center gap-3 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-1 rounded-full">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#0a0a0a]/15 text-[#0a0a0a] px-2 py-1 rounded-full">
               VIP
             </span>
-            <span className="text-xs text-white/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
+            <span className="text-xs text-black/40" style={{ fontFamily: "var(--font-geist-mono)" }}>
               Paper Trading
             </span>
           </motion.div>
@@ -495,7 +495,7 @@ export default function SimulatorPage() {
 
         {dataLoading ? (
           <div className="flex items-center justify-center py-32">
-            <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
+            <Loader2 className="w-6 h-6 text-black/40 animate-spin" />
           </div>
         ) : (
           <>
@@ -544,7 +544,7 @@ export default function SimulatorPage() {
                     setConfirmation("Bankroll reset");
                     setTimeout(() => setConfirmation(null), 2500);
                   }}
-                  className="text-xs text-white/30 hover:text-[#FF3B3B] transition-colors border border-white/[0.06] hover:border-[#FF3B3B]/30 px-4 py-2 rounded-lg"
+                  className="text-xs text-black/40 hover:text-[#0a0a0a] transition-colors border border-black/[0.06] hover:border-[#0a0a0a]/30 px-4 py-2 rounded-lg"
                 >
                   Reset Bankroll
                 </button>
@@ -554,20 +554,20 @@ export default function SimulatorPage() {
                 <motion.div
                   variants={fadeUp}
                   custom={0}
-                  className="col-span-2 md:col-span-2 bg-[#111] border border-white/[0.06] rounded-2xl p-6 md:p-8"
+                  className="col-span-2 md:col-span-2 bg-white border border-black/[0.06] rounded-2xl p-6 md:p-8"
                 >
-                  <div className="text-xs text-white/30 uppercase tracking-widest mb-3">
+                  <div className="text-xs text-black/40 uppercase tracking-widest mb-3">
                     Balance
                   </div>
                   <div
                     className={`text-4xl md:text-5xl font-bold ${
-                      pnl >= 0 ? "text-[#22C55E]" : "text-[#FF3B3B]"
+                      pnl >= 0 ? "text-[#22C55E]" : "text-[#0a0a0a]"
                     }`}
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
                     ${bankroll?.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "1,000.00"}
                   </div>
-                  <div className="text-xs text-white/25 mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  <div className="text-xs text-black/40 mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
                     Started: ${bankroll?.starting_balance.toLocaleString() || "1,000"}
                   </div>
                 </motion.div>
@@ -576,14 +576,14 @@ export default function SimulatorPage() {
                 <motion.div
                   variants={fadeUp}
                   custom={1}
-                  className="bg-[#111] border border-white/[0.06] rounded-2xl p-6"
+                  className="bg-white border border-black/[0.06] rounded-2xl p-6"
                 >
-                  <div className="text-xs text-white/30 uppercase tracking-widest mb-3">
+                  <div className="text-xs text-black/40 uppercase tracking-widest mb-3">
                     P&L
                   </div>
                   <div
                     className={`text-2xl font-bold flex items-center gap-2 ${
-                      pnl >= 0 ? "text-[#22C55E]" : "text-[#FF3B3B]"
+                      pnl >= 0 ? "text-[#22C55E]" : "text-[#0a0a0a]"
                     }`}
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
@@ -594,7 +594,7 @@ export default function SimulatorPage() {
                     )}
                     {pnl >= 0 ? "+" : ""}${Math.abs(pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
-                  <div className="text-xs text-white/25 mt-1" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  <div className="text-xs text-black/40 mt-1" style={{ fontFamily: "var(--font-geist-mono)" }}>
                     {pnl >= 0 ? "+" : ""}{pnlPct}%
                   </div>
                 </motion.div>
@@ -603,18 +603,18 @@ export default function SimulatorPage() {
                 <motion.div
                   variants={fadeUp}
                   custom={2}
-                  className="bg-[#111] border border-white/[0.06] rounded-2xl p-6"
+                  className="bg-white border border-black/[0.06] rounded-2xl p-6"
                 >
-                  <div className="text-xs text-white/30 uppercase tracking-widest mb-3">
+                  <div className="text-xs text-black/40 uppercase tracking-widest mb-3">
                     Win Rate
                   </div>
                   <div
-                    className="text-2xl font-bold text-white"
+                    className="text-2xl font-bold text-black"
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
                     {winRate}%
                   </div>
-                  <div className="text-xs text-white/25 mt-1" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  <div className="text-xs text-black/40 mt-1" style={{ fontFamily: "var(--font-geist-mono)" }}>
                     {bankroll?.wins || 0}W / {bankroll?.losses || 0}L
                   </div>
                 </motion.div>
@@ -623,13 +623,13 @@ export default function SimulatorPage() {
                 <motion.div
                   variants={fadeUp}
                   custom={3}
-                  className="bg-[#111] border border-white/[0.06] rounded-2xl p-6"
+                  className="bg-white border border-black/[0.06] rounded-2xl p-6"
                 >
-                  <div className="text-xs text-white/30 uppercase tracking-widest mb-3">
+                  <div className="text-xs text-black/40 uppercase tracking-widest mb-3">
                     Wagered
                   </div>
                   <div
-                    className="text-2xl font-bold text-white"
+                    className="text-2xl font-bold text-black"
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
                     ${bankroll?.total_wagered.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}
@@ -650,8 +650,8 @@ export default function SimulatorPage() {
                 custom={0}
                 className="rounded-2xl px-6 py-10 md:px-12 md:py-14 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
                 style={{
-                  background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
-                  border: "1px solid rgba(255,59,59,0.15)",
+                  background: "linear-gradient(135deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.03) 100%)",
+                  border: "1px solid rgba(0,0,0,0.08)",
                 }}
               >
                 <div>
@@ -661,14 +661,14 @@ export default function SimulatorPage() {
                   >
                     Place a new sim bet
                   </p>
-                  <p className="text-sm md:text-base" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  <p className="text-sm md:text-base" style={{ color: "rgba(0,0,0,0.6)" }}>
                     Browse today&apos;s AI slate, open any parlay&apos;s &quot;Why this pick&quot; panel, and click &quot;Try $10 in Simulator&quot; to paper-trade it here.
                   </p>
                 </div>
                 <Link
                   href="/parlays"
                   className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
-                  style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                  style={{ background: "#0a0a0a", color: "#FFFFFF" }}
                 >
                   Browse Picks →
                 </Link>
@@ -696,12 +696,12 @@ export default function SimulatorPage() {
                 <motion.div
                   variants={fadeUp}
                   custom={1}
-                  className="bg-[#111] border border-white/[0.06] rounded-2xl p-6 md:p-8"
+                  className="bg-white border border-black/[0.06] rounded-2xl p-6 md:p-8"
                 >
                   {/* Y-axis labels + chart */}
                   <div className="flex items-stretch gap-4">
                     {/* Y labels */}
-                    <div className="flex flex-col justify-between text-[10px] text-white/25 py-1" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <div className="flex flex-col justify-between text-[10px] text-black/40 py-1" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       <span>${chartMax.toFixed(0)}</span>
                       <span>${((chartMax + chartMin) / 2).toFixed(0)}</span>
                       <span>${chartMin.toFixed(0)}</span>
@@ -720,7 +720,7 @@ export default function SimulatorPage() {
                           y1={200 - ((bankroll!.starting_balance - chartMin) / chartRange) * 180 - 10}
                           x2={chartPoints.length * 40}
                           y2={200 - ((bankroll!.starting_balance - chartMin) / chartRange) * 180 - 10}
-                          stroke="rgba(255,255,255,0.06)"
+                          stroke="rgba(0,0,0,0.06)"
                           strokeDasharray="4 4"
                         />
 
@@ -734,7 +734,7 @@ export default function SimulatorPage() {
                             })
                             .join(" ")}
                           fill="none"
-                          stroke={pnl >= 0 ? "#22C55E" : "#FF3B3B"}
+                          stroke={pnl >= 0 ? "#22C55E" : "#0a0a0a"}
                           strokeWidth="2"
                           strokeLinejoin="round"
                         />
@@ -749,7 +749,7 @@ export default function SimulatorPage() {
                               cx={x}
                               cy={y}
                               r="4"
-                              fill={val >= bankroll!.starting_balance ? "#22C55E" : "#FF3B3B"}
+                              fill={val >= bankroll!.starting_balance ? "#22C55E" : "#0a0a0a"}
                               opacity={0.8}
                             />
                           );
@@ -758,7 +758,7 @@ export default function SimulatorPage() {
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-white/20 mt-3 text-center" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  <div className="text-[10px] text-black/30 mt-3 text-center" style={{ fontFamily: "var(--font-geist-mono)" }}>
                     {resolvedParlays.length} resolved bet{resolvedParlays.length !== 1 ? "s" : ""}
                   </div>
                 </motion.div>
@@ -786,13 +786,13 @@ export default function SimulatorPage() {
                   <button
                     onClick={refreshSim}
                     disabled={refreshing}
-                    className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50 bg-[#FF3B3B]/10 text-[#FF3B3B] border border-[#FF3B3B]/25 hover:bg-[#FF3B3B]/15"
+                    className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50 bg-[#0a0a0a]/10 text-[#0a0a0a] border border-[#0a0a0a]/25 hover:bg-[#0a0a0a]/15"
                   >
                     {refreshing ? "Refreshing…" : "Refresh Results"}
                   </button>
                   <Link
                     href="/my-stats"
-                    className="text-xs text-white/40 hover:text-white/70 transition-colors"
+                    className="text-xs text-black/45 hover:text-black/70 transition-colors"
                   >
                     Full history →
                   </Link>
@@ -806,12 +806,12 @@ export default function SimulatorPage() {
                     <motion.div
                       variants={fadeUp}
                       custom={1}
-                      className="bg-[#111] border border-white/[0.06] rounded-2xl p-10 text-center"
+                      className="bg-white border border-black/[0.06] rounded-2xl p-10 text-center"
                     >
-                      <p className="text-white/40 mb-2">No active bets.</p>
-                      <p className="text-xs text-white/25">
+                      <p className="text-black/45 mb-2">No active bets.</p>
+                      <p className="text-xs text-black/40">
                         Head to{" "}
-                        <Link href="/parlays" className="text-[#FF3B3B] hover:underline">
+                        <Link href="/parlays" className="text-[#0a0a0a] hover:underline">
                           today&apos;s picks
                         </Link>{" "}
                         to place one.
@@ -826,14 +826,14 @@ export default function SimulatorPage() {
                         key={p.id}
                         variants={fadeUp}
                         custom={i + 1}
-                        className="border rounded-xl transition-all cursor-pointer bg-[#111] border-white/[0.06]"
+                        className="border rounded-xl transition-all cursor-pointer bg-white border-black/[0.06]"
                         onClick={() =>
                           setExpandedParlay(expandedParlay === p.id ? null : p.id)
                         }
                       >
                         <div className="flex items-center justify-between p-4 md:px-6 flex-wrap gap-2">
                           <div className="flex items-center gap-4 min-w-0 flex-1">
-                            <span className="text-xs text-white/40">{p.legs.length}L</span>
+                            <span className="text-xs text-black/45">{p.legs.length}L</span>
                             {p.category && CATEGORY_META[p.category] && (
                               <span
                                 className={`hidden sm:inline text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${CATEGORY_META[p.category].color} ${CATEGORY_META[p.category].bg}`}
@@ -842,12 +842,12 @@ export default function SimulatorPage() {
                               </span>
                             )}
                             <span
-                              className="text-sm font-bold text-white/70"
+                              className="text-sm font-bold text-black/70"
                               style={{ fontFamily: "var(--font-geist-mono)" }}
                             >
                               {p.combined_odds}
                             </span>
-                            <span className="text-xs text-white/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                            <span className="text-xs text-black/40" style={{ fontFamily: "var(--font-geist-mono)" }}>
                               ${p.stake}
                             </span>
                             {(() => {
@@ -855,10 +855,10 @@ export default function SimulatorPage() {
                               if (!gs) return null;
                               const colorClass =
                                 gs.kind === "live"
-                                  ? "bg-[#FF3B3B]/15 text-[#FF3B3B] animate-pulse"
+                                  ? "bg-[#0a0a0a]/15 text-[#0a0a0a] animate-pulse"
                                   : gs.kind === "awaiting"
                                   ? "bg-[#eab308]/15 text-[#eab308]"
-                                  : "bg-white/[0.04] text-white/50";
+                                  : "bg-black/[0.04] text-black/55";
                               const text =
                                 gs.kind === "upcoming"
                                   ? `Starts in ${gs.startsIn}`
@@ -880,7 +880,7 @@ export default function SimulatorPage() {
                                 className={`text-xs font-medium px-2 py-1 rounded ${
                                   cashoutValues[p.id] >= p.stake
                                     ? "bg-[#22C55E]/10 text-[#22C55E]"
-                                    : "bg-white/[0.04] text-white/40"
+                                    : "bg-black/[0.04] text-black/45"
                                 }`}
                                 style={{ fontFamily: "var(--font-geist-mono)" }}
                               >
@@ -888,39 +888,39 @@ export default function SimulatorPage() {
                               </span>
                             )}
                             {expandedParlay === p.id ? (
-                              <ChevronUp className="w-4 h-4 text-white/20" />
+                              <ChevronUp className="w-4 h-4 text-black/30" />
                             ) : (
-                              <ChevronDown className="w-4 h-4 text-white/20" />
+                              <ChevronDown className="w-4 h-4 text-black/30" />
                             )}
                           </div>
                         </div>
 
                         {expandedParlay === p.id && (
-                          <div className="px-4 md:px-6 pb-4 space-y-2 border-t border-white/[0.04] pt-3">
+                          <div className="px-4 md:px-6 pb-4 space-y-2 border-t border-black/[0.04] pt-3">
                             {p.legs.map((leg, j) => (
                               <div key={j} className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-bold uppercase tracking-wider bg-white/[0.06] text-white/40 px-1.5 py-0.5 rounded">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider bg-black/[0.06] text-black/45 px-1.5 py-0.5 rounded">
                                     {leg.sport}
                                   </span>
-                                  <span className="text-white/60">{leg.pick}</span>
-                                  <span className="text-white/25 text-xs">{leg.game}</span>
+                                  <span className="text-black/60">{leg.pick}</span>
+                                  <span className="text-black/40 text-xs">{leg.game}</span>
                                 </div>
-                                <span className="text-white/50" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                                <span className="text-black/55" style={{ fontFamily: "var(--font-geist-mono)" }}>
                                   {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
                                 </span>
                               </div>
                             ))}
 
-                            <div className="pt-3 mt-2 border-t border-white/[0.04] space-y-3">
+                            <div className="pt-3 mt-2 border-t border-black/[0.04] space-y-3">
                               {editingParlay === p.id ? (
                                 <div className="flex items-center gap-3">
-                                  <label className="text-xs text-white/40 uppercase tracking-wider">
+                                  <label className="text-xs text-black/45 uppercase tracking-wider">
                                     New Stake
                                   </label>
                                   <div className="relative">
                                     <span
-                                      className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40 text-xs"
+                                      className="absolute left-2.5 top-1/2 -translate-y-1/2 text-black/45 text-xs"
                                       style={{ fontFamily: "var(--font-geist-mono)" }}
                                     >
                                       $
@@ -931,7 +931,7 @@ export default function SimulatorPage() {
                                       value={editStake}
                                       onChange={(e) => setEditStake(Math.max(1, Number(e.target.value)))}
                                       onClick={(e) => e.stopPropagation()}
-                                      className="bg-[#0a0a0a] border border-white/[0.08] rounded-lg pl-6 pr-3 py-2 text-xs text-white w-24 focus:outline-none focus:border-[#FF3B3B]/40"
+                                      className="bg-[#FAFAF7] border border-black/[0.08] rounded-lg pl-6 pr-3 py-2 text-xs text-black w-24 focus:outline-none focus:border-[#0a0a0a]/40"
                                       style={{ fontFamily: "var(--font-geist-mono)" }}
                                     />
                                   </div>
@@ -951,7 +951,7 @@ export default function SimulatorPage() {
                                       e.stopPropagation();
                                       setEditingParlay(null);
                                     }}
-                                    className="text-xs text-white/30 hover:text-white/50 px-2 py-2"
+                                    className="text-xs text-black/40 hover:text-black/55 px-2 py-2"
                                   >
                                     Cancel
                                   </button>
@@ -963,7 +963,7 @@ export default function SimulatorPage() {
                                     setEditingParlay(p.id);
                                     setEditStake(p.stake);
                                   }}
-                                  className="flex items-center gap-2 text-xs font-medium text-white/40 hover:text-white/60"
+                                  className="flex items-center gap-2 text-xs font-medium text-black/45 hover:text-black/60"
                                 >
                                   <Pencil className="w-3 h-3" />
                                   Edit Stake (${p.stake})
@@ -979,7 +979,7 @@ export default function SimulatorPage() {
                                 className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${
                                   cashoutValues[p.id] !== undefined && cashoutValues[p.id] >= p.stake
                                     ? "bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20 hover:bg-[#22C55E]/15"
-                                    : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:bg-white/[0.06]"
+                                    : "bg-black/[0.04] text-black/55 border border-black/[0.08] hover:bg-black/[0.06]"
                                 } disabled:opacity-40 disabled:cursor-not-allowed`}
                               >
                                 {cashingOut === p.id ? (
@@ -1005,9 +1005,9 @@ export default function SimulatorPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.04] py-12">
+      <footer className="border-t border-black/[0.04] py-12">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10 text-center">
-          <p className="text-xs text-white/15">
+          <p className="text-xs text-black/25">
             Simulator uses simulated money only. No real bets are placed.
           </p>
         </div>
