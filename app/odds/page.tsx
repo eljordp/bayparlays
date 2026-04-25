@@ -198,7 +198,7 @@ export default function OddsPage() {
               onClick={() => setSport(s.key)}
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 sport === s.key
-                  ? "bg-[#0a0a0a] text-[#0a0a0a]"
+                  ? "bg-[#0a0a0a] text-white"
                   : "bg-black/[0.04] text-black/55 hover:bg-black/[0.08] hover:text-black"
               }`}
             >

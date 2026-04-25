@@ -421,7 +421,7 @@ export default function BuilderPage() {
                       px-4 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap
                       ${
                         activeSport === sport.key
-                          ? "bg-[#0a0a0a] text-[#0a0a0a]"
+                          ? "bg-[#0a0a0a] text-white"
                           : "bg-black/[0.04] text-black/55 hover:bg-black/[0.08] hover:text-black/80"
                       }
                     `}
@@ -633,7 +633,7 @@ export default function BuilderPage() {
                     </p>
                     <Link
                       href="/subscribe"
-                      className="px-8 py-3 rounded-full text-sm font-bold bg-[#0a0a0a] text-[#0a0a0a] hover:bg-[#FF5252] transition-colors"
+                      className="px-8 py-3 rounded-full text-sm font-bold bg-[#0a0a0a] text-white hover:bg-[#FF5252] transition-colors"
                     >
                       Upgrade to VIP
                     </Link>
@@ -652,7 +652,7 @@ export default function BuilderPage() {
                         Your Parlay
                       </h2>
                       {legs.length > 0 && (
-                        <span className="text-xs font-bold bg-[#0a0a0a] text-[#0a0a0a] px-2 py-0.5 rounded-full">
+                        <span className="text-xs font-bold bg-[#0a0a0a] text-white px-2 py-0.5 rounded-full">
                           {legs.length} leg{legs.length !== 1 ? "s" : ""}
                         </span>
                       )}
@@ -761,7 +761,7 @@ export default function BuilderPage() {
 
                   {/* Conflict alert — impossible combo blocked on last add */}
                   {conflictMessage && (
-                    <div className="px-5 py-3 text-xs border-t border-[#0a0a0a]/40 bg-[#0a0a0a]/10 text-[#0a0a0a]">
+                    <div className="px-5 py-3 text-xs border-t border-[#0a0a0a]/40 bg-[#0a0a0a]/10 text-white">
                       {conflictMessage}
                     </div>
                   )}
@@ -943,7 +943,7 @@ export default function BuilderPage() {
                 onClick={() => {
                   slipRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="shrink-0 bg-[#0a0a0a] text-[#0a0a0a] text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#0a0a0a]/90 transition-colors"
+                className="shrink-0 bg-[#0a0a0a] text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#0a0a0a]/90 transition-colors"
               >
                 View Slip
               </button>

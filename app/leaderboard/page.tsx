@@ -107,7 +107,7 @@ export default function LeaderboardPage() {
         <Link
           href="/login"
           className="px-8 py-3 text-sm font-semibold rounded-full transition-colors duration-200"
-          style={{ background: "#0a0a0a", color: "#0a0a0a" }}
+          style={{ background: "#0a0a0a", color: "#FFFFFF" }}
         >
           Sign In
         </Link>
@@ -150,7 +150,7 @@ export default function LeaderboardPage() {
               <Link
                 href="/subscribe"
                 className="inline-block px-10 py-3.5 text-sm font-semibold rounded-full transition-all duration-200"
-                style={{ background: "#0a0a0a", color: "#0a0a0a" }}
+                style={{ background: "#0a0a0a", color: "#FFFFFF" }}
               >
                 Upgrade to VIP
               </Link>
@@ -428,7 +428,7 @@ export default function LeaderboardPage() {
                       <Link
                         href="/simulator"
                         className="inline-block mt-4 px-8 py-3 text-sm font-semibold rounded-full transition-colors duration-200"
-                        style={{ background: "#0a0a0a", color: "#0a0a0a" }}
+                        style={{ background: "#0a0a0a", color: "#FFFFFF" }}
                       >
                         Start Simulating
                       </Link>

@@ -443,8 +443,8 @@ export default function ParlaysPage() {
                 onClick={() => setSelectedSport(sport)}
                 className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
                 style={{
-                  background: selectedSport === sport ? "#0a0a0a" : "rgba(0,0,0,0.06)",
-                  color: selectedSport === sport ? "#0a0a0a" : "rgba(0,0,0,0.55)",
+                  background: selectedSport === sport ? "#0a0a0a" : "rgba(0,0,0,0.04)",
+                  color: selectedSport === sport ? "#FFFFFF" : "rgba(0,0,0,0.55)",
                   border: selectedSport === sport ? "1px solid #0a0a0a" : "1px solid rgba(0,0,0,0.08)",
                 }}
               >
@@ -701,8 +701,8 @@ export default function ParlaysPage() {
                           <Link
                             href="/subscribe"
                             className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
-                            style={{ background: "#0a0a0a", color: "#0a0a0a" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                            style={{ background: "#0a0a0a", color: "#FFFFFF" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = "#1f1f1f"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = "#0a0a0a"; e.currentTarget.style.transform = "translateY(0)"; }}
                           >
                             Upgrade to VIP
@@ -763,8 +763,8 @@ export default function ParlaysPage() {
                           <Link
                             href="/subscribe"
                             className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
-                            style={{ background: "#0a0a0a", color: "#0a0a0a" }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                            style={{ background: "#0a0a0a", color: "#FFFFFF" }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = "#1f1f1f"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = "#0a0a0a"; e.currentTarget.style.transform = "translateY(0)"; }}
                           >
                             Start Free Trial

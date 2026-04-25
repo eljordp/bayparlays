@@ -115,13 +115,13 @@ function confidenceFromRelativeEdge(
   if (ratio >= 0.15) {
     return {
       label: "LOCK",
-      className: "bg-[#0a0a0a] text-[#0a0a0a]",
+      className: "bg-[#0a0a0a] text-white",
     };
   }
   if (ratio >= 0.08) {
     return {
       label: "STRONG",
-      className: "bg-[#0a0a0a]/20 text-[#0a0a0a] border border-[#0a0a0a]/40",
+      className: "bg-[#0a0a0a]/20 text-white border border-[#0a0a0a]/40",
     };
   }
   if (ratio >= 0.04) {
@@ -428,7 +428,7 @@ export default function PropsPage() {
                 onClick={() => setSport(s)}
                 className={`rounded-md px-5 py-2 text-xs font-bold uppercase tracking-[0.15em] transition ${
                   active
-                    ? "bg-[#0a0a0a] text-[#0a0a0a]"
+                    ? "bg-[#0a0a0a] text-white"
                     : "text-black/55 hover:text-black"
                 }`}
               >
@@ -470,7 +470,7 @@ export default function PropsPage() {
                   onClick={() => setTab(k)}
                   className={`rounded-lg px-5 py-3 text-sm font-semibold transition whitespace-nowrap ${
                     active
-                      ? "bg-[#0a0a0a] text-[#0a0a0a]"
+                      ? "bg-[#0a0a0a] text-white"
                       : "bg-black/[0.04] text-black/60 hover:bg-black/[0.08] hover:text-black"
                   }`}
                 >
@@ -721,7 +721,7 @@ export default function PropsPage() {
                   </p>
                   <Link
                     href="/subscribe"
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-3 text-sm font-semibold text-[#0a0a0a] hover:bg-[#FF5252] transition-colors"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-3 text-sm font-semibold text-white hover:bg-[#FF5252] transition-colors"
                   >
                     Upgrade to VIP
                     <span aria-hidden>→</span>

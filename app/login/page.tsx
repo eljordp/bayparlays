@@ -180,7 +180,7 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <div className="bg-[#0a0a0a]/10 border border-[#0a0a0a]/20 rounded-xl px-4 py-3 text-sm text-[#0a0a0a]">
+              <div className="bg-[#0a0a0a]/10 border border-[#0a0a0a]/20 rounded-xl px-4 py-3 text-sm text-white">
                 {error}
               </div>
             )}

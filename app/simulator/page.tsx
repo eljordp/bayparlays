@@ -476,7 +476,7 @@ export default function SimulatorPage() {
           className="mb-16"
         >
           <motion.div variants={fadeUp} custom={0} className="flex items-center gap-3 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#0a0a0a]/15 text-[#0a0a0a] px-2 py-1 rounded-full">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#0a0a0a]/15 text-white px-2 py-1 rounded-full">
               VIP
             </span>
             <span className="text-xs text-black/40" style={{ fontFamily: "var(--font-geist-mono)" }}>
@@ -786,7 +786,7 @@ export default function SimulatorPage() {
                   <button
                     onClick={refreshSim}
                     disabled={refreshing}
-                    className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50 bg-[#0a0a0a]/10 text-[#0a0a0a] border border-[#0a0a0a]/25 hover:bg-[#0a0a0a]/15"
+                    className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50 bg-[#0a0a0a]/10 text-white border border-[#0a0a0a]/25 hover:bg-[#0a0a0a]/15"
                   >
                     {refreshing ? "Refreshing…" : "Refresh Results"}
                   </button>
@@ -855,7 +855,7 @@ export default function SimulatorPage() {
                               if (!gs) return null;
                               const colorClass =
                                 gs.kind === "live"
-                                  ? "bg-[#0a0a0a]/15 text-[#0a0a0a] animate-pulse"
+                                  ? "bg-[#0a0a0a]/15 text-white animate-pulse"
                                   : gs.kind === "awaiting"
                                   ? "bg-[#eab308]/15 text-[#eab308]"
                                   : "bg-black/[0.04] text-black/55";
