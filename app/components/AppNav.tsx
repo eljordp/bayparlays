@@ -8,12 +8,9 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "@/app/components/Logo";
 import { NavUser } from "@/app/components/NavUser";
 
-// Single source of truth for primary navigation. Every page imports this
-// instead of rolling its own inline nav — keeps spacing, hover states,
-// mobile behavior, and link styling consistent site-wide.
-//
-// Sub-features like Odds / Builder / Props are accessed from within Picks
-// via in-page tabs. Refer + Achievements live in Settings.
+// Light-theme primary nav. Editorial monochrome — black on warm off-white,
+// no brand color in the chrome. The colored content (team logos, picks)
+// supplies the visual variety.
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -22,8 +19,6 @@ const NAV_LINKS = [
   { href: "/results", label: "Results" },
 ];
 
-// Secondary routes that still exist but aren't in the primary nav.
-// They count as "active" under their parent when highlighting.
 const PARENT_MAP: Record<string, string> = {
   "/odds": "/parlays",
   "/builder": "/parlays",
@@ -50,9 +45,9 @@ export function AppNav() {
     <nav
       className="fixed top-0 left-0 right-0 z-50"
       style={{
-        background: "rgba(10,10,10,0.85)",
+        background: "rgba(250,250,247,0.85)",
         backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid rgba(0,0,0,0.06)",
       }}
     >
       <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
@@ -69,14 +64,16 @@ export function AppNav() {
                   href={link.href}
                   className="text-sm transition-colors duration-200"
                   style={{
-                    color: active ? "#FF3B3B" : "rgba(255,255,255,0.5)",
-                    fontWeight: active ? 600 : 400,
+                    color: active ? "#0a0a0a" : "rgba(0,0,0,0.45)",
+                    fontWeight: active ? 700 : 500,
+                    borderBottom: active ? "2px solid #0a0a0a" : "2px solid transparent",
+                    paddingBottom: 2,
                   }}
                   onMouseEnter={(e) => {
-                    if (!active) e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+                    if (!active) e.currentTarget.style.color = "rgba(0,0,0,0.85)";
                   }}
                   onMouseLeave={(e) => {
-                    if (!active) e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+                    if (!active) e.currentTarget.style.color = "rgba(0,0,0,0.45)";
                   }}
                 >
                   {link.label}
@@ -90,7 +87,7 @@ export function AppNav() {
           <NavUser />
           <button
             className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200"
-            style={{ color: "rgba(255,255,255,0.7)" }}
+            style={{ color: "rgba(0,0,0,0.7)" }}
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -107,7 +104,7 @@ export function AppNav() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
             className="md:hidden overflow-hidden"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
           >
             <div className="px-6 py-4 flex flex-col gap-1">
               {NAV_LINKS.map((link) => {
@@ -119,8 +116,9 @@ export function AppNav() {
                     onClick={() => setMobileOpen(false)}
                     className="py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-150"
                     style={{
-                      color: active ? "#FF3B3B" : "rgba(255,255,255,0.6)",
-                      background: active ? "rgba(255,59,59,0.08)" : "transparent",
+                      color: active ? "#0a0a0a" : "rgba(0,0,0,0.6)",
+                      background: active ? "rgba(0,0,0,0.04)" : "transparent",
+                      fontWeight: active ? 700 : 500,
                     }}
                   >
                     {link.label}

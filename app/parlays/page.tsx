@@ -15,6 +15,12 @@ import {
   Shield,
   Download,
 } from "lucide-react";
+import {
+  getTeamBrand,
+  getTeamLogoUrl,
+  DEFAULT_BRAND,
+  type TeamBrand,
+} from "@/lib/team-colors";
 
 /* ─── Types ─── */
 
@@ -132,7 +138,7 @@ function formatOdds(odds: number): string {
 }
 
 function confidenceLabel(c: number): { text: string; color: string; bg: string } {
-  if (c >= 75) return { text: "High", color: "#FF3B3B", bg: "rgba(255,59,59,0.12)" };
+  if (c >= 75) return { text: "High", color: "#0a0a0a", bg: "rgba(21,128,61,0.12)" };
   if (c >= 50) return { text: "Medium", color: "#FFB800", bg: "rgba(255,184,0,0.12)" };
   return { text: "Low", color: "#FF4D4D", bg: "rgba(255,77,77,0.12)" };
 }
@@ -357,7 +363,7 @@ export default function ParlaysPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       <AppNav />
       <div className="pt-20">
         <PicksTabs />
@@ -374,20 +380,20 @@ export default function ParlaysPage() {
             <div className="flex items-center gap-3 mb-6">
               <div
                 className="w-2.5 h-2.5 rounded-full glow-pulse"
-                style={{ background: "#FF3B3B" }}
+                style={{ background: "#0a0a0a" }}
               />
-              <span className="text-xs font-medium tracking-widest uppercase" style={{ color: "#FF3B3B" }}>
+              <span className="text-xs font-medium tracking-widest uppercase" style={{ color: "#0a0a0a" }}>
                 Live &middot; Updated every 5 minutes
               </span>
             </div>
 
             <h1
               className="text-5xl md:text-7xl font-normal leading-[1.05] mb-5"
-              style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+              style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
             >
               Today&apos;s AI Parlays
             </h1>
-            <p className="text-lg md:text-xl max-w-2xl" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+            <p className="text-lg md:text-xl max-w-2xl" style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}>
               Mathematically optimized. Every line scanned. Every edge calculated.
             </p>
           </motion.div>
@@ -408,13 +414,13 @@ export default function ParlaysPage() {
                 <div key={stat.label} className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ background: "rgba(255,59,59,0.08)", border: "1px solid rgba(255,59,59,0.15)" }}
+                    style={{ background: "rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.08)" }}
                   >
-                    <stat.icon size={18} style={{ color: "#FF3B3B" }} />
+                    <stat.icon size={18} style={{ color: "#0a0a0a" }} />
                   </div>
                   <div>
-                    <div className="text-xl font-semibold" style={{ color: "#ededed" }}>{stat.value}</div>
-                    <div className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{stat.label}</div>
+                    <div className="text-xl font-semibold" style={{ color: "#0a0a0a" }}>{stat.value}</div>
+                    <div className="text-xs" style={{ color: "rgba(0,0,0,0.45)" }}>{stat.label}</div>
                   </div>
                 </div>
               ))}
@@ -424,11 +430,11 @@ export default function ParlaysPage() {
       </header>
 
       {/* ─── Filters ─── */}
-      <section className="px-4 md:px-6 pb-6 sticky top-16 z-40" style={{ background: "rgba(10,10,10,0.92)", backdropFilter: "blur(12px)" }}>
-        <div className="max-w-[1400px] mx-auto py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <section className="px-4 md:px-6 pb-6 sticky top-16 z-40" style={{ background: "rgba(250,250,247,0.92)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-[1400px] mx-auto py-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
           {/* Sport filters */}
           <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mb-5">
-            <span className="text-xs font-medium uppercase tracking-wider mr-2 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <span className="text-xs font-medium uppercase tracking-wider mr-2 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
               Sport
             </span>
             {SPORTS.map((sport) => (
@@ -437,9 +443,9 @@ export default function ParlaysPage() {
                 onClick={() => setSelectedSport(sport)}
                 className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
                 style={{
-                  background: selectedSport === sport ? "#FF3B3B" : "rgba(255,255,255,0.05)",
-                  color: selectedSport === sport ? "#0a0a0a" : "rgba(255,255,255,0.5)",
-                  border: selectedSport === sport ? "1px solid #FF3B3B" : "1px solid rgba(255,255,255,0.08)",
+                  background: selectedSport === sport ? "#0a0a0a" : "rgba(0,0,0,0.06)",
+                  color: selectedSport === sport ? "#0a0a0a" : "rgba(0,0,0,0.55)",
+                  border: selectedSport === sport ? "1px solid #0a0a0a" : "1px solid rgba(0,0,0,0.08)",
                 }}
               >
                 {sport}
@@ -450,16 +456,16 @@ export default function ParlaysPage() {
           {/* Leg count + Sort */}
           <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-6">
             <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
                 Legs
               </span>
               <button
                 onClick={() => setSelectedLegs(null)}
                 className="px-4 h-10 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center"
                 style={{
-                  background: selectedLegs === null ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.04)",
-                  color: selectedLegs === null ? "#FF3B3B" : "rgba(255,255,255,0.45)",
-                  border: selectedLegs === null ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                  background: selectedLegs === null ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
+                  color: selectedLegs === null ? "#0a0a0a" : "rgba(0,0,0,0.5)",
+                  border: selectedLegs === null ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
                 }}
               >
                 Mix
@@ -470,9 +476,9 @@ export default function ParlaysPage() {
                   onClick={() => setSelectedLegs(selectedLegs === count ? null : count)}
                   className="w-10 h-10 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center"
                   style={{
-                    background: selectedLegs === count ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.04)",
-                    color: selectedLegs === count ? "#FF3B3B" : "rgba(255,255,255,0.45)",
-                    border: selectedLegs === count ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                    background: selectedLegs === count ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
+                    color: selectedLegs === count ? "#0a0a0a" : "rgba(0,0,0,0.5)",
+                    border: selectedLegs === count ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
                   }}
                 >
                   {count}
@@ -480,10 +486,10 @@ export default function ParlaysPage() {
               ))}
             </div>
 
-            <div className="h-6 w-px flex-shrink-0" style={{ background: "rgba(255,255,255,0.08)" }} />
+            <div className="h-6 w-px flex-shrink-0" style={{ background: "rgba(0,0,0,0.08)" }} />
 
             <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
                 Sort
               </span>
               {SORT_OPTIONS.map((opt) => (
@@ -492,8 +498,8 @@ export default function ParlaysPage() {
                   onClick={() => setSortBy(opt.value)}
                   className="px-4 py-2 rounded-lg text-sm transition-all duration-200"
                   style={{
-                    background: sortBy === opt.value ? "rgba(255,59,59,0.1)" : "transparent",
-                    color: sortBy === opt.value ? "#FF3B3B" : "rgba(255,255,255,0.4)",
+                    background: sortBy === opt.value ? "rgba(0,0,0,0.06)" : "transparent",
+                    color: sortBy === opt.value ? "#0a0a0a" : "rgba(0,0,0,0.45)",
                     fontWeight: sortBy === opt.value ? 600 : 400,
                   }}
                 >
@@ -505,7 +511,7 @@ export default function ParlaysPage() {
 
           {/* Odds range — client-side payout bucket filter */}
           <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mt-4">
-            <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
               Odds
             </span>
             {ODDS_RANGES.map((r) => (
@@ -514,9 +520,9 @@ export default function ParlaysPage() {
                 onClick={() => setOddsRange(r.value)}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
                 style={{
-                  background: oddsRange === r.value ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.04)",
-                  color: oddsRange === r.value ? "#FF3B3B" : "rgba(255,255,255,0.45)",
-                  border: oddsRange === r.value ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.06)",
+                  background: oddsRange === r.value ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
+                  color: oddsRange === r.value ? "#0a0a0a" : "rgba(0,0,0,0.5)",
+                  border: oddsRange === r.value ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
                 }}
               >
                 {r.label}
@@ -556,20 +562,20 @@ export default function ParlaysPage() {
               >
                 <div
                   className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
                 >
-                  <Shield size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
+                  <Shield size={32} style={{ color: "rgba(0,0,0,0.3)" }} />
                 </div>
-                <p className="text-xl font-medium mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
+                <p className="text-xl font-medium mb-2" style={{ color: "rgba(0,0,0,0.6)" }}>
                   {error || "No parlays available right now."}
                 </p>
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
                   Check back soon. Our AI is scanning every line.
                 </p>
                 <button
                   onClick={fetchParlays}
                   className="mt-8 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200"
-                  style={{ background: "rgba(255,59,59,0.1)", color: "#FF3B3B", border: "1px solid rgba(255,59,59,0.2)" }}
+                  style={{ background: "rgba(0,0,0,0.06)", color: "#0a0a0a", border: "1px solid rgba(0,0,0,0.18)" }}
                 >
                   Retry
                 </button>
@@ -612,7 +618,7 @@ export default function ParlaysPage() {
                         <p className="text-sm font-semibold" style={{ color: "#eab308" }}>
                           No clear edge found today
                         </p>
-                        <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
+                        <p className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.6)", lineHeight: 1.5 }}>
                           Every parlay below is priced at or above the AI&apos;s own estimate — meaning the book is charging a reasonable-to-steep price for each one. Nothing qualifies as a Lock. If you&apos;re here to fire, pick carefully. If you&apos;re here to grow bankroll, it might be a day to skip.
                         </p>
                       </div>
@@ -671,19 +677,19 @@ export default function ParlaysPage() {
                       <div
                         className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14"
                         style={{
-                          background: "linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(255,59,59,0.02) 100%)",
-                          border: "1px solid rgba(255,59,59,0.15)",
+                          background: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%)",
+                          border: "1px solid rgba(0,0,0,0.08)",
                         }}
                       >
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                           <div>
-                            <p className="text-xl md:text-2xl font-semibold" style={{ color: "#ededed" }}>
+                            <p className="text-xl md:text-2xl font-semibold" style={{ color: "#0a0a0a" }}>
                               Ready to run this like a business?
                             </p>
-                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.5)" }}>
+                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(0,0,0,0.55)" }}>
                               VIP unlocks 15+ picks/day, bankroll manager (Kelly criterion), line-movement tracking, closing-line value dashboard, and real-time alerts when the AI finds high-EV plays.
                             </p>
-                            <div className="mt-4 flex flex-wrap gap-3 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            <div className="mt-4 flex flex-wrap gap-3 text-xs" style={{ color: "rgba(0,0,0,0.45)" }}>
                               <span>· Bankroll calculator</span>
                               <span>· Line movement</span>
                               <span>· CLV tracker</span>
@@ -695,9 +701,9 @@ export default function ParlaysPage() {
                           <Link
                             href="/subscribe"
                             className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
-                            style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                            style={{ background: "#0a0a0a", color: "#0a0a0a" }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "#0a0a0a"; e.currentTarget.style.transform = "translateY(0)"; }}
                           >
                             Upgrade to VIP
                           </Link>
@@ -734,19 +740,19 @@ export default function ParlaysPage() {
                       <div
                         className="mt-12 rounded-2xl px-6 py-10 md:px-12 md:py-14"
                         style={{
-                          background: "linear-gradient(135deg, rgba(255,59,59,0.08) 0%, rgba(255,59,59,0.03) 100%)",
-                          border: "1px solid rgba(255,59,59,0.15)",
+                          background: "linear-gradient(135deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.03) 100%)",
+                          border: "1px solid rgba(0,0,0,0.08)",
                         }}
                       >
                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                           <div>
-                            <p className="text-xl md:text-2xl font-semibold" style={{ color: "#ededed" }}>
+                            <p className="text-xl md:text-2xl font-semibold" style={{ color: "#0a0a0a" }}>
                               Want 2× more picks + the full toolkit?
                             </p>
-                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(255,255,255,0.5)" }}>
+                            <p className="mt-2 text-sm md:text-base" style={{ color: "rgba(0,0,0,0.55)" }}>
                               Sharp unlocks 8 picks/day across all strategies, the Simulator (paper trade with $1K bankroll), personal stats tracking, and the Props analyzer.
                             </p>
-                            <div className="mt-4 flex flex-wrap gap-3 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            <div className="mt-4 flex flex-wrap gap-3 text-xs" style={{ color: "rgba(0,0,0,0.45)" }}>
                               <span>· Simulator</span>
                               <span>· My Stats</span>
                               <span>· Props analyzer</span>
@@ -757,9 +763,9 @@ export default function ParlaysPage() {
                           <Link
                             href="/subscribe"
                             className="flex-shrink-0 px-8 py-4 rounded-full text-base font-bold transition-all duration-200"
-                            style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                            style={{ background: "#0a0a0a", color: "#0a0a0a" }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = "#FF5252"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "#FF3B3B"; e.currentTarget.style.transform = "translateY(0)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "#0a0a0a"; e.currentTarget.style.transform = "translateY(0)"; }}
                           >
                             Start Free Trial
                           </Link>
@@ -775,12 +781,12 @@ export default function ParlaysPage() {
       </main>
 
       {/* ─── Footer ─── */}
-      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
             BayParlays. AI-powered parlay optimization.
           </p>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+          <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
             Not financial advice. Gamble responsibly.
           </p>
         </div>
@@ -882,34 +888,49 @@ function ParlayCard({
     parlay.combinedOdds.startsWith("+") || parlay.combinedOdds.startsWith("-")
       ? parlay.combinedOdds
       : `+${parlay.combinedOdds}`;
+  const accent = getParlayAccent(parlay.legs);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden relative"
       style={{
-        background: "#111",
-        border: isLockOfDay ? "1px solid rgba(255,59,59,0.35)" : "1px solid rgba(255,255,255,0.08)",
-        boxShadow: isLockOfDay ? "0 0 40px rgba(255,59,59,0.08)" : "none",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.06)",
+        boxShadow: isLockOfDay
+          ? "0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)"
+          : "0 1px 3px rgba(0,0,0,0.05)",
       }}
     >
+      {/* Team-color accent bar — pulled from the dominant leg's team brand */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          background: `linear-gradient(180deg, ${accent.primary} 0%, ${accent.secondary} 100%)`,
+        }}
+      />
       {isLockOfDay && (
         <div
           className="px-5 md:px-6 py-2.5 flex items-center gap-2"
           style={{
-            background: "linear-gradient(90deg, rgba(255,59,59,0.12) 0%, rgba(255,59,59,0.02) 100%)",
-            borderBottom: "1px solid rgba(255,59,59,0.2)",
+            background: "rgba(0,0,0,0.03)",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
           }}
         >
           <span
             className="text-[10px] font-bold uppercase tracking-[0.2em]"
-            style={{ color: "#FF3B3B" }}
+            style={{ color: "#0a0a0a" }}
           >
             ★ Lock of the Day
           </span>
-          <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <span className="text-[10px]" style={{ color: "rgba(0,0,0,0.45)" }}>
             · AI&apos;s highest-confidence pick
           </span>
         </div>
@@ -917,12 +938,12 @@ function ParlayCard({
       {/* Header: number + confidence + time */}
       <div
         className="px-5 md:px-6 py-4 flex items-center justify-between"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+        style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
       >
         <div className="flex items-center gap-3">
           <span
             className="text-lg font-black tabular-nums"
-            style={{ color: "rgba(255,255,255,0.15)" }}
+            style={{ color: "rgba(0,0,0,0.25)" }}
           >
             #{String(index + 1).padStart(2, "0")}
           </span>
@@ -936,7 +957,7 @@ function ParlayCard({
           </span>
           <span
             className="text-xs tabular-nums"
-            style={{ color: "rgba(255,255,255,0.3)" }}
+            style={{ color: "rgba(0,0,0,0.4)" }}
           >
             {timeAgo(parlay.timestamp)}
           </span>
@@ -953,20 +974,20 @@ function ParlayCard({
       {/* Bottom section — 3 columns + copy button */}
       <div
         className="px-5 md:px-6 pt-5 pb-5"
-        style={{ borderTop: "2px solid rgba(255,255,255,0.06)" }}
+        style={{ borderTop: "2px solid rgba(0,0,0,0.06)" }}
       >
         <div className="grid grid-cols-3 gap-4 mb-5">
           {/* Combined Odds */}
           <div>
             <div
               className="text-[11px] uppercase tracking-wider mb-1"
-              style={{ color: "rgba(255,255,255,0.3)" }}
+              style={{ color: "rgba(0,0,0,0.4)" }}
             >
               Combined
             </div>
             <div
               className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums"
-              style={{ color: "#FF3B3B", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
+              style={{ color: "#0a0a0a", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
             >
               {formattedOdds}
             </div>
@@ -976,7 +997,7 @@ function ParlayCard({
           <div>
             <div
               className="text-[11px] uppercase tracking-wider mb-1"
-              style={{ color: "rgba(255,255,255,0.3)" }}
+              style={{ color: "rgba(0,0,0,0.4)" }}
             >
               $100 pays
             </div>
@@ -989,7 +1010,7 @@ function ParlayCard({
           <div>
             <div
               className="text-[11px] uppercase tracking-wider mb-1"
-              style={{ color: "rgba(255,255,255,0.3)" }}
+              style={{ color: "rgba(0,0,0,0.4)" }}
             >
               Expected Value
             </div>
@@ -1007,30 +1028,30 @@ function ParlayCard({
           <div
             className="flex items-center justify-between gap-3 mb-5 px-3 py-2.5 rounded-lg"
             style={{
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.05)",
+              background: "rgba(0,0,0,0.04)",
+              border: "1px solid rgba(0,0,0,0.06)",
             }}
           >
             <div className="flex items-center gap-5 flex-wrap">
               {parlay.impliedHitRate !== undefined && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(0,0,0,0.45)" }}>
                     Book says
                   </span>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: "rgba(255,255,255,0.85)", fontFamily: "ui-monospace, monospace" }}>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "rgba(0,0,0,0.85)", fontFamily: "ui-monospace, monospace" }}>
                     {parlay.impliedHitRate.toFixed(1)}%
                   </span>
                 </div>
               )}
               {parlay.aiEstimate !== undefined && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(0,0,0,0.45)" }}>
                     AI says
                   </span>
                   <span
                     className="text-sm font-bold tabular-nums"
                     style={{
-                      color: parlay.impliedHitRate !== undefined && parlay.aiEstimate > parlay.impliedHitRate ? "#34D399" : "rgba(255,255,255,0.85)",
+                      color: parlay.impliedHitRate !== undefined && parlay.aiEstimate > parlay.impliedHitRate ? "#34D399" : "rgba(0,0,0,0.85)",
                       fontFamily: "ui-monospace, monospace",
                     }}
                   >
@@ -1039,7 +1060,7 @@ function ParlayCard({
                 </div>
               )}
             </div>
-            <span className="text-[10px] hidden sm:block" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <span className="text-[10px] hidden sm:block" style={{ color: "rgba(0,0,0,0.4)" }}>
               Hit probability
             </span>
           </div>
@@ -1051,20 +1072,20 @@ function ParlayCard({
           onClick={() => onCopy(parlay)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
           style={{
-            background: copiedId === parlay.id ? "rgba(255,59,59,0.15)" : "rgba(255,255,255,0.05)",
-            color: copiedId === parlay.id ? "#FF3B3B" : "rgba(255,255,255,0.5)",
-            border: copiedId === parlay.id ? "1px solid rgba(255,59,59,0.3)" : "1px solid rgba(255,255,255,0.08)",
+            background: copiedId === parlay.id ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.06)",
+            color: copiedId === parlay.id ? "#0a0a0a" : "rgba(0,0,0,0.55)",
+            border: copiedId === parlay.id ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.08)",
           }}
           onMouseEnter={(e) => {
             if (copiedId !== parlay.id) {
-              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.background = "rgba(0,0,0,0.08)";
               e.currentTarget.style.color = "#ededed";
             }
           }}
           onMouseLeave={(e) => {
             if (copiedId !== parlay.id) {
-              e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-              e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+              e.currentTarget.style.background = "rgba(0,0,0,0.06)";
+              e.currentTarget.style.color = "rgba(0,0,0,0.55)";
             }
           }}
         >
@@ -1086,17 +1107,17 @@ function ParlayCard({
           onClick={() => onSaveCard(parlay)}
           className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
           style={{
-            background: "rgba(255,255,255,0.05)",
-            color: "rgba(255,255,255,0.5)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(0,0,0,0.06)",
+            color: "rgba(0,0,0,0.55)",
+            border: "1px solid rgba(0,0,0,0.08)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+            e.currentTarget.style.background = "rgba(0,0,0,0.08)";
             e.currentTarget.style.color = "#ededed";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(255,255,255,0.05)";
-            e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+            e.currentTarget.style.background = "rgba(0,0,0,0.06)";
+            e.currentTarget.style.color = "rgba(0,0,0,0.55)";
           }}
         >
           <Download size={14} />
@@ -1114,26 +1135,26 @@ function ParlayCard({
             className="w-full py-3 rounded-xl text-sm font-medium transition-all duration-200 mt-2"
             style={{
               background: !pendingSimsLoaded
-                ? "rgba(255,255,255,0.04)"
+                ? "rgba(0,0,0,0.04)"
                 : isDuplicate
-                ? "rgba(255,255,255,0.04)"
+                ? "rgba(0,0,0,0.04)"
                 : simResult
                 ? "rgba(34,197,94,0.1)"
-                : "rgba(255,59,59,0.08)",
+                : "rgba(0,0,0,0.06)",
               color: !pendingSimsLoaded
-                ? "rgba(255,255,255,0.3)"
+                ? "rgba(0,0,0,0.4)"
                 : isDuplicate
-                ? "rgba(255,255,255,0.3)"
+                ? "rgba(0,0,0,0.4)"
                 : simResult
                 ? "#22C55E"
-                : "#FF3B3B",
+                : "#0a0a0a",
               border: !pendingSimsLoaded
-                ? "1px solid rgba(255,255,255,0.06)"
+                ? "1px solid rgba(0,0,0,0.06)"
                 : isDuplicate
-                ? "1px solid rgba(255,255,255,0.06)"
+                ? "1px solid rgba(0,0,0,0.06)"
                 : simResult
                 ? "1px solid rgba(34,197,94,0.2)"
-                : "1px solid rgba(255,59,59,0.15)",
+                : "1px solid rgba(0,0,0,0.08)",
               cursor: isDuplicate || !pendingSimsLoaded ? "not-allowed" : undefined,
             }}
           >
@@ -1149,10 +1170,10 @@ function ParlayCard({
 
         {/* Recommended book */}
         {parlay.recommendedBook && (
-          <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-            <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+            <p className="text-center text-xs" style={{ color: "rgba(0,0,0,0.45)" }}>
               Place this parlay on{" "}
-              <span className="font-semibold text-[#FF3B3B]">{parlay.recommendedBook}</span>
+              <span className="font-semibold text-[#0a0a0a]">{parlay.recommendedBook}</span>
             </p>
           </div>
         )}
@@ -1180,7 +1201,7 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
   return (
     <div>
       {showDivider && (
-        <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+        <div style={{ height: 1, background: "rgba(0,0,0,0.06)" }} />
       )}
       <button
         onClick={() => setOpen(!open)}
@@ -1191,26 +1212,21 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
           opacity: 1,
         }}
       >
-        <div
-          className="flex items-center justify-center w-11 sm:w-12 h-6 rounded text-[11px] sm:text-xs font-bold uppercase tracking-wide flex-shrink-0"
-          style={{
-            background: `${SPORT_COLORS[leg.sport] || "#333"}25`,
-            color: SPORT_COLORS[leg.sport] || "#888",
-          }}
-        >
-          {leg.sport}
-        </div>
+        {/* Team logo OR sport pill — uses ESPN CDN logo for the picked team
+            when we can identify it from the leg's pick string + sport. Falls
+            back to a sport-colored pill if no team match (totals or unknown). */}
+        <LegLogo leg={leg} />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[15px] sm:text-base font-semibold text-white truncate">
+            <span className="text-[15px] sm:text-base font-semibold truncate" style={{ color: "#0a0a0a" }}>
               {leg.pick}
             </span>
             {showEdgeBadge && (
               <span
                 className="text-[10px] font-bold tabular-nums flex-shrink-0"
                 style={{
-                  color: "#22c55e",
+                  color: "#15803d",
                   fontFamily: "ui-monospace, monospace",
                 }}
               >
@@ -1220,7 +1236,7 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
           </div>
           <span
             className="text-xs truncate block mt-0.5"
-            style={{ color: "rgba(255,255,255,0.35)" }}
+            style={{ color: "rgba(0,0,0,0.5)" }}
           >
             {leg.game}
           </span>
@@ -1230,7 +1246,7 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
           <div
             className="text-[15px] sm:text-base font-bold tabular-nums"
             style={{
-              color: "#FF3B3B",
+              color: "#0a0a0a",
               fontFamily: "ui-monospace, SFMono-Regular, monospace",
             }}
           >
@@ -1238,7 +1254,7 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
           </div>
           <div
             className="text-[11px] mt-0.5"
-            style={{ color: "rgba(255,255,255,0.3)" }}
+            style={{ color: "rgba(0,0,0,0.4)" }}
           >
             {leg.book}
           </div>
@@ -1248,7 +1264,7 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
           <div
             className="flex-shrink-0 transition-transform"
             style={{
-              color: "rgba(255,255,255,0.35)",
+              color: "rgba(0,0,0,0.45)",
               transform: open ? "rotate(180deg)" : "rotate(0deg)",
             }}
           >
@@ -1273,13 +1289,13 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
                 <div
                   className="rounded-lg p-3 space-y-2"
                   style={{
-                    background: "rgba(255,255,255,0.025)",
-                    border: "1px solid rgba(255,255,255,0.05)",
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(0,0,0,0.06)",
                   }}
                 >
                   <div
                     className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-2"
-                    style={{ color: "rgba(255,59,59,0.8)" }}
+                    style={{ color: "rgba(0,0,0,0.65)" }}
                   >
                     Why this pick
                   </div>
@@ -1287,11 +1303,11 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
                     <div
                       key={j}
                       className="flex items-start gap-2 text-xs"
-                      style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}
+                      style={{ color: "rgba(0,0,0,0.7)", lineHeight: 1.5 }}
                     >
                       <span
                         className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full"
-                        style={{ background: "rgba(255,59,59,0.6)" }}
+                        style={{ background: "rgba(0,0,0,0.5)" }}
                       />
                       <span>{r}</span>
                     </div>
@@ -1303,13 +1319,13 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
                 <div
                   className="rounded-lg p-3"
                   style={{
-                    background: "rgba(255,255,255,0.025)",
-                    border: "1px solid rgba(255,255,255,0.05)",
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(0,0,0,0.06)",
                   }}
                 >
                   <div
                     className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-3"
-                    style={{ color: "rgba(255,59,59,0.8)" }}
+                    style={{ color: "rgba(0,0,0,0.65)" }}
                   >
                     Recent form · last 5
                   </div>
@@ -1344,13 +1360,13 @@ function FormColumn({ team, games }: { team: string; games: FormGame[] }) {
       <div className="flex items-center justify-between mb-2">
         <span
           className="text-xs font-semibold truncate"
-          style={{ color: "rgba(255,255,255,0.85)" }}
+          style={{ color: "rgba(0,0,0,0.85)" }}
         >
           {team}
         </span>
         <span
           className="text-[10px] tabular-nums"
-          style={{ color: "rgba(255,255,255,0.4)" }}
+          style={{ color: "rgba(0,0,0,0.45)" }}
         >
           {wins}-{games.length - wins} L5
         </span>
@@ -1360,25 +1376,25 @@ function FormColumn({ team, games }: { team: string; games: FormGame[] }) {
           <div
             key={i}
             className="flex items-center gap-2 text-[11px] tabular-nums"
-            style={{ color: "rgba(255,255,255,0.65)" }}
+            style={{ color: "rgba(0,0,0,0.65)" }}
           >
             <span
               className="inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold"
               style={{
                 background:
                   g.result === "W" ? "rgba(34,197,94,0.18)" : "rgba(255,59,59,0.18)",
-                color: g.result === "W" ? "#22C55E" : "#FF3B3B",
+                color: g.result === "W" ? "#22C55E" : "#0a0a0a",
               }}
             >
               {g.result}
             </span>
-            <span style={{ color: "rgba(255,255,255,0.4)" }}>
+            <span style={{ color: "rgba(0,0,0,0.45)" }}>
               {g.isHome ? "vs" : "@"}
             </span>
-            <span className="truncate flex-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+            <span className="truncate flex-1" style={{ color: "rgba(0,0,0,0.7)" }}>
               {shortTeam(g.opponent)}
             </span>
-            <span style={{ color: "rgba(255,255,255,0.85)" }}>
+            <span style={{ color: "rgba(0,0,0,0.85)" }}>
               {g.teamScore}-{g.opponentScore}
             </span>
           </div>
@@ -1397,6 +1413,79 @@ function shortTeam(name: string): string {
   return parts[parts.length - 1];
 }
 
+// Resolve which team this leg belongs to from `pick` + `game`. For ML/spread
+// picks, the team name appears in the pick string; for totals it doesn't,
+// and we fall back to the home team's brand for color but skip the logo.
+function resolveLegTeam(leg: { pick: string; game: string; market: string; homeTeam?: string; awayTeam?: string }): string | null {
+  if (!leg.pick) return null;
+  if (leg.market === "total") return null;
+  // game format: "Team A vs Team B"
+  const parts = leg.game?.split(" vs ") ?? [];
+  for (const candidate of parts) {
+    if (candidate && leg.pick.startsWith(candidate)) return candidate;
+  }
+  // homeTeam/awayTeam are passed through from the engine when available
+  if (leg.homeTeam && leg.pick.startsWith(leg.homeTeam)) return leg.homeTeam;
+  if (leg.awayTeam && leg.pick.startsWith(leg.awayTeam)) return leg.awayTeam;
+  return null;
+}
+
+// Inline team logo from ESPN CDN. Falls back to a sport pill when we can't
+// identify a team (totals legs) or when the team isn't in our brand map.
+function LegLogo({ leg }: { leg: Leg }) {
+  const team = resolveLegTeam(leg);
+  const logoUrl = team ? getTeamLogoUrl(team, leg.sport) : null;
+  if (logoUrl) {
+    return (
+      <div
+        className="flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0"
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid rgba(0,0,0,0.06)",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={logoUrl}
+          alt={team || leg.sport}
+          width={36}
+          height={36}
+          style={{ width: 36, height: 36, objectFit: "contain" }}
+          onError={(e) => {
+            // ESPN slug mismatch — hide image, leave empty pill so layout holds.
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      </div>
+    );
+  }
+  // No team logo — use the sport pill as fallback (totals, unknown teams).
+  return (
+    <div
+      className="flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0 text-xs font-bold uppercase"
+      style={{
+        background: `${SPORT_COLORS[leg.sport] || "#333"}1f`,
+        color: SPORT_COLORS[leg.sport] || "#666",
+      }}
+    >
+      {leg.sport}
+    </div>
+  );
+}
+
+// Derive the dominant team brand for a parlay — used as the colored accent
+// bar on the side of each card. Picks the first leg with a team match.
+function getParlayAccent(legs: Leg[]): TeamBrand {
+  for (const leg of legs) {
+    const team = resolveLegTeam(leg);
+    if (team) {
+      const brand = getTeamBrand(team);
+      if (brand) return brand;
+    }
+  }
+  return DEFAULT_BRAND;
+}
+
 /* ─── Skeleton Card ─── */
 
 function SkeletonCard() {
@@ -1404,45 +1493,45 @@ function SkeletonCard() {
     <div
       className="rounded-2xl overflow-hidden animate-pulse"
       style={{
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "rgba(0,0,0,0.04)",
+        border: "1px solid rgba(0,0,0,0.06)",
       }}
     >
       {/* Header skeleton */}
-      <div className="px-4 md:px-8 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="px-4 md:px-8 py-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-7 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
-          <div className="w-32 h-5 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="w-12 h-7 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
+          <div className="w-32 h-5 rounded-full" style={{ background: "rgba(0,0,0,0.06)" }} />
         </div>
-        <div className="w-16 h-4 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+        <div className="w-16 h-4 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
       </div>
 
       {/* Legs skeleton */}
       <div className="px-4 md:px-8 py-4 space-y-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-4 py-3 px-4">
-            <div className="w-12 h-7 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+            <div className="w-12 h-7 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
             <div className="flex-1 space-y-2">
-              <div className="w-48 h-4 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
-              <div className="w-32 h-4 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+              <div className="w-48 h-4 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
+              <div className="w-32 h-4 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
             </div>
-            <div className="w-14 h-5 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+            <div className="w-14 h-5 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
           </div>
         ))}
       </div>
 
       {/* Bottom skeleton */}
-      <div className="px-4 md:px-8 py-6 flex items-center gap-8" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="px-4 md:px-8 py-6 flex items-center gap-8" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="space-y-2">
-          <div className="w-20 h-3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-          <div className="w-24 h-8 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="w-20 h-3 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
+          <div className="w-24 h-8 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
         </div>
         <div className="flex-1 space-y-2">
-          <div className="w-28 h-3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-          <div className="h-2 rounded-full w-full" style={{ background: "rgba(255,255,255,0.04)" }} />
+          <div className="w-28 h-3 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
+          <div className="h-2 rounded-full w-full" style={{ background: "rgba(0,0,0,0.04)" }} />
         </div>
-        <div className="w-14 h-14 rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
-        <div className="w-36 h-10 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }} />
+        <div className="w-14 h-14 rounded-full" style={{ background: "rgba(0,0,0,0.04)" }} />
+        <div className="w-36 h-10 rounded-xl" style={{ background: "rgba(0,0,0,0.04)" }} />
       </div>
     </div>
   );
