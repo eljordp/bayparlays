@@ -7,8 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/app/components/Logo";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ProcessAnimation } from "@/app/components/ProcessAnimation";
-import { ParlayPlayer } from "@/app/components/ParlayPlayer";
-import { HowItWorksPlayer } from "@/app/components/HowItWorksVideo";
+import { StaticParlayCard } from "@/app/components/StaticParlayCard";
 import { BettingSlip } from "@/app/components/BettingSlip";
 import { AppNav } from "@/app/components/AppNav";
 import { LockOfTheDay } from "@/app/components/LockOfTheDay";
@@ -440,12 +439,37 @@ export default function Home() {
               custom={1}
               className="w-16 h-0.5 bg-[#0a0a0a] mx-auto mb-10"
             />
+            {/* Process steps — simple typographic flow replacing the
+                Remotion animation that used to live here. Three text-only
+                stages with serif numerals, monochrome. */}
             <motion.div
               variants={fadeUp}
               custom={2}
-              className="flex justify-center mb-8"
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-12"
             >
-              <HowItWorksPlayer />
+              {[
+                { n: "01", t: "Scan", d: "We pull every line across 5 books in real time." },
+                { n: "02", t: "Score", d: "Elo, recent form, injuries, rest, weather — all run through one model." },
+                { n: "03", t: "Stack", d: "Top legs combine into the day's best 2–6-leg parlays." },
+              ].map((step) => (
+                <div key={step.n} className="text-left">
+                  <div
+                    className="text-sm uppercase tracking-[0.2em] mb-2"
+                    style={{ color: "rgba(0,0,0,0.4)", fontFamily: "var(--font-geist-mono)" }}
+                  >
+                    {step.n}
+                  </div>
+                  <div
+                    className="text-2xl mb-2"
+                    style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
+                  >
+                    {step.t}
+                  </div>
+                  <p className="text-sm" style={{ color: "rgba(0,0,0,0.55)", lineHeight: 1.5 }}>
+                    {step.d}
+                  </p>
+                </div>
+              ))}
             </motion.div>
             <motion.p
               variants={fadeUp}
@@ -513,9 +537,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Right: Remotion video preview of the crazy parlay */}
+                {/* Right: static parlay card preview (replaces Remotion). */}
                 <div className="flex justify-center">
-                  <ParlayPlayer
+                  <StaticParlayCard
                     legs={crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number; book?: string }) => ({
                       sport: leg.sport,
                       pick: leg.pick,
@@ -524,8 +548,6 @@ export default function Home() {
                       game: leg.game,
                     })) || []}
                     combinedOdds={crazy.combined_odds || ""}
-                    evPercent={0}
-                    confidence={0}
                     payout={crazy.payout || 0}
                     maxWidth={340}
                   />
@@ -1048,7 +1070,7 @@ function LiveHeroParlay() {
   }, []);
 
   return (
-    <ParlayPlayer
+    <StaticParlayCard
       legs={parlay.legs}
       combinedOdds={parlay.combinedOdds}
       evPercent={parlay.evPercent}

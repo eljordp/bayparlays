@@ -83,7 +83,7 @@ const plans = [
       "Unlimited AI parlays",
       "Full parlay builder",
       "Betting simulator ($10K bankroll)",
-      "Shareable Remotion video cards",
+      "Shareable PNG share cards",
       "All achievements unlockable",
       "Leaderboard access",
       "Advanced EV analytics",
