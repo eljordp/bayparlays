@@ -87,19 +87,19 @@ export default function EdgesHistoryPage() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a", color: "#ededed" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7", color: "#0a0a0a" }}>
       <AppNav />
       <div className="pt-20">
         <PicksTabs />
       </div>
 
-      <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <section className="border-b" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
         <div className="max-w-[1400px] mx-auto px-6 py-10 md:py-14">
           <div className="flex items-center gap-3 mb-3">
             <Link
               href="/edges"
               className="text-xs uppercase tracking-wider hover:opacity-80"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "rgba(0,0,0,0.45)" }}
             >
               ← Sharp Edges
             </Link>
@@ -110,7 +110,7 @@ export default function EdgesHistoryPage() {
           >
             Edge Track Record
           </h1>
-          <p className="text-sm md:text-base max-w-3xl" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="text-sm md:text-base max-w-3xl" style={{ color: "rgba(0,0,0,0.6)" }}>
             Every sharp-edge single-leg pick the model has flagged, graded on game result. No cherry-picking, no hidden losses. If this number is positive over a real sample, the model has edge. If not, it doesn&apos;t.
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function EdgesHistoryPage() {
 
       <main className="max-w-[1400px] mx-auto px-6 py-10 md:py-14 space-y-12">
         {loading && (
-          <div className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <div className="text-sm" style={{ color: "rgba(0,0,0,0.45)" }}>
             Loading track record…
           </div>
         )}
@@ -128,8 +128,8 @@ export default function EdgesHistoryPage() {
             <div className="text-sm font-semibold mb-2" style={{ color: "#eab308" }}>
               Setup pending
             </div>
-            <div className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
-              The edge archive requires a one-time database migration to store graded picks. Run <code style={{ fontFamily: "var(--font-geist-mono)", background: "rgba(255,255,255,0.05)", padding: "1px 6px", borderRadius: 3 }}>supabase/migrations/013_edge_picks.sql</code> in the Supabase SQL editor, then reload. From that point on, every sharp edge /edges flags will automatically log, grade, and appear here.
+            <div className="text-xs leading-relaxed" style={{ color: "rgba(0,0,0,0.6)" }}>
+              The edge archive requires a one-time database migration to store graded picks. Run <code style={{ fontFamily: "var(--font-geist-mono)", background: "rgba(0,0,0,0.06)", padding: "1px 6px", borderRadius: 3 }}>supabase/migrations/013_edge_picks.sql</code> in the Supabase SQL editor, then reload. From that point on, every sharp edge /edges flags will automatically log, grade, and appear here.
             </div>
           </div>
         )}
@@ -139,18 +139,18 @@ export default function EdgesHistoryPage() {
             <div className="text-sm font-semibold mb-1" style={{ color: "#ef4444" }}>
               Couldn&apos;t load track record
             </div>
-            <div className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <div className="text-xs" style={{ color: "rgba(0,0,0,0.6)" }}>
               {data.details || data.error}
             </div>
           </div>
         )}
 
         {!loading && data && !data.stats && !data.migrationPending && !data.error && (
-          <div className="rounded-lg p-10 text-center" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div className="rounded-lg p-10 text-center" style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)" }}>
             <div className="text-base mb-2" style={{ color: "rgba(255,255,255,0.8)" }}>
               No picks logged yet
             </div>
-            <div className="text-xs max-w-md mx-auto" style={{ color: "rgba(255,255,255,0.5)" }}>
+            <div className="text-xs max-w-md mx-auto" style={{ color: "rgba(0,0,0,0.55)" }}>
               The archive is live and watching. Once /edges finds its first sharp mispricing on a game within the next 3 days, it&apos;ll land here automatically.
             </div>
           </div>
@@ -195,7 +195,7 @@ export default function EdgesHistoryPage() {
                     ? "#22c55e"
                     : data.stats.avgClv !== null
                       ? "#ef4444"
-                      : "rgba(255,255,255,0.5)"
+                      : "rgba(0,0,0,0.55)"
                 }
                 sub={`${data.stats.clvSample} with CLV`}
               />
@@ -210,7 +210,7 @@ export default function EdgesHistoryPage() {
                 icon={<TrendingUp size={14} />}
                 label="Breakeven"
                 value="52.4%"
-                valueColor="rgba(255,255,255,0.5)"
+                valueColor="rgba(0,0,0,0.55)"
                 sub="At -110 odds"
               />
               <StatCard
@@ -230,18 +230,18 @@ export default function EdgesHistoryPage() {
                 </h2>
                 <div className="space-y-3">
                   {data.bySport.map((s) => (
-                    <div key={s.sport} className="flex items-center justify-between py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+                    <div key={s.sport} className="flex items-center justify-between py-3 border-b" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
                       <div className="flex items-center gap-4">
                         <span className="text-sm font-semibold w-14">{s.sport}</span>
-                        <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-geist-mono)" }}>
+                        <span className="text-xs" style={{ color: "rgba(0,0,0,0.55)", fontFamily: "var(--font-geist-mono)" }}>
                           {s.won}W – {s.lost}L
                         </span>
                       </div>
                       <div className="flex items-center gap-6">
-                        <span className="text-sm" style={{ color: s.winRate >= 52.4 ? "#22c55e" : "rgba(255,255,255,0.7)", fontFamily: "var(--font-geist-mono)" }}>
+                        <span className="text-sm" style={{ color: s.winRate >= 52.4 ? "#22c55e" : "rgba(0,0,0,0.7)", fontFamily: "var(--font-geist-mono)" }}>
                           {s.winRate.toFixed(1)}%
                         </span>
-                        <span className="text-sm" style={{ color: s.profit > 0 ? "#22c55e" : s.profit < 0 ? "#ef4444" : "rgba(255,255,255,0.5)", fontFamily: "var(--font-geist-mono)", minWidth: 80, textAlign: "right" }}>
+                        <span className="text-sm" style={{ color: s.profit > 0 ? "#22c55e" : s.profit < 0 ? "#ef4444" : "rgba(0,0,0,0.55)", fontFamily: "var(--font-geist-mono)", minWidth: 80, textAlign: "right" }}>
                           {fmtMoney(s.profit)}
                         </span>
                       </div>
@@ -257,7 +257,7 @@ export default function EdgesHistoryPage() {
                 Recent Picks
               </h2>
               {data.recent.length === 0 && (
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <p className="text-sm" style={{ color: "rgba(0,0,0,0.55)" }}>
                   No picks logged yet. Once /edges finds its first sharp mispricing, it&apos;ll land here.
                 </p>
               )}
@@ -269,8 +269,8 @@ export default function EdgesHistoryPage() {
                     animate={{ opacity: 1 }}
                     className="rounded-lg py-3 px-4 md:py-3 md:px-4"
                     style={{
-                      background: "rgba(255,255,255,0.02)",
-                      border: `1px solid ${p.status === "won" ? "rgba(34,197,94,0.15)" : p.status === "lost" ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)"}`,
+                      background: "rgba(0,0,0,0.04)",
+                      border: `1px solid ${p.status === "won" ? "rgba(34,197,94,0.15)" : p.status === "lost" ? "rgba(239,68,68,0.15)" : "rgba(0,0,0,0.06)"}`,
                     }}
                   >
                     {/* Mobile: two-line stack. Desktop: all-in-one row.
@@ -280,7 +280,7 @@ export default function EdgesHistoryPage() {
                     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                       {/* Row 1 (mobile) / left (desktop): meta + pick */}
                       <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-                        <div className="text-[11px] md:text-xs flex-shrink-0 w-14 md:w-16" style={{ color: "rgba(255,255,255,0.4)", fontFamily: "var(--font-geist-mono)" }}>
+                        <div className="text-[11px] md:text-xs flex-shrink-0 w-14 md:w-16" style={{ color: "rgba(0,0,0,0.45)", fontFamily: "var(--font-geist-mono)" }}>
                           {fmtDate(p.createdAt)}
                         </div>
                         <div className="text-[11px] md:text-xs flex-shrink-0 w-10 md:w-12 font-semibold" style={{ color: "#3b82f6" }}>
@@ -288,23 +288,23 @@ export default function EdgesHistoryPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm truncate">{p.pick}</div>
-                          <div className="text-xs truncate" style={{ color: "rgba(255,255,255,0.4)" }}>{p.game}</div>
+                          <div className="text-xs truncate" style={{ color: "rgba(0,0,0,0.45)" }}>{p.game}</div>
                         </div>
                       </div>
 
                       {/* Row 2 (mobile) / right (desktop): numbers */}
                       <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4 pl-[108px] md:pl-0">
-                        <div className="text-xs flex-shrink-0 md:w-auto" style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}>
+                        <div className="text-xs flex-shrink-0 md:w-auto" style={{ color: "#0a0a0a", fontFamily: "var(--font-geist-mono)" }}>
                           {fmtOdds(p.odds)}
                         </div>
                         <div className="text-xs flex-shrink-0 md:w-16 md:text-right" style={{
-                          color: p.evVsFair && p.evVsFair >= 0.02 ? "#22c55e" : "rgba(255,255,255,0.5)",
+                          color: p.evVsFair && p.evVsFair >= 0.02 ? "#22c55e" : "rgba(0,0,0,0.55)",
                           fontFamily: "var(--font-geist-mono)",
                         }}>
                           {p.evVsFair !== null ? `${(p.evVsFair * 100).toFixed(1)}%` : "—"}
                         </div>
                         <div className="text-xs flex-shrink-0 md:w-20 md:text-right" style={{
-                          color: p.status === "won" ? "#22c55e" : p.status === "lost" ? "#ef4444" : "rgba(255,255,255,0.5)",
+                          color: p.status === "won" ? "#22c55e" : p.status === "lost" ? "#ef4444" : "rgba(0,0,0,0.55)",
                           fontFamily: "var(--font-geist-mono)",
                           fontWeight: 600,
                           textTransform: "uppercase",
@@ -312,7 +312,7 @@ export default function EdgesHistoryPage() {
                           {p.status}
                         </div>
                         <div className="text-xs flex-shrink-0 md:w-20 md:text-right" style={{
-                          color: p.profit > 0 ? "#22c55e" : p.profit < 0 ? "#ef4444" : "rgba(255,255,255,0.5)",
+                          color: p.profit > 0 ? "#22c55e" : p.profit < 0 ? "#ef4444" : "rgba(0,0,0,0.55)",
                           fontFamily: "var(--font-geist-mono)",
                         }}>
                           {p.status === "pending" ? "—" : fmtMoney(p.profit)}
@@ -344,15 +344,15 @@ function StatCard({
   sub: string;
 }) {
   return (
-    <div className="rounded-lg p-4" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <div className="flex items-center gap-2 text-xs mb-2 uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)" }}>
+    <div className="rounded-lg p-4" style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)" }}>
+      <div className="flex items-center gap-2 text-xs mb-2 uppercase tracking-wider" style={{ color: "rgba(0,0,0,0.45)" }}>
         {icon}
         {label}
       </div>
       <div className="text-2xl leading-none" style={{ color: valueColor, fontFamily: "var(--font-geist-mono)", fontWeight: 500 }}>
         {value}
       </div>
-      <div className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+      <div className="text-xs mt-2" style={{ color: "rgba(0,0,0,0.45)" }}>
         {sub}
       </div>
     </div>

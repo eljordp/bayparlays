@@ -143,9 +143,9 @@ const CATEGORY_META: Record<
   },
   payout: {
     label: "Highest Payout",
-    color: "#FF3B3B",
-    bg: "rgba(255,59,59,0.10)",
-    border: "rgba(255,59,59,0.20)",
+    color: "#0a0a0a",
+    bg: "rgba(0,0,0,0.06)",
+    border: "rgba(0,0,0,0.18)",
   },
   confidence: {
     label: "Most Confident",
@@ -285,7 +285,7 @@ export default function MyStatsPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
+        <Loader2 className="w-6 h-6 text-black/40 animate-spin" />
       </div>
     );
   }
@@ -293,19 +293,19 @@ export default function MyStatsPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] flex flex-col items-center justify-center px-6">
-        <Lock className="w-10 h-10 text-white/20 mb-6" />
+        <Lock className="w-10 h-10 text-black/30 mb-6" />
         <h1
           className="text-3xl md:text-4xl mb-4 text-center"
           style={{ fontFamily: "'DM Serif Display', serif" }}
         >
           Sign in to view your track record
         </h1>
-        <p className="text-white/40 mb-8 text-center max-w-md">
+        <p className="text-black/45 mb-8 text-center max-w-md">
           Your sim bets, resolved against real scores. See how you&apos;re trending.
         </p>
         <Link
           href="/login"
-          className="bg-[#FF3B3B] text-[#0a0a0a] px-8 py-3 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors"
+          className="bg-[#0a0a0a] text-white px-8 py-3 text-sm font-semibold rounded-full hover:bg-[#222] transition-colors"
         >
           Sign In
         </Link>
@@ -324,7 +324,7 @@ export default function MyStatsPage() {
   );
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       <AppNav />
       <div className="pt-20">
         <ResultsTabs />
@@ -342,14 +342,14 @@ export default function MyStatsPage() {
               className="text-5xl md:text-7xl font-normal leading-[1.05] mb-5"
               style={{
                 fontFamily: "'DM Serif Display', serif",
-                color: "#ededed",
+                color: "#0a0a0a",
               }}
             >
               My Track Record
             </h1>
             <p
               className="text-lg md:text-xl max-w-2xl"
-              style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}
+              style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}
             >
               Your sim bets, resolved against real scores.
             </p>
@@ -360,17 +360,17 @@ export default function MyStatsPage() {
                 className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50"
                 style={{
                   background: refreshing
-                    ? "rgba(255,59,59,0.08)"
-                    : "rgba(255,59,59,0.12)",
-                  color: "#FF3B3B",
-                  border: "1px solid rgba(255,59,59,0.25)",
+                    ? "rgba(0,0,0,0.06)"
+                    : "rgba(0,0,0,0.08)",
+                  color: "#0a0a0a",
+                  border: "1px solid rgba(0,0,0,0.25)",
                 }}
               >
                 {refreshing ? "Refreshing…" : "Refresh Now"}
               </button>
               <span
                 className="text-xs uppercase tracking-widest"
-                style={{ color: "rgba(255,255,255,0.25)" }}
+                style={{ color: "rgba(0,0,0,0.4)" }}
               >
                 {lastUpdated
                   ? `Updated ${lastUpdated.toLocaleTimeString("en-US", {
@@ -420,24 +420,24 @@ export default function MyStatsPage() {
                 <div
                   className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(0,0,0,0.08)",
                   }}
                 >
                   <BarChart3
                     size={32}
-                    style={{ color: "rgba(255,255,255,0.2)" }}
+                    style={{ color: "rgba(0,0,0,0.3)" }}
                   />
                 </div>
                 <p
                   className="text-xl font-medium mb-2"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  style={{ color: "rgba(0,0,0,0.6)" }}
                 >
                   {error}
                 </p>
                 <p
                   className="text-sm"
-                  style={{ color: "rgba(255,255,255,0.3)" }}
+                  style={{ color: "rgba(0,0,0,0.4)" }}
                 >
                   Try refreshing.
                 </p>
@@ -456,24 +456,24 @@ export default function MyStatsPage() {
                 <div
                   className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    background: "rgba(0,0,0,0.04)",
+                    border: "1px solid rgba(0,0,0,0.08)",
                   }}
                 >
                   <BarChart3
                     size={32}
-                    style={{ color: "rgba(255,255,255,0.2)" }}
+                    style={{ color: "rgba(0,0,0,0.3)" }}
                   />
                 </div>
                 <p
                   className="text-xl font-medium mb-2"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  style={{ color: "rgba(0,0,0,0.6)" }}
                 >
                   No sim bets yet.
                 </p>
                 <p
                   className="text-sm mb-6"
-                  style={{ color: "rgba(255,255,255,0.3)" }}
+                  style={{ color: "rgba(0,0,0,0.4)" }}
                 >
                   Place your first one in the Simulator.
                 </p>
@@ -481,9 +481,9 @@ export default function MyStatsPage() {
                   href="/simulator"
                   className="text-xs font-semibold px-4 py-2 rounded-full transition-all"
                   style={{
-                    background: "rgba(255,59,59,0.12)",
-                    color: "#FF3B3B",
-                    border: "1px solid rgba(255,59,59,0.25)",
+                    background: "rgba(0,0,0,0.08)",
+                    color: "#0a0a0a",
+                    border: "1px solid rgba(0,0,0,0.25)",
                   }}
                 >
                   Go to Simulator
@@ -568,7 +568,7 @@ export default function MyStatsPage() {
                     value={`$${stats.bestPayout.toLocaleString(undefined, {
                       maximumFractionDigits: 0,
                     })}`}
-                    valueColor="#FF3B3B"
+                    valueColor="#0a0a0a"
                     sublabel={`${formatMoney(stats.bestProfit)} profit`}
                     delay={0.25}
                   />
@@ -586,7 +586,7 @@ export default function MyStatsPage() {
                       className="text-2xl md:text-3xl mb-8"
                       style={{
                         fontFamily: "'DM Serif Display', serif",
-                        color: "#ededed",
+                        color: "#0a0a0a",
                       }}
                     >
                       By Sport
@@ -605,14 +605,14 @@ export default function MyStatsPage() {
                         >
                           <div
                             className="w-16 md:w-20 text-sm font-semibold flex-shrink-0"
-                            style={{ color: "rgba(255,255,255,0.7)" }}
+                            style={{ color: "rgba(0,0,0,0.7)" }}
                           >
                             {sport.sport}
                           </div>
                           <div
                             className="text-xs flex-shrink-0 w-16 text-right"
                             style={{
-                              color: "rgba(255,255,255,0.35)",
+                              color: "rgba(0,0,0,0.45)",
                               fontFamily: "var(--font-geist-mono)",
                             }}
                           >
@@ -620,7 +620,7 @@ export default function MyStatsPage() {
                           </div>
                           <div
                             className="flex-1 h-7 rounded overflow-hidden"
-                            style={{ background: "rgba(255,255,255,0.04)" }}
+                            style={{ background: "rgba(0,0,0,0.04)" }}
                           >
                             <motion.div
                               className="h-full rounded"
@@ -638,8 +638,8 @@ export default function MyStatsPage() {
                               style={{
                                 background:
                                   sport.winRate >= 50
-                                    ? "linear-gradient(90deg, #FF3B3B, #FF5252)"
-                                    : "linear-gradient(90deg, rgba(255,59,59,0.4), rgba(255,59,59,0.6))",
+                                    ? "linear-gradient(90deg, #0a0a0a, rgba(0,0,0,0.7))"
+                                    : "linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5))",
                                 minWidth: "2px",
                               }}
                             />
@@ -672,7 +672,7 @@ export default function MyStatsPage() {
                       className="text-2xl md:text-3xl mb-8"
                       style={{
                         fontFamily: "'DM Serif Display', serif",
-                        color: "#ededed",
+                        color: "#0a0a0a",
                       }}
                     >
                       By Category
@@ -700,7 +700,7 @@ export default function MyStatsPage() {
                             <div
                               className="text-xs flex-shrink-0 w-16 text-right"
                               style={{
-                                color: "rgba(255,255,255,0.35)",
+                                color: "rgba(0,0,0,0.45)",
                                 fontFamily: "var(--font-geist-mono)",
                               }}
                             >
@@ -708,7 +708,7 @@ export default function MyStatsPage() {
                             </div>
                             <div
                               className="flex-1 h-7 rounded overflow-hidden"
-                              style={{ background: "rgba(255,255,255,0.04)" }}
+                              style={{ background: "rgba(0,0,0,0.04)" }}
                             >
                               <motion.div
                                 className="h-full rounded"
@@ -757,16 +757,16 @@ export default function MyStatsPage() {
                     className="text-2xl md:text-3xl mb-3"
                     style={{
                       fontFamily: "'DM Serif Display', serif",
-                      color: "#ededed",
+                      color: "#0a0a0a",
                     }}
                   >
                     Recent Bets
                   </h2>
                   <p
                     className="text-xs mb-8 max-w-2xl"
-                    style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}
+                    style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}
                   >
-                    <span className="font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>Hit %</span> = the book&apos;s implied probability this parlay cashes.
+                    <span className="font-semibold" style={{ color: "rgba(0,0,0,0.6)" }}>Hit %</span> = the book&apos;s implied probability this parlay cashes.
                     A +500 parlay hits ~17% of the time, +100 hits ~50%. Chasing high hit rates with juiced favorites is a trap — the book&apos;s vig grinds you down. Look for picks where the AI&apos;s estimate exceeds the book&apos;s.
                   </p>
 
@@ -776,8 +776,8 @@ export default function MyStatsPage() {
                     style={{
                       gridTemplateColumns:
                         "140px 80px 90px 70px 90px 100px 40px",
-                      color: "rgba(255,255,255,0.25)",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      color: "rgba(0,0,0,0.4)",
+                      borderBottom: "1px solid rgba(0,0,0,0.06)",
                     }}
                   >
                     <span>Date</span>
@@ -815,13 +815,13 @@ export default function MyStatsPage() {
                             className="w-full text-left transition-colors duration-150 rounded-lg"
                             style={{
                               background: isExpanded
-                                ? "rgba(255,255,255,0.03)"
+                                ? "rgba(0,0,0,0.04)"
                                 : "transparent",
                             }}
                             onMouseEnter={(e) => {
                               if (!isExpanded)
                                 e.currentTarget.style.background =
-                                  "rgba(255,255,255,0.02)";
+                                  "rgba(0,0,0,0.04)";
                             }}
                             onMouseLeave={(e) => {
                               if (!isExpanded)
@@ -839,13 +839,13 @@ export default function MyStatsPage() {
                               <div>
                                 <div
                                   className="text-sm"
-                                  style={{ color: "rgba(255,255,255,0.7)" }}
+                                  style={{ color: "rgba(0,0,0,0.7)" }}
                                 >
                                   {formatDate(bet.created_at)}
                                 </div>
                                 <div
                                   className="text-xs mt-0.5"
-                                  style={{ color: "rgba(255,255,255,0.25)" }}
+                                  style={{ color: "rgba(0,0,0,0.4)" }}
                                 >
                                   {formatTime(bet.created_at)}
                                 </div>
@@ -854,7 +854,7 @@ export default function MyStatsPage() {
                                 <span
                                   className="text-sm font-medium"
                                   style={{
-                                    color: "rgba(255,255,255,0.6)",
+                                    color: "rgba(0,0,0,0.6)",
                                     fontFamily: "var(--font-geist-mono)",
                                   }}
                                 >
@@ -880,7 +880,7 @@ export default function MyStatsPage() {
                               <div
                                 className="text-sm text-right font-semibold"
                                 style={{
-                                  color: "#FF3B3B",
+                                  color: "#0a0a0a",
                                   fontFamily: "var(--font-geist-mono)",
                                 }}
                               >
@@ -888,7 +888,7 @@ export default function MyStatsPage() {
                                 {impliedHitRate(bet.combined_decimal) != null && (
                                   <div
                                     className="text-[10px] font-normal mt-0.5"
-                                    style={{ color: "rgba(255,255,255,0.3)" }}
+                                    style={{ color: "rgba(0,0,0,0.4)" }}
                                   >
                                     {impliedHitRate(bet.combined_decimal)!.toFixed(1)}% hit
                                   </div>
@@ -897,7 +897,7 @@ export default function MyStatsPage() {
                               <div
                                 className="text-sm text-right font-medium"
                                 style={{
-                                  color: "rgba(255,255,255,0.5)",
+                                  color: "rgba(0,0,0,0.55)",
                                   fontFamily: "var(--font-geist-mono)",
                                 }}
                               >
@@ -923,7 +923,7 @@ export default function MyStatsPage() {
                                       ? "#22c55e"
                                       : bet.profit < 0
                                       ? "#ef4444"
-                                      : "rgba(255,255,255,0.4)",
+                                      : "rgba(0,0,0,0.45)",
                                   fontFamily: "var(--font-geist-mono)",
                                 }}
                               >
@@ -943,7 +943,7 @@ export default function MyStatsPage() {
                               </div>
                               <div
                                 className="flex justify-end"
-                                style={{ color: "rgba(255,255,255,0.25)" }}
+                                style={{ color: "rgba(0,0,0,0.4)" }}
                               >
                                 {isExpanded ? (
                                   <ChevronUp size={16} />
@@ -981,12 +981,12 @@ export default function MyStatsPage() {
                                   )}
                                   <span
                                     className="text-xs"
-                                    style={{ color: "rgba(255,255,255,0.3)" }}
+                                    style={{ color: "rgba(0,0,0,0.4)" }}
                                   >
                                     {formatDate(bet.created_at)}
                                   </span>
                                 </div>
-                                <div style={{ color: "rgba(255,255,255,0.25)" }}>
+                                <div style={{ color: "rgba(0,0,0,0.4)" }}>
                                   {isExpanded ? (
                                     <ChevronUp size={16} />
                                   ) : (
@@ -1000,7 +1000,7 @@ export default function MyStatsPage() {
                                     <span
                                       className="text-xs"
                                       style={{
-                                        color: "rgba(255,255,255,0.3)",
+                                        color: "rgba(0,0,0,0.4)",
                                       }}
                                     >
                                       {bet.legs.length} legs
@@ -1016,7 +1016,7 @@ export default function MyStatsPage() {
                                     <span
                                       className="text-sm font-semibold"
                                       style={{
-                                        color: "#FF3B3B",
+                                        color: "#0a0a0a",
                                         fontFamily: "var(--font-geist-mono)",
                                       }}
                                     >
@@ -1026,7 +1026,7 @@ export default function MyStatsPage() {
                                       <span
                                         className="text-[10px] ml-2"
                                         style={{
-                                          color: "rgba(255,255,255,0.3)",
+                                          color: "rgba(0,0,0,0.4)",
                                           fontFamily: "var(--font-geist-mono)",
                                         }}
                                       >
@@ -1044,7 +1044,7 @@ export default function MyStatsPage() {
                                     <span
                                       className="text-xs"
                                       style={{
-                                        color: "rgba(255,255,255,0.4)",
+                                        color: "rgba(0,0,0,0.45)",
                                         fontFamily: "var(--font-geist-mono)",
                                       }}
                                     >
@@ -1060,7 +1060,7 @@ export default function MyStatsPage() {
                                         ? "#22c55e"
                                         : bet.profit < 0
                                         ? "#ef4444"
-                                        : "rgba(255,255,255,0.4)",
+                                        : "rgba(0,0,0,0.45)",
                                     fontFamily: "var(--font-geist-mono)",
                                   }}
                                 >
@@ -1095,8 +1095,8 @@ export default function MyStatsPage() {
                                 <div
                                   className="mx-4 md:mx-6 mb-3 rounded-xl overflow-hidden"
                                   style={{
-                                    background: "rgba(255,255,255,0.02)",
-                                    border: "1px solid rgba(255,255,255,0.05)",
+                                    background: "rgba(0,0,0,0.04)",
+                                    border: "1px solid rgba(0,0,0,0.06)",
                                   }}
                                 >
                                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -1111,7 +1111,7 @@ export default function MyStatsPage() {
                                       style={{
                                         borderBottom:
                                           li < bet.legs.length - 1
-                                            ? "1px solid rgba(255,255,255,0.04)"
+                                            ? "1px solid rgba(0,0,0,0.04)"
                                             : "none",
                                       }}
                                     >
@@ -1122,10 +1122,10 @@ export default function MyStatsPage() {
                                               className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
                                               style={{
                                                 background:
-                                                  "rgba(255,59,59,0.08)",
-                                                color: "#FF3B3B",
+                                                  "rgba(0,0,0,0.06)",
+                                                color: "#0a0a0a",
                                                 border:
-                                                  "1px solid rgba(255,59,59,0.15)",
+                                                  "1px solid rgba(0,0,0,0.08)",
                                               }}
                                             >
                                               {leg.sport}
@@ -1139,13 +1139,13 @@ export default function MyStatsPage() {
                                                   status.state === "in"
                                                     ? "rgba(34,197,94,0.12)"
                                                     : status.state === "post"
-                                                      ? "rgba(255,255,255,0.06)"
+                                                      ? "rgba(0,0,0,0.06)"
                                                       : "rgba(59,130,246,0.10)",
                                                 color:
                                                   status.state === "in"
                                                     ? "#22c55e"
                                                     : status.state === "post"
-                                                      ? "rgba(255,255,255,0.6)"
+                                                      ? "rgba(0,0,0,0.6)"
                                                       : "#60a5fa",
                                                 border: `1px solid ${
                                                   status.state === "in"
@@ -1192,7 +1192,7 @@ export default function MyStatsPage() {
                                           <span
                                             className="text-xs truncate"
                                             style={{
-                                              color: "rgba(255,255,255,0.4)",
+                                              color: "rgba(0,0,0,0.45)",
                                             }}
                                           >
                                             {gameLabel}
@@ -1200,7 +1200,7 @@ export default function MyStatsPage() {
                                         </div>
                                         <div
                                           className="text-sm font-medium mt-1"
-                                          style={{ color: "#ededed" }}
+                                          style={{ color: "#0a0a0a" }}
                                         >
                                           {leg.pick || leg.selection || ""}
                                         </div>
@@ -1211,7 +1211,7 @@ export default function MyStatsPage() {
                                             <span
                                               className="text-sm font-bold"
                                               style={{
-                                                color: "#FF3B3B",
+                                                color: "#0a0a0a",
                                                 fontFamily:
                                                   "var(--font-geist-mono)",
                                               }}
@@ -1234,14 +1234,14 @@ export default function MyStatsPage() {
                                       className="flex items-center justify-between px-4 md:px-6 py-3"
                                       style={{
                                         borderTop:
-                                          "1px solid rgba(255,255,255,0.06)",
+                                          "1px solid rgba(0,0,0,0.06)",
                                         background: "rgba(255,255,255,0.01)",
                                       }}
                                     >
                                       <span
                                         className="text-xs uppercase tracking-wider"
                                         style={{
-                                          color: "rgba(255,255,255,0.3)",
+                                          color: "rgba(0,0,0,0.4)",
                                         }}
                                       >
                                         Potential Payout
@@ -1249,7 +1249,7 @@ export default function MyStatsPage() {
                                       <span
                                         className="text-sm font-bold"
                                         style={{
-                                          color: "#ededed",
+                                          color: "#0a0a0a",
                                           fontFamily: "var(--font-geist-mono)",
                                         }}
                                       >
@@ -1274,13 +1274,13 @@ export default function MyStatsPage() {
                       <Clock
                         size={28}
                         style={{
-                          color: "rgba(255,255,255,0.15)",
+                          color: "rgba(0,0,0,0.25)",
                           margin: "0 auto 12px",
                         }}
                       />
                       <p
                         className="text-sm"
-                        style={{ color: "rgba(255,255,255,0.3)" }}
+                        style={{ color: "rgba(0,0,0,0.4)" }}
                       >
                         No sim bets yet. Place your first one in the Simulator.
                       </p>
@@ -1296,13 +1296,13 @@ export default function MyStatsPage() {
       {/* ─── Footer ─── */}
       <footer
         className="px-6 py-12"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
       >
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
             BayParlays. AI-powered parlay optimization.
           </p>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+          <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
             Sim bets use simulated money only. No real bets are placed.
           </p>
         </div>
@@ -1332,8 +1332,8 @@ function StatCard({
     <motion.div
       className="rounded-xl p-5 md:p-6"
       style={{
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.06)",
       }}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -1344,10 +1344,10 @@ function StatCard({
       }}
     >
       <div className="flex items-center gap-2 mb-4">
-        <div style={{ color: "rgba(255,255,255,0.3)" }}>{icon}</div>
+        <div style={{ color: "rgba(0,0,0,0.4)" }}>{icon}</div>
         <span
           className="text-xs uppercase tracking-wider font-medium"
-          style={{ color: "rgba(255,255,255,0.35)" }}
+          style={{ color: "rgba(0,0,0,0.45)" }}
         >
           {label}
         </span>
@@ -1358,7 +1358,7 @@ function StatCard({
       >
         {value}
       </div>
-      <div className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+      <div className="text-xs mt-2" style={{ color: "rgba(0,0,0,0.3)" }}>
         {sublabel}
       </div>
     </motion.div>
@@ -1375,21 +1375,21 @@ function StatsSkeletons() {
           key={i}
           className="rounded-xl p-5 md:p-6 animate-pulse"
           style={{
-            background: "rgba(255,255,255,0.025)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "#FFFFFF",
+            border: "1px solid rgba(0,0,0,0.06)",
           }}
         >
           <div
             className="w-20 h-3 rounded mb-4"
-            style={{ background: "rgba(255,255,255,0.06)" }}
+            style={{ background: "rgba(0,0,0,0.06)" }}
           />
           <div
             className="w-24 h-9 rounded mb-2"
-            style={{ background: "rgba(255,255,255,0.08)" }}
+            style={{ background: "rgba(0,0,0,0.08)" }}
           />
           <div
             className="w-16 h-3 rounded"
-            style={{ background: "rgba(255,255,255,0.04)" }}
+            style={{ background: "rgba(0,0,0,0.04)" }}
           />
         </div>
       ))}
@@ -1402,25 +1402,25 @@ function BarSkeletons() {
     <div className="space-y-4">
       <div
         className="w-24 h-7 rounded mb-6"
-        style={{ background: "rgba(255,255,255,0.06)" }}
+        style={{ background: "rgba(0,0,0,0.06)" }}
       />
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="flex items-center gap-4 animate-pulse">
           <div
             className="w-16 h-4 rounded"
-            style={{ background: "rgba(255,255,255,0.06)" }}
+            style={{ background: "rgba(0,0,0,0.06)" }}
           />
           <div
             className="w-12 h-4 rounded"
-            style={{ background: "rgba(255,255,255,0.04)" }}
+            style={{ background: "rgba(0,0,0,0.04)" }}
           />
           <div
             className="flex-1 h-7 rounded"
-            style={{ background: "rgba(255,255,255,0.03)" }}
+            style={{ background: "rgba(0,0,0,0.04)" }}
           />
           <div
             className="w-10 h-4 rounded"
-            style={{ background: "rgba(255,255,255,0.05)" }}
+            style={{ background: "rgba(0,0,0,0.06)" }}
           />
         </div>
       ))}
@@ -1433,28 +1433,28 @@ function BetRowSkeleton() {
     <div className="flex items-center gap-4 px-6 py-4 animate-pulse">
       <div
         className="w-28 h-5 rounded"
-        style={{ background: "rgba(255,255,255,0.05)" }}
+        style={{ background: "rgba(0,0,0,0.06)" }}
       />
       <div
         className="w-8 h-5 rounded"
-        style={{ background: "rgba(255,255,255,0.04)" }}
+        style={{ background: "rgba(0,0,0,0.04)" }}
       />
       <div
         className="w-16 h-5 rounded"
-        style={{ background: "rgba(255,255,255,0.05)" }}
+        style={{ background: "rgba(0,0,0,0.06)" }}
       />
       <div
         className="w-12 h-5 rounded"
-        style={{ background: "rgba(255,255,255,0.04)" }}
+        style={{ background: "rgba(0,0,0,0.04)" }}
       />
       <div
         className="w-16 h-6 rounded-full"
-        style={{ background: "rgba(255,255,255,0.05)" }}
+        style={{ background: "rgba(0,0,0,0.06)" }}
       />
       <div className="flex-1" />
       <div
         className="w-16 h-5 rounded"
-        style={{ background: "rgba(255,255,255,0.05)" }}
+        style={{ background: "rgba(0,0,0,0.06)" }}
       />
     </div>
   );

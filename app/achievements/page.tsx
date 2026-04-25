@@ -62,8 +62,8 @@ function tierLabel(tier: string): string {
 
 function tierColor(tier: string): { text: string; bg: string; border: string } {
   if (tier === "vip") return { text: "#eab308", bg: "rgba(234,179,8,0.08)", border: "rgba(234,179,8,0.2)" };
-  if (tier === "sharp") return { text: "#FF3B3B", bg: "rgba(255,59,59,0.06)", border: "rgba(255,59,59,0.15)" };
-  return { text: "rgba(255,255,255,0.4)", bg: "transparent", border: "transparent" };
+  if (tier === "sharp") return { text: "#0a0a0a", bg: "rgba(0,0,0,0.04)", border: "rgba(0,0,0,0.08)" };
+  return { text: "rgba(0,0,0,0.45)", bg: "transparent", border: "transparent" };
 }
 
 /* ─── Component ─── */
@@ -120,34 +120,34 @@ export default function AchievementsPage() {
   // Auth gate
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a0a0a" }}>
-        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "transparent" }} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#FAFAF7" }}>
+        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(0,0,0,0.25)", borderTopColor: "transparent" }} />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "#0a0a0a" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "#FAFAF7" }}>
         <div
           className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
         >
-          <Lock size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
+          <Lock size={32} style={{ color: "rgba(0,0,0,0.3)" }} />
         </div>
         <h2
           className="text-3xl mb-3"
-          style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+          style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
         >
           Sign in to view achievements
         </h2>
-        <p className="text-sm mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>
+        <p className="text-sm mb-8" style={{ color: "rgba(0,0,0,0.45)" }}>
           Track your progress, earn badges, and unlock rewards.
         </p>
         <Link
           href="/login"
           className="px-8 py-3 text-sm font-semibold rounded-full transition-colors duration-200"
-          style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+          style={{ background: "#0a0a0a", color: "#FFFFFF" }}
         >
           Sign In
         </Link>
@@ -156,14 +156,14 @@ export default function AchievementsPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       {/* ─── Nav ─── */}
       <nav
         className="fixed top-0 left-0 right-0 z-50"
         style={{
           background: "rgba(10,10,10,0.85)",
           backdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}
       >
         <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
@@ -178,14 +178,14 @@ export default function AchievementsPage() {
                   href={link.href}
                   className="text-sm transition-colors duration-200"
                   style={{
-                    color: link.href === "/achievements" ? "#FF3B3B" : "rgba(255,255,255,0.5)",
+                    color: link.href === "/achievements" ? "#0a0a0a" : "rgba(0,0,0,0.55)",
                     fontWeight: link.href === "/achievements" ? 600 : 400,
                   }}
                   onMouseEnter={(e) => {
-                    if (link.href !== "/achievements") e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+                    if (link.href !== "/achievements") e.currentTarget.style.color = "rgba(0,0,0,0.9)";
                   }}
                   onMouseLeave={(e) => {
-                    if (link.href !== "/achievements") e.currentTarget.style.color = "rgba(255,255,255,0.5)";
+                    if (link.href !== "/achievements") e.currentTarget.style.color = "rgba(0,0,0,0.55)";
                   }}
                 >
                   {link.label}
@@ -197,7 +197,7 @@ export default function AchievementsPage() {
             <NavUser />
             <button
               className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-200"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              style={{ color: "rgba(0,0,0,0.7)" }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -215,7 +215,7 @@ export default function AchievementsPage() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
               className="md:hidden overflow-hidden"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
             >
               <div className="px-6 py-4 flex flex-col gap-1">
                 {NAV_LINKS.map((link) => (
@@ -225,8 +225,8 @@ export default function AchievementsPage() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="py-3 px-4 rounded-lg text-sm font-medium transition-colors duration-150"
                     style={{
-                      color: link.href === "/achievements" ? "#FF3B3B" : "rgba(255,255,255,0.6)",
-                      background: link.href === "/achievements" ? "rgba(255,59,59,0.08)" : "transparent",
+                      color: link.href === "/achievements" ? "#0a0a0a" : "rgba(0,0,0,0.6)",
+                      background: link.href === "/achievements" ? "rgba(0,0,0,0.06)" : "transparent",
                     }}
                   >
                     {link.label}
@@ -251,29 +251,29 @@ export default function AchievementsPage() {
             <div
               className="px-6 py-4 rounded-2xl flex items-center gap-4"
               style={{
-                background: "rgba(255,59,59,0.12)",
-                border: "1px solid rgba(255,59,59,0.3)",
+                background: "rgba(0,0,0,0.08)",
+                border: "1px solid rgba(0,0,0,0.25)",
                 backdropFilter: "blur(20px)",
-                boxShadow: "0 8px 32px rgba(255,59,59,0.15)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
               }}
             >
               <span className="text-2xl">
                 {badges.find((b) => b.id === newlyEarned[0])?.icon || "\uD83C\uDFC6"}
               </span>
               <div>
-                <p className="text-sm font-semibold" style={{ color: "#ededed" }}>
+                <p className="text-sm font-semibold" style={{ color: "#0a0a0a" }}>
                   {newlyEarned.length === 1
                     ? `Badge Unlocked: ${badges.find((b) => b.id === newlyEarned[0])?.name || "New Badge"}`
                     : `${newlyEarned.length} New Badges Unlocked!`}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(0,0,0,0.55)" }}>
                   Check your trophy case below
                 </p>
               </div>
               <button
                 onClick={() => setNewlyEarned([])}
                 className="ml-2 p-1 rounded-lg transition-colors"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                style={{ color: "rgba(0,0,0,0.45)" }}
               >
                 <X size={16} />
               </button>
@@ -288,13 +288,13 @@ export default function AchievementsPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <h1
               className="text-5xl md:text-7xl font-normal leading-[1.05] mb-5"
-              style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+              style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
             >
               Achievements
             </h1>
             <p
               className="text-lg md:text-xl max-w-2xl"
-              style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}
+              style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}
             >
               {totalUnlocked} / {totalAvailable} unlocked
             </p>
@@ -303,7 +303,7 @@ export default function AchievementsPage() {
             <div className="mt-6 max-w-md">
               <div
                 className="h-2 rounded-full overflow-hidden"
-                style={{ background: "rgba(255,255,255,0.06)" }}
+                style={{ background: "rgba(0,0,0,0.06)" }}
               >
                 <motion.div
                   className="h-full rounded-full"
@@ -311,7 +311,7 @@ export default function AchievementsPage() {
                   animate={{ width: `${progressPercent}%` }}
                   transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
                   style={{
-                    background: "linear-gradient(90deg, #FF3B3B, #FF5252)",
+                    background: "linear-gradient(90deg, #0a0a0a, rgba(0,0,0,0.7))",
                     minWidth: totalUnlocked > 0 ? "8px" : "0px",
                   }}
                 />
@@ -319,7 +319,7 @@ export default function AchievementsPage() {
               <p
                 className="text-xs mt-2"
                 style={{
-                  color: "rgba(255,255,255,0.25)",
+                  color: "rgba(0,0,0,0.4)",
                   fontFamily: "var(--font-geist-mono)",
                 }}
               >
@@ -351,11 +351,11 @@ export default function AchievementsPage() {
                     <div className="mb-8">
                       <h2
                         className="text-2xl md:text-3xl mb-2"
-                        style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                        style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
                       >
                         {cat.label}
                       </h2>
-                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
                         {cat.description}
                       </p>
                     </div>
@@ -368,12 +368,12 @@ export default function AchievementsPage() {
 
                         // Determine opacity and style
                         let opacity = 1;
-                        let borderStyle = "1px solid rgba(255,255,255,0.06)";
-                        let bgStyle = "rgba(255,255,255,0.025)";
+                        let borderStyle = "1px solid rgba(0,0,0,0.06)";
+                        let bgStyle = "#FFFFFF";
 
                         if (isUnlocked) {
-                          borderStyle = "1px solid rgba(255,59,59,0.2)";
-                          bgStyle = "rgba(255,59,59,0.04)";
+                          borderStyle = "1px solid rgba(0,0,0,0.18)";
+                          bgStyle = "rgba(0,0,0,0.04)";
                         } else if (!canEarn) {
                           opacity = 0.2;
                         } else {
@@ -381,8 +381,8 @@ export default function AchievementsPage() {
                         }
 
                         if (isNewlyEarned) {
-                          borderStyle = "1px solid rgba(255,59,59,0.4)";
-                          bgStyle = "rgba(255,59,59,0.08)";
+                          borderStyle = "1px solid rgba(0,0,0,0.3)";
+                          bgStyle = "rgba(0,0,0,0.06)";
                         }
 
                         return (
@@ -398,7 +398,7 @@ export default function AchievementsPage() {
                             animate={{ opacity, y: 0 }}
                             transition={{ duration: 0.4, delay: 0.3 + catIdx * 0.1 + idx * 0.05 }}
                             whileHover={isUnlocked ? {
-                              borderColor: "rgba(255,59,59,0.35)",
+                              borderColor: "rgba(0,0,0,0.25)",
                               transition: { duration: 0.2 },
                             } : undefined}
                           >
@@ -407,7 +407,7 @@ export default function AchievementsPage() {
                               <div
                                 className="absolute -top-10 -right-10 w-32 h-32 rounded-full"
                                 style={{
-                                  background: "radial-gradient(circle, rgba(255,59,59,0.08) 0%, transparent 70%)",
+                                  background: "radial-gradient(circle, rgba(0,0,0,0.06) 0%, transparent 70%)",
                                   pointerEvents: "none",
                                 }}
                               />
@@ -426,7 +426,7 @@ export default function AchievementsPage() {
                             {/* Name */}
                             <h3
                               className="text-sm md:text-base font-bold mb-1"
-                              style={{ color: isUnlocked ? "#ededed" : "rgba(255,255,255,0.5)" }}
+                              style={{ color: isUnlocked ? "#ededed" : "rgba(0,0,0,0.55)" }}
                             >
                               {badge.name}
                             </h3>
@@ -434,7 +434,7 @@ export default function AchievementsPage() {
                             {/* Description */}
                             <p
                               className="text-xs leading-relaxed mb-3"
-                              style={{ color: isUnlocked ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.25)" }}
+                              style={{ color: isUnlocked ? "rgba(0,0,0,0.5)" : "rgba(0,0,0,0.4)" }}
                             >
                               {badge.description}
                             </p>
@@ -455,7 +455,7 @@ export default function AchievementsPage() {
                                 {badge.unlocked_at && (
                                   <span
                                     className="text-[10px] ml-1"
-                                    style={{ color: "rgba(255,255,255,0.2)" }}
+                                    style={{ color: "rgba(0,0,0,0.3)" }}
                                   >
                                     {formatUnlockedDate(badge.unlocked_at)}
                                   </span>
@@ -464,7 +464,7 @@ export default function AchievementsPage() {
                             ) : canEarn ? (
                               <span
                                 className="text-[10px] uppercase tracking-wider font-medium"
-                                style={{ color: "rgba(255,255,255,0.25)" }}
+                                style={{ color: "rgba(0,0,0,0.4)" }}
                               >
                                 Keep going
                               </span>
@@ -502,23 +502,23 @@ export default function AchievementsPage() {
             <motion.div
               className="rounded-2xl p-8 md:p-12 text-center"
               style={{
-                background: "linear-gradient(135deg, rgba(255,59,59,0.06) 0%, rgba(234,179,8,0.04) 100%)",
-                border: "1px solid rgba(255,59,59,0.12)",
+                background: "linear-gradient(135deg, rgba(0,0,0,0.04) 0%, rgba(234,179,8,0.04) 100%)",
+                border: "1px solid rgba(0,0,0,0.08)",
               }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.8 }}
             >
-              <p className="text-3xl mb-2" style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}>
+              <p className="text-3xl mb-2" style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}>
                 Unlock all badges
               </p>
-              <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <p className="text-sm mb-6" style={{ color: "rgba(0,0,0,0.45)" }}>
                 Upgrade to Sharp or VIP to access every achievement tier.
               </p>
               <Link
                 href="/subscribe"
                 className="inline-block px-8 py-3 text-sm font-semibold rounded-full transition-colors duration-200"
-                style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                style={{ background: "#0a0a0a", color: "#FFFFFF" }}
               >
                 View Plans
               </Link>
@@ -528,12 +528,12 @@ export default function AchievementsPage() {
       )}
 
       {/* ─── Footer ─── */}
-      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
             BayParlays. AI-powered parlay optimization.
           </p>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+          <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
             Not financial advice. Gamble responsibly.
           </p>
         </div>
@@ -549,18 +549,18 @@ function BadgeSkeletons() {
     <div className="space-y-16">
       {[1, 2, 3, 4].map((section) => (
         <div key={section}>
-          <div className="w-32 h-7 rounded mb-8 animate-pulse" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="w-32 h-7 rounded mb-8 animate-pulse" style={{ background: "rgba(0,0,0,0.06)" }} />
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
                 className="rounded-xl p-5 md:p-6 animate-pulse"
-                style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.06)" }}
               >
-                <div className="w-10 h-10 rounded-lg mb-4" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="w-20 h-4 rounded mb-2" style={{ background: "rgba(255,255,255,0.06)" }} />
-                <div className="w-32 h-3 rounded mb-3" style={{ background: "rgba(255,255,255,0.04)" }} />
-                <div className="w-16 h-3 rounded" style={{ background: "rgba(255,255,255,0.03)" }} />
+                <div className="w-10 h-10 rounded-lg mb-4" style={{ background: "rgba(0,0,0,0.06)" }} />
+                <div className="w-20 h-4 rounded mb-2" style={{ background: "rgba(0,0,0,0.06)" }} />
+                <div className="w-32 h-3 rounded mb-3" style={{ background: "rgba(0,0,0,0.04)" }} />
+                <div className="w-16 h-3 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
               </div>
             ))}
           </div>

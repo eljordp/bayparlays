@@ -136,7 +136,7 @@ export function BettingSlip({
       <div
         style={{
           height: 12,
-          background: "#111111",
+          background: "#FFFFFF",
           borderRadius: "16px 16px 0 0",
           position: "relative",
           overflow: "hidden",
@@ -160,7 +160,7 @@ export function BettingSlip({
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                backgroundColor: "#0a0a0a",
+                backgroundColor: "#FAFAF7",
               }}
             />
           ))}
@@ -170,7 +170,7 @@ export function BettingSlip({
       {/* ─── Main card ─── */}
       <div
         style={{
-          backgroundColor: "#111111",
+          backgroundColor: "#FFFFFF",
           padding: "0 20px 20px",
           position: "relative",
         }}
@@ -185,7 +185,7 @@ export function BettingSlip({
             alignItems: "center",
             justifyContent: "space-between",
             paddingBottom: 14,
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
             marginBottom: 16,
           }}
         >
@@ -196,8 +196,8 @@ export function BettingSlip({
                 fontWeight: 800,
                 letterSpacing: "0.15em",
                 textTransform: "uppercase",
-                color: "#0a0a0a",
-                backgroundColor: "#FF3B3B",
+                color: "#FAFAF7",
+                backgroundColor: "#0a0a0a",
                 padding: "3px 8px",
                 borderRadius: 4,
                 fontFamily:
@@ -209,7 +209,7 @@ export function BettingSlip({
             <span
               style={{
                 fontSize: 12,
-                color: "rgba(255,255,255,0.35)",
+                color: "rgba(0,0,0,0.45)",
                 fontFamily:
                   'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
               }}
@@ -222,11 +222,11 @@ export function BettingSlip({
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.05em",
-              color: "rgba(255,255,255,0.2)",
+              color: "rgba(0,0,0,0.3)",
             }}
           >
             Bay
-            <span style={{ color: "rgba(255,59,59,0.4)" }}>Parlays</span>
+            <span style={{ color: "rgba(0,0,0,0.45)" }}>Parlays</span>
           </span>
         </div>
 
@@ -253,7 +253,7 @@ export function BettingSlip({
                   justifyContent: "space-between",
                   padding: "10px 12px",
                   borderRadius: 8,
-                  backgroundColor: "rgba(255,255,255,0.02)",
+                  backgroundColor: "rgba(0,0,0,0.02)",
                   position: "relative",
                 }}
               >
@@ -279,10 +279,10 @@ export function BettingSlip({
                       flexShrink: 0,
                       backgroundColor: isWin
                         ? "rgba(34,197,94,0.15)"
-                        : "rgba(255,255,255,0.04)",
+                        : "rgba(0,0,0,0.04)",
                       border: isWin
                         ? "1.5px solid rgba(34,197,94,0.3)"
-                        : "1.5px solid rgba(255,255,255,0.08)",
+                        : "1.5px solid rgba(0,0,0,0.08)",
                     }}
                   >
                     {isWin ? (
@@ -314,7 +314,7 @@ export function BettingSlip({
                           width: 6,
                           height: 6,
                           borderRadius: "50%",
-                          backgroundColor: "rgba(255,255,255,0.15)",
+                          backgroundColor: "rgba(0,0,0,0.25)",
                         }}
                       />
                     )}
@@ -335,7 +335,7 @@ export function BettingSlip({
                         fontWeight: 700,
                         letterSpacing: "0.1em",
                         textTransform: "uppercase",
-                        color: "rgba(255,255,255,0.25)",
+                        color: "rgba(0,0,0,0.4)",
                       }}
                     >
                       {leg.sport}
@@ -345,8 +345,8 @@ export function BettingSlip({
                         fontSize: 13,
                         fontWeight: 600,
                         color: isWin
-                          ? "rgba(255,255,255,0.95)"
-                          : "rgba(255,255,255,0.6)",
+                          ? "rgba(0,0,0,0.95)"
+                          : "rgba(0,0,0,0.6)",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -362,7 +362,7 @@ export function BettingSlip({
                   style={{
                     fontSize: 13,
                     fontWeight: 700,
-                    color: isWin ? "#22c55e" : "rgba(255,255,255,0.35)",
+                    color: isWin ? "#22c55e" : "rgba(0,0,0,0.45)",
                     fontFamily:
                       'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
                     flexShrink: 0,
@@ -381,7 +381,7 @@ export function BettingSlip({
           style={{
             height: 1,
             background:
-              "linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
+              "linear-gradient(90deg, rgba(0,0,0,0.08), rgba(0,0,0,0.02))",
             marginBottom: 16,
           }}
         />
@@ -401,7 +401,7 @@ export function BettingSlip({
               style={{
                 fontSize: 11,
                 fontWeight: 500,
-                color: "rgba(255,255,255,0.3)",
+                color: "rgba(0,0,0,0.4)",
                 letterSpacing: "0.05em",
                 textTransform: "uppercase",
               }}
@@ -412,7 +412,7 @@ export function BettingSlip({
               style={{
                 fontSize: 13,
                 fontWeight: 600,
-                color: "rgba(255,255,255,0.6)",
+                color: "rgba(0,0,0,0.6)",
                 fontFamily:
                   'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
               }}
@@ -434,7 +434,7 @@ export function BettingSlip({
               style={{
                 fontSize: 11,
                 fontWeight: 500,
-                color: "rgba(255,255,255,0.3)",
+                color: "rgba(0,0,0,0.4)",
                 letterSpacing: "0.05em",
                 textTransform: "uppercase",
               }}
@@ -446,7 +446,7 @@ export function BettingSlip({
                 fontSize: 20,
                 fontWeight: 800,
                 color:
-                  status === "won" ? "#22c55e" : "rgba(255,255,255,0.85)",
+                  status === "won" ? "#22c55e" : "rgba(0,0,0,0.85)",
                 fontFamily:
                   'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
                 letterSpacing: "-0.02em",
@@ -556,7 +556,7 @@ export function BettingSlip({
                   fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: "0.1em",
-                  color: "rgba(255,255,255,0.35)",
+                  color: "rgba(0,0,0,0.45)",
                   textTransform: "uppercase",
                 }}
               >
@@ -598,7 +598,7 @@ export function BettingSlip({
       <div
         style={{
           height: 12,
-          background: "#111111",
+          background: "#FFFFFF",
           borderRadius: "0 0 16px 16px",
           position: "relative",
           overflow: "hidden",
@@ -622,7 +622,7 @@ export function BettingSlip({
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                backgroundColor: "#0a0a0a",
+                backgroundColor: "#FAFAF7",
               }}
             />
           ))}

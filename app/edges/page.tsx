@@ -137,7 +137,7 @@ export default function EdgesPage() {
   }, [data, sport, market]);
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a", color: "#ededed" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7", color: "#0a0a0a" }}>
       <AppNav />
       <div className="pt-20">
         <PicksTabs />
@@ -146,14 +146,14 @@ export default function EdgesPage() {
       {/* ── Hero ── */}
       <section
         className="border-b"
-        style={{ borderColor: "rgba(255,255,255,0.06)" }}
+        style={{ borderColor: "rgba(0,0,0,0.06)" }}
       >
         <div className="max-w-[1400px] mx-auto px-6 py-10 md:py-16">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
               <div
                 className="text-xs uppercase tracking-wider mb-3"
-                style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
+                style={{ color: "#0a0a0a", fontFamily: "var(--font-geist-mono)" }}
               >
                 Live · Where the book is slow
               </div>
@@ -165,7 +165,7 @@ export default function EdgesPage() {
               </h1>
               <p
                 className="mt-4 text-sm md:text-base max-w-2xl"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "rgba(0,0,0,0.6)" }}
               >
                 Single-leg picks where one sportsbook is pricing below the no-vig consensus across the market. These are the spots where retail books are slow to tighten after sharp money moves. We publish everything we find — no cherry-picking.
               </p>
@@ -182,8 +182,8 @@ export default function EdgesPage() {
                   href="/edges/history"
                   className="text-xs flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors"
                   style={{
-                    background: "rgba(255,255,255,0.05)",
-                    color: "rgba(255,255,255,0.7)",
+                    background: "rgba(0,0,0,0.06)",
+                    color: "rgba(0,0,0,0.7)",
                   }}
                 >
                   <History size={12} />
@@ -199,8 +199,8 @@ export default function EdgesPage() {
       {/* Sharp edges are rare by design — if the market is efficient today
           the feed is mostly empty. Tell users that up front so they don't
           assume the site is broken when they see 0-3 picks. */}
-      <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-        <div className="max-w-[1400px] mx-auto px-6 py-4 text-xs flex items-start gap-2" style={{ color: "rgba(255,255,255,0.45)" }}>
+      <section className="border-b" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+        <div className="max-w-[1400px] mx-auto px-6 py-4 text-xs flex items-start gap-2" style={{ color: "rgba(0,0,0,0.5)" }}>
           <Info size={12} className="mt-0.5 flex-shrink-0" />
           <span>
             Real sharp edges are rare — most days surface 0–5 picks. An empty feed means the market is tight, not that the model is broken. Quality over quantity.
@@ -214,7 +214,7 @@ export default function EdgesPage() {
       {/* ── Filters ── */}
       <section
         className="border-b"
-        style={{ borderColor: "rgba(255,255,255,0.06)" }}
+        style={{ borderColor: "rgba(0,0,0,0.06)" }}
       >
         <div className="max-w-[1400px] mx-auto px-6 py-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
           <FilterGroup label="Sport" options={SPORT_FILTERS} value={sport} onChange={setSport} />
@@ -234,7 +234,7 @@ export default function EdgesPage() {
         {loading && (
           <div
             className="py-20 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.4)" }}
+            style={{ color: "rgba(0,0,0,0.45)" }}
           >
             Scanning the market…
           </div>
@@ -251,10 +251,10 @@ export default function EdgesPage() {
 
         {!loading && !error && filtered.length === 0 && (
           <div className="py-20 text-center">
-            <p className="text-lg mb-2" style={{ color: "rgba(255,255,255,0.8)" }}>
+            <p className="text-lg mb-2" style={{ color: "rgba(0,0,0,0.7)" }}>
               No edges found for this filter.
             </p>
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+            <p className="text-sm" style={{ color: "rgba(0,0,0,0.45)" }}>
               Try widening sport/market filters, or check back later — lines move constantly and new gaps open all day.
             </p>
           </div>
@@ -264,7 +264,7 @@ export default function EdgesPage() {
           <>
             <p
               className="text-xs mb-6 flex items-center gap-2"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "rgba(0,0,0,0.45)" }}
             >
               <Info size={12} />
               Sorted by EV vs no-vig consensus. Bigger EV = bigger mispricing.
@@ -292,7 +292,7 @@ function Stat({ label, value, accent = false }: { label: string; value: number; 
         className="text-2xl md:text-3xl leading-none"
         style={{
           fontFamily: "var(--font-geist-mono)",
-          color: accent ? "#FF3B3B" : "#ededed",
+          color: accent ? "#0a0a0a" : "#ededed",
           fontWeight: 500,
         }}
       >
@@ -300,7 +300,7 @@ function Stat({ label, value, accent = false }: { label: string; value: number; 
       </div>
       <div
         className="text-xs mt-1 uppercase tracking-wider"
-        style={{ color: "rgba(255,255,255,0.4)" }}
+        style={{ color: "rgba(0,0,0,0.45)" }}
       >
         {label}
       </div>
@@ -323,7 +323,7 @@ function FilterGroup({
     <div className="flex items-center gap-3 flex-wrap">
       <span
         className="text-xs uppercase tracking-wider"
-        style={{ color: "rgba(255,255,255,0.4)" }}
+        style={{ color: "rgba(0,0,0,0.45)" }}
       >
         {label}
       </span>
@@ -336,8 +336,8 @@ function FilterGroup({
               onClick={() => onChange(opt)}
               className="px-3 py-1.5 text-xs rounded-full transition-colors"
               style={{
-                background: active ? "#FF3B3B" : "rgba(255,255,255,0.05)",
-                color: active ? "#0a0a0a" : "rgba(255,255,255,0.7)",
+                background: active ? "#0a0a0a" : "rgba(0,0,0,0.06)",
+                color: active ? "#0a0a0a" : "rgba(0,0,0,0.7)",
                 fontWeight: active ? 600 : 400,
               }}
             >
@@ -353,7 +353,7 @@ function FilterGroup({
 function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
   const sharp = leg.sharpEdge === true;
   const ev = leg.evVsFair ?? leg.trueEdge ?? 0;
-  const evColor = ev >= 0.02 ? "#22c55e" : ev >= 0.01 ? "#eab308" : "rgba(255,255,255,0.5)";
+  const evColor = ev >= 0.02 ? "#22c55e" : ev >= 0.01 ? "#eab308" : "rgba(0,0,0,0.55)";
   const [copied, setCopied] = useState(false);
 
   const copyPick = async () => {
@@ -382,8 +382,8 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
       transition={{ duration: 0.25 }}
       className="rounded-lg p-5 md:p-6"
       style={{
-        background: "rgba(255,255,255,0.02)",
-        border: `1px solid ${sharp ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.06)"}`,
+        background: "rgba(0,0,0,0.04)",
+        border: `1px solid ${sharp ? "rgba(34,197,94,0.25)" : "rgba(0,0,0,0.06)"}`,
       }}
     >
       <div className="flex items-start justify-between gap-3 md:gap-4 mb-4">
@@ -392,8 +392,8 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
             <span
               className="text-xs font-semibold px-2 py-0.5 rounded"
               style={{
-                background: "rgba(255,255,255,0.06)",
-                color: "rgba(255,255,255,0.7)",
+                background: "rgba(0,0,0,0.06)",
+                color: "rgba(0,0,0,0.7)",
                 fontFamily: "var(--font-geist-mono)",
               }}
             >
@@ -407,7 +407,7 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
             </span>
             <span
               className="text-xs"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "rgba(0,0,0,0.45)" }}
             >
               {leg.market}
             </span>
@@ -423,7 +423,7 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
             {leg.commenceTime && (
               <span
                 className="text-xs ml-auto"
-                style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-geist-mono)" }}
+                style={{ color: "rgba(0,0,0,0.45)", fontFamily: "var(--font-geist-mono)" }}
               >
                 {timeUntil(leg.commenceTime)}
               </span>
@@ -432,7 +432,7 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
           <div className="text-xl md:text-2xl font-semibold mb-1">{leg.pick}</div>
           <div
             className="text-sm"
-            style={{ color: "rgba(255,255,255,0.5)" }}
+            style={{ color: "rgba(0,0,0,0.55)" }}
           >
             {leg.game}
           </div>
@@ -444,7 +444,7 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
               className="text-2xl md:text-3xl leading-none"
               style={{
                 fontFamily: "var(--font-geist-mono)",
-                color: "#FF3B3B",
+                color: "#0a0a0a",
                 fontWeight: 500,
               }}
             >
@@ -456,14 +456,14 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 className="text-xs mt-1 inline-flex items-center gap-1 hover:underline"
-                style={{ color: "rgba(255,255,255,0.5)" }}
+                style={{ color: "rgba(0,0,0,0.55)" }}
                 title={isAffiliate ? `Place bet at ${leg.book}` : `Open ${leg.book}`}
               >
                 {leg.book}
                 <ExternalLink size={10} />
               </a>
             ) : (
-              <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <div className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.45)" }}>
                 {leg.book}
               </div>
             )}
@@ -477,9 +477,9 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
               style={{
                 width: 32,
                 height: 32,
-                background: copied ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)",
-                border: `1px solid ${copied ? "rgba(34,197,94,0.35)" : "rgba(255,255,255,0.08)"}`,
-                color: copied ? "#22c55e" : "rgba(255,255,255,0.55)",
+                background: copied ? "rgba(34,197,94,0.15)" : "rgba(0,0,0,0.04)",
+                border: `1px solid ${copied ? "rgba(34,197,94,0.35)" : "rgba(0,0,0,0.08)"}`,
+                color: copied ? "#22c55e" : "rgba(0,0,0,0.6)",
               }}
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -492,9 +492,9 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
               style={{
                 width: 32,
                 height: 32,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "rgba(255,255,255,0.55)",
+                background: "rgba(0,0,0,0.04)",
+                border: "1px solid rgba(0,0,0,0.08)",
+                color: "rgba(0,0,0,0.6)",
               }}
             >
               <Share2 size={14} />
@@ -503,32 +503,32 @@ function EdgeCard({ leg, rank }: { leg: Leg; rank: number }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 pt-4 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="grid grid-cols-3 gap-4 pt-4 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
         <MiniStat icon={<TrendingUp size={12} />} label="EV vs Fair" value={formatEv(ev)} color={evColor} />
         <MiniStat
           icon={<Target size={12} />}
           label="Fair Prob"
           value={leg.fairProb !== undefined ? formatPct(leg.fairProb) : "—"}
-          color="rgba(255,255,255,0.8)"
+          color="rgba(0,0,0,0.7)"
         />
         <MiniStat
           icon={<Info size={12} />}
           label="Book Implied"
           value={formatPct(leg.impliedProb)}
-          color="rgba(255,255,255,0.5)"
+          color="rgba(0,0,0,0.55)"
         />
       </div>
 
       {leg.reasons && leg.reasons.length > 0 && (
         <div
           className="mt-4 pt-4 border-t space-y-1.5"
-          style={{ borderColor: "rgba(255,255,255,0.04)" }}
+          style={{ borderColor: "rgba(0,0,0,0.04)" }}
         >
           {leg.reasons.map((r, i) => (
             <div
               key={i}
               className="text-xs leading-relaxed"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "rgba(0,0,0,0.6)" }}
             >
               {r}
             </div>
@@ -554,7 +554,7 @@ function MiniStat({
     <div>
       <div
         className="flex items-center gap-1 text-xs mb-1"
-        style={{ color: "rgba(255,255,255,0.35)" }}
+        style={{ color: "rgba(0,0,0,0.45)" }}
       >
         {icon}
         {label}
@@ -582,10 +582,10 @@ function EmailCapture({
 
   if (submitted) {
     return (
-      <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <section className="border-b" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
         <div
           className="max-w-[1400px] mx-auto px-6 py-4 text-xs"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "rgba(0,0,0,0.6)" }}
         >
           You&apos;re in. Expect tomorrow morning.
         </div>
@@ -623,7 +623,7 @@ function EmailCapture({
   }
 
   return (
-    <section className="border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+    <section className="border-b" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
       <div className="max-w-[1400px] mx-auto px-6 py-5">
         <form
           onSubmit={submit}
@@ -631,10 +631,10 @@ function EmailCapture({
         >
           <span
             className="text-sm"
-            style={{ color: "rgba(255,255,255,0.75)" }}
+            style={{ color: "rgba(0,0,0,0.65)" }}
           >
             Get tomorrow&apos;s edges in your inbox.{" "}
-            <span style={{ color: "rgba(255,255,255,0.45)" }}>Free. No spam.</span>
+            <span style={{ color: "rgba(0,0,0,0.5)" }}>Free. No spam.</span>
           </span>
           <div className="flex gap-2 flex-1 sm:max-w-md sm:ml-auto">
             <input
@@ -650,9 +650,9 @@ function EmailCapture({
               disabled={status === "sending"}
               className="flex-1 px-3 py-2 text-sm rounded-md outline-none"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                color: "#ededed",
+                background: "rgba(0,0,0,0.04)",
+                border: "1px solid rgba(0,0,0,0.08)",
+                color: "#0a0a0a",
               }}
             />
             <button
@@ -660,7 +660,7 @@ function EmailCapture({
               disabled={status === "sending"}
               className="px-4 py-2 text-xs font-semibold rounded-md transition-opacity"
               style={{
-                background: "#FF3B3B",
+                background: "#0a0a0a",
                 color: "#0a0a0a",
                 opacity: status === "sending" ? 0.6 : 1,
               }}

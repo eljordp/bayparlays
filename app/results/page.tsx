@@ -197,7 +197,7 @@ export default function ResultsPage() {
   const maxSportWinRate = Math.max(...sportBreakdown.map((s) => s.winRate), 1);
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       <AppNav />
       <div className="pt-20">
         <ResultsTabs />
@@ -209,13 +209,13 @@ export default function ResultsPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <h1
               className="text-5xl md:text-7xl font-normal leading-[1.05] mb-5"
-              style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+              style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
             >
               Track Record
             </h1>
             <p
               className="text-lg md:text-xl max-w-2xl"
-              style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}
+              style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}
             >
               Only parlays with AI-verified positive expected value (5%+ EV) are tracked here. No cherry-picking. No hiding losses.
             </p>
@@ -238,14 +238,14 @@ export default function ResultsPage() {
                 disabled={refreshing}
                 className="text-xs font-semibold px-4 py-2 rounded-full transition-all disabled:opacity-50"
                 style={{
-                  background: refreshing ? "rgba(255,59,59,0.08)" : "rgba(255,59,59,0.12)",
-                  color: "#FF3B3B",
-                  border: "1px solid rgba(255,59,59,0.25)",
+                  background: refreshing ? "rgba(0,0,0,0.06)" : "rgba(0,0,0,0.08)",
+                  color: "#0a0a0a",
+                  border: "1px solid rgba(0,0,0,0.25)",
                 }}
               >
                 {refreshing ? "Refreshing…" : "Refresh Now"}
               </button>
-              <span className="text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.25)" }}>
+              <span className="text-xs uppercase tracking-widest" style={{ color: "rgba(0,0,0,0.4)" }}>
                 {lastUpdated
                   ? `Updated ${lastUpdated.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
                   : "Updated in real-time"}
@@ -285,14 +285,14 @@ export default function ResultsPage() {
               >
                 <div
                   className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
                 >
-                  <BarChart3 size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
+                  <BarChart3 size={32} style={{ color: "rgba(0,0,0,0.3)" }} />
                 </div>
-                <p className="text-xl font-medium mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
+                <p className="text-xl font-medium mb-2" style={{ color: "rgba(0,0,0,0.6)" }}>
                   {error || "No tracked parlays yet."}
                 </p>
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+                <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
                   Check back soon.
                 </p>
               </motion.div>
@@ -356,7 +356,7 @@ export default function ResultsPage() {
                     icon={<Zap size={16} />}
                     label="Best Payout"
                     value={`$${stats.bestPayout.toLocaleString()}`}
-                    valueColor="#FF3B3B"
+                    valueColor="#0a0a0a"
                     sublabel="Single parlay"
                     delay={0.25}
                   />
@@ -380,7 +380,7 @@ export default function ResultsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.35 }}
                     className="mt-4 text-xs md:text-sm"
-                    style={{ color: "rgba(255,255,255,0.5)", maxWidth: 720 }}
+                    style={{ color: "rgba(0,0,0,0.55)", maxWidth: 720 }}
                   >
                     CLV = Closing Line Value. Measures how much better our opening price was vs the line right before the game started. Positive CLV over time is the only real proof a model has edge. Hit rate is noise; CLV is signal.
                   </motion.p>
@@ -396,7 +396,7 @@ export default function ResultsPage() {
                   >
                     <h2
                       className="text-2xl md:text-3xl mb-8"
-                      style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                      style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
                     >
                       By Sport
                     </h2>
@@ -411,17 +411,17 @@ export default function ResultsPage() {
                         >
                           <div
                             className="w-16 md:w-20 text-sm font-semibold flex-shrink-0"
-                            style={{ color: "rgba(255,255,255,0.7)" }}
+                            style={{ color: "rgba(0,0,0,0.7)" }}
                           >
                             {sport.sport}
                           </div>
                           <div
                             className="text-xs flex-shrink-0 w-16 text-right"
-                            style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-geist-mono)" }}
+                            style={{ color: "rgba(0,0,0,0.45)", fontFamily: "var(--font-geist-mono)" }}
                           >
                             {sport.won}-{sport.lost}
                           </div>
-                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(0,0,0,0.04)" }}>
                             <motion.div
                               className="h-full rounded"
                               initial={{ width: 0 }}
@@ -429,8 +429,8 @@ export default function ResultsPage() {
                               transition={{ duration: 0.8, delay: 0.4 + idx * 0.06, ease: "easeOut" }}
                               style={{
                                 background: sport.winRate >= 50
-                                  ? "linear-gradient(90deg, #FF3B3B, #FF5252)"
-                                  : "linear-gradient(90deg, rgba(255,59,59,0.4), rgba(255,59,59,0.6))",
+                                  ? "linear-gradient(90deg, #0a0a0a, rgba(0,0,0,0.7))"
+                                  : "linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5))",
                                 minWidth: "2px",
                               }}
                             />
@@ -460,11 +460,11 @@ export default function ResultsPage() {
                   >
                     <h2
                       className="text-2xl md:text-3xl mb-3"
-                      style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                      style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
                     >
                       By Strategy
                     </h2>
-                    <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+                    <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}>
                       Three flavors the AI generates each day. Most Confident hits more often but pays less. Best EV is the math play. Highest Payout is the lottery.
                     </p>
                     <div className="space-y-4">
@@ -478,20 +478,20 @@ export default function ResultsPage() {
                         >
                           <div
                             className="w-28 md:w-36 text-sm font-semibold flex-shrink-0"
-                            style={{ color: "rgba(255,255,255,0.7)" }}
+                            style={{ color: "rgba(0,0,0,0.7)" }}
                           >
                             {CATEGORY_LABEL[cat.category]}
-                            <div className="text-[10px] font-normal mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                            <div className="text-[10px] font-normal mt-0.5" style={{ color: "rgba(0,0,0,0.4)" }}>
                               {CATEGORY_DESC[cat.category]}
                             </div>
                           </div>
                           <div
                             className="text-xs flex-shrink-0 w-16 text-right"
-                            style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-geist-mono)" }}
+                            style={{ color: "rgba(0,0,0,0.45)", fontFamily: "var(--font-geist-mono)" }}
                           >
                             {cat.won}-{cat.lost}
                           </div>
-                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(0,0,0,0.04)" }}>
                             <motion.div
                               className="h-full rounded"
                               initial={{ width: 0 }}
@@ -500,7 +500,7 @@ export default function ResultsPage() {
                               style={{
                                 background: cat.winRate >= 50
                                   ? "linear-gradient(90deg, #22c55e, #34d399)"
-                                  : "linear-gradient(90deg, rgba(255,59,59,0.4), rgba(255,59,59,0.6))",
+                                  : "linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5))",
                                 minWidth: "2px",
                               }}
                             />
@@ -530,11 +530,11 @@ export default function ResultsPage() {
                   >
                     <h2
                       className="text-2xl md:text-3xl mb-3"
-                      style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                      style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
                     >
                       By Market
                     </h2>
-                    <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}>
+                    <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}>
                       Moneyline vs spread vs totals. Useful for spotting where the model has edge and where it doesn&apos;t — no hiding weak markets.
                     </p>
                     <div className="space-y-4">
@@ -548,17 +548,17 @@ export default function ResultsPage() {
                         >
                           <div
                             className="w-24 md:w-32 text-sm font-semibold flex-shrink-0"
-                            style={{ color: "rgba(255,255,255,0.7)" }}
+                            style={{ color: "rgba(0,0,0,0.7)" }}
                           >
                             {MARKET_LABEL[mk.market] ?? mk.market}
                           </div>
                           <div
                             className="text-xs flex-shrink-0 w-16 text-right"
-                            style={{ color: "rgba(255,255,255,0.35)", fontFamily: "var(--font-geist-mono)" }}
+                            style={{ color: "rgba(0,0,0,0.45)", fontFamily: "var(--font-geist-mono)" }}
                           >
                             {mk.won}-{mk.lost}
                           </div>
-                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                          <div className="flex-1 h-7 rounded overflow-hidden" style={{ background: "rgba(0,0,0,0.04)" }}>
                             <motion.div
                               className="h-full rounded"
                               initial={{ width: 0 }}
@@ -567,7 +567,7 @@ export default function ResultsPage() {
                               style={{
                                 background: mk.winRate >= 50
                                   ? "linear-gradient(90deg, #22c55e, #34d399)"
-                                  : "linear-gradient(90deg, rgba(255,59,59,0.4), rgba(255,59,59,0.6))",
+                                  : "linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0.5))",
                                 minWidth: "2px",
                               }}
                             />
@@ -596,15 +596,15 @@ export default function ResultsPage() {
                 >
                   <h2
                     className="text-2xl md:text-3xl mb-3"
-                    style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                    style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
                   >
                     Recent Parlays
                   </h2>
                   <p
                     className="text-xs mb-8 max-w-2xl"
-                    style={{ color: "rgba(255,255,255,0.35)", lineHeight: 1.6 }}
+                    style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}
                   >
-                    <span className="font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>Hit %</span> is the book&apos;s implied probability this parlay cashes.
+                    <span className="font-semibold" style={{ color: "rgba(0,0,0,0.6)" }}>Hit %</span> is the book&apos;s implied probability this parlay cashes.
                     Higher odds = lower hit %. A parlay at +500 hits ~17% of the time, +100 hits ~50%. High hit rates don&apos;t mean profitable — the book&apos;s vig eats you long-term unless you&apos;re finding EV.
                   </p>
 
@@ -613,8 +613,8 @@ export default function ResultsPage() {
                     className="hidden md:grid items-center gap-4 px-6 py-3 text-xs uppercase tracking-wider font-medium"
                     style={{
                       gridTemplateColumns: "140px 60px 90px 70px 90px 100px 40px",
-                      color: "rgba(255,255,255,0.25)",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      color: "rgba(0,0,0,0.4)",
+                      borderBottom: "1px solid rgba(0,0,0,0.06)",
                     }}
                   >
                     <span>Date</span>
@@ -643,10 +643,10 @@ export default function ResultsPage() {
                             onClick={() => setExpandedParlay(isExpanded ? null : parlay.id)}
                             className="w-full text-left transition-colors duration-150 rounded-lg"
                             style={{
-                              background: isExpanded ? "rgba(255,255,255,0.03)" : "transparent",
+                              background: isExpanded ? "rgba(0,0,0,0.04)" : "transparent",
                             }}
                             onMouseEnter={(e) => {
-                              if (!isExpanded) e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                              if (!isExpanded) e.currentTarget.style.background = "rgba(0,0,0,0.04)";
                             }}
                             onMouseLeave={(e) => {
                               if (!isExpanded) e.currentTarget.style.background = "transparent";
@@ -658,28 +658,28 @@ export default function ResultsPage() {
                               style={{ gridTemplateColumns: "140px 60px 90px 70px 90px 100px 40px" }}
                             >
                               <div>
-                                <div className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+                                <div className="text-sm" style={{ color: "rgba(0,0,0,0.7)" }}>
                                   {formatDate(parlay.created_at)}
                                 </div>
-                                <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+                                <div className="text-xs mt-0.5" style={{ color: "rgba(0,0,0,0.4)" }}>
                                   {formatTime(parlay.created_at)}
                                 </div>
                               </div>
                               <div
                                 className="text-sm text-center font-medium"
-                                style={{ color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-geist-mono)" }}
+                                style={{ color: "rgba(0,0,0,0.6)", fontFamily: "var(--font-geist-mono)" }}
                               >
                                 {parlay.legs.length}
                               </div>
                               <div
                                 className="text-sm text-right font-semibold"
-                                style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
+                                style={{ color: "#0a0a0a", fontFamily: "var(--font-geist-mono)" }}
                               >
                                 {parlay.combined_odds}
                                 {parlay.impliedHitRate != null && (
                                   <div
                                     className="text-[10px] font-normal mt-0.5"
-                                    style={{ color: "rgba(255,255,255,0.3)" }}
+                                    style={{ color: "rgba(0,0,0,0.4)" }}
                                   >
                                     {parlay.impliedHitRate.toFixed(1)}% hit
                                   </div>
@@ -688,7 +688,7 @@ export default function ResultsPage() {
                               <div
                                 className="text-sm text-right font-medium"
                                 style={{
-                                  color: parlay.ev_percent > 0 ? "#22c55e" : "rgba(255,255,255,0.4)",
+                                  color: parlay.ev_percent > 0 ? "#22c55e" : "rgba(0,0,0,0.45)",
                                   fontFamily: "var(--font-geist-mono)",
                                 }}
                               >
@@ -706,14 +706,14 @@ export default function ResultsPage() {
                               <div
                                 className="text-sm text-right font-bold"
                                 style={{
-                                  color: parlay.profit > 0 ? "#22c55e" : parlay.profit < 0 ? "#ef4444" : "rgba(255,255,255,0.4)",
+                                  color: parlay.profit > 0 ? "#22c55e" : parlay.profit < 0 ? "#ef4444" : "rgba(0,0,0,0.45)",
                                   fontFamily: "var(--font-geist-mono)",
                                 }}
                               >
                                 {parlay.profit > 0 ? "+" : ""}
                                 {parlay.profit !== 0 ? `$${Math.abs(parlay.profit).toLocaleString()}` : "--"}
                               </div>
-                              <div className="flex justify-end" style={{ color: "rgba(255,255,255,0.25)" }}>
+                              <div className="flex justify-end" style={{ color: "rgba(0,0,0,0.4)" }}>
                                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                               </div>
                             </div>
@@ -728,18 +728,18 @@ export default function ResultsPage() {
                                   >
                                     {parlay.status}
                                   </span>
-                                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+                                  <span className="text-xs" style={{ color: "rgba(0,0,0,0.4)" }}>
                                     {formatDate(parlay.created_at)}
                                   </span>
                                 </div>
-                                <div style={{ color: "rgba(255,255,255,0.25)" }}>
+                                <div style={{ color: "rgba(0,0,0,0.4)" }}>
                                   {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 </div>
                               </div>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                   <div>
-                                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+                                    <span className="text-xs" style={{ color: "rgba(0,0,0,0.4)" }}>
                                       {parlay.legs.length} legs
                                     </span>
                                     <span className="mx-2" style={{ color: "rgba(255,255,255,0.1)" }}>
@@ -747,14 +747,14 @@ export default function ResultsPage() {
                                     </span>
                                     <span
                                       className="text-sm font-semibold"
-                                      style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
+                                      style={{ color: "#0a0a0a", fontFamily: "var(--font-geist-mono)" }}
                                     >
                                       {parlay.combined_odds}
                                     </span>
                                     {parlay.impliedHitRate != null && (
                                       <span
                                         className="text-[10px] ml-2"
-                                        style={{ color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-geist-mono)" }}
+                                        style={{ color: "rgba(0,0,0,0.4)", fontFamily: "var(--font-geist-mono)" }}
                                       >
                                         ({parlay.impliedHitRate.toFixed(1)}%)
                                       </span>
@@ -764,7 +764,7 @@ export default function ResultsPage() {
                                 <span
                                   className="text-sm font-bold"
                                   style={{
-                                    color: parlay.profit > 0 ? "#22c55e" : parlay.profit < 0 ? "#ef4444" : "rgba(255,255,255,0.4)",
+                                    color: parlay.profit > 0 ? "#22c55e" : parlay.profit < 0 ? "#ef4444" : "rgba(0,0,0,0.45)",
                                     fontFamily: "var(--font-geist-mono)",
                                   }}
                                 >
@@ -788,8 +788,8 @@ export default function ResultsPage() {
                                 <div
                                   className="mx-4 md:mx-6 mb-3 rounded-xl overflow-hidden"
                                   style={{
-                                    background: "rgba(255,255,255,0.02)",
-                                    border: "1px solid rgba(255,255,255,0.05)",
+                                    background: "rgba(0,0,0,0.04)",
+                                    border: "1px solid rgba(0,0,0,0.06)",
                                   }}
                                 >
                                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -800,7 +800,7 @@ export default function ResultsPage() {
                                       style={{
                                         borderBottom:
                                           li < parlay.legs.length - 1
-                                            ? "1px solid rgba(255,255,255,0.04)"
+                                            ? "1px solid rgba(0,0,0,0.04)"
                                             : "none",
                                       }}
                                     >
@@ -810,22 +810,22 @@ export default function ResultsPage() {
                                             <span
                                               className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
                                               style={{
-                                                background: "rgba(255,59,59,0.08)",
-                                                color: "#FF3B3B",
-                                                border: "1px solid rgba(255,59,59,0.15)",
+                                                background: "rgba(0,0,0,0.06)",
+                                                color: "#0a0a0a",
+                                                border: "1px solid rgba(0,0,0,0.08)",
                                               }}
                                             >
                                               {leg.sport}
                                             </span>
                                           )}
-                                          <span className="text-xs truncate" style={{ color: "rgba(255,255,255,0.4)" }}>
+                                          <span className="text-xs truncate" style={{ color: "rgba(0,0,0,0.45)" }}>
                                             {leg.game || leg.matchup || ""}
                                           </span>
                                         </div>
-                                        <div className="text-sm font-medium mt-1" style={{ color: "#ededed" }}>
+                                        <div className="text-sm font-medium mt-1" style={{ color: "#0a0a0a" }}>
                                           {leg.pick || leg.selection || ""}
                                           {(leg.market || leg.type) && (
-                                            <span className="ml-2 font-normal" style={{ color: "rgba(255,255,255,0.3)" }}>
+                                            <span className="ml-2 font-normal" style={{ color: "rgba(0,0,0,0.4)" }}>
                                               {leg.market || leg.type}
                                             </span>
                                           )}
@@ -835,7 +835,7 @@ export default function ResultsPage() {
                                         {leg.odds && (
                                           <span
                                             className="text-sm font-bold"
-                                            style={{ color: "#FF3B3B", fontFamily: "var(--font-geist-mono)" }}
+                                            style={{ color: "#0a0a0a", fontFamily: "var(--font-geist-mono)" }}
                                           >
                                             {typeof leg.odds === "number"
                                               ? leg.odds > 0
@@ -867,14 +867,14 @@ export default function ResultsPage() {
                                   {parlay.payout > 0 && (
                                     <div
                                       className="flex items-center justify-between px-4 md:px-6 py-3"
-                                      style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.01)" }}
+                                      style={{ borderTop: "1px solid rgba(0,0,0,0.06)", background: "rgba(255,255,255,0.01)" }}
                                     >
-                                      <span className="text-xs uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>
+                                      <span className="text-xs uppercase tracking-wider" style={{ color: "rgba(0,0,0,0.4)" }}>
                                         Payout
                                       </span>
                                       <span
                                         className="text-sm font-bold"
-                                        style={{ color: "#ededed", fontFamily: "var(--font-geist-mono)" }}
+                                        style={{ color: "#0a0a0a", fontFamily: "var(--font-geist-mono)" }}
                                       >
                                         ${parlay.payout.toLocaleString()}
                                       </span>
@@ -891,8 +891,8 @@ export default function ResultsPage() {
 
                   {recentParlays.length === 0 && (
                     <div className="py-16 text-center">
-                      <Clock size={28} style={{ color: "rgba(255,255,255,0.15)", margin: "0 auto 12px" }} />
-                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+                      <Clock size={28} style={{ color: "rgba(0,0,0,0.25)", margin: "0 auto 12px" }} />
+                      <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
                         No tracked parlays yet. Check back soon.
                       </p>
                     </div>
@@ -905,12 +905,12 @@ export default function ResultsPage() {
       </main>
 
       {/* ─── Footer ─── */}
-      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
             BayParlays. AI-powered parlay optimization.
           </p>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+          <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
             Not financial advice. Gamble responsibly.
           </p>
         </div>
@@ -940,8 +940,8 @@ function StatCard({
     <motion.div
       className="rounded-xl p-5 md:p-6"
       style={{
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.06)",
       }}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -952,8 +952,8 @@ function StatCard({
       }}
     >
       <div className="flex items-center gap-2 mb-4">
-        <div style={{ color: "rgba(255,255,255,0.3)" }}>{icon}</div>
-        <span className="text-xs uppercase tracking-wider font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <div style={{ color: "rgba(0,0,0,0.4)" }}>{icon}</div>
+        <span className="text-xs uppercase tracking-wider font-medium" style={{ color: "rgba(0,0,0,0.45)" }}>
           {label}
         </span>
       </div>
@@ -963,7 +963,7 @@ function StatCard({
       >
         {value}
       </div>
-      <div className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+      <div className="text-xs mt-2" style={{ color: "rgba(0,0,0,0.3)" }}>
         {sublabel}
       </div>
     </motion.div>
@@ -979,11 +979,11 @@ function StatsSkeletons() {
         <div
           key={i}
           className="rounded-xl p-5 md:p-6 animate-pulse"
-          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.06)" }}
         >
-          <div className="w-20 h-3 rounded mb-4" style={{ background: "rgba(255,255,255,0.06)" }} />
-          <div className="w-24 h-9 rounded mb-2" style={{ background: "rgba(255,255,255,0.08)" }} />
-          <div className="w-16 h-3 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
+          <div className="w-20 h-3 rounded mb-4" style={{ background: "rgba(0,0,0,0.06)" }} />
+          <div className="w-24 h-9 rounded mb-2" style={{ background: "rgba(0,0,0,0.08)" }} />
+          <div className="w-16 h-3 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
         </div>
       ))}
     </div>
@@ -993,13 +993,13 @@ function StatsSkeletons() {
 function BarSkeletons() {
   return (
     <div className="space-y-4">
-      <div className="w-24 h-7 rounded mb-6" style={{ background: "rgba(255,255,255,0.06)" }} />
+      <div className="w-24 h-7 rounded mb-6" style={{ background: "rgba(0,0,0,0.06)" }} />
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="flex items-center gap-4 animate-pulse">
-          <div className="w-16 h-4 rounded" style={{ background: "rgba(255,255,255,0.06)" }} />
-          <div className="w-12 h-4 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-          <div className="flex-1 h-7 rounded" style={{ background: "rgba(255,255,255,0.03)" }} />
-          <div className="w-10 h-4 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+          <div className="w-16 h-4 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
+          <div className="w-12 h-4 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
+          <div className="flex-1 h-7 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
+          <div className="w-10 h-4 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
         </div>
       ))}
     </div>
@@ -1009,13 +1009,13 @@ function BarSkeletons() {
 function ParlayRowSkeleton() {
   return (
     <div className="flex items-center gap-4 px-6 py-4 animate-pulse">
-      <div className="w-28 h-5 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
-      <div className="w-8 h-5 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-      <div className="w-16 h-5 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
-      <div className="w-12 h-5 rounded" style={{ background: "rgba(255,255,255,0.04)" }} />
-      <div className="w-16 h-6 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="w-28 h-5 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
+      <div className="w-8 h-5 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
+      <div className="w-16 h-5 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
+      <div className="w-12 h-5 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
+      <div className="w-16 h-6 rounded-full" style={{ background: "rgba(0,0,0,0.06)" }} />
       <div className="flex-1" />
-      <div className="w-16 h-5 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+      <div className="w-16 h-5 rounded" style={{ background: "rgba(0,0,0,0.06)" }} />
     </div>
   );
 }

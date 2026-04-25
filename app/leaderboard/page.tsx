@@ -34,14 +34,14 @@ function rankAccent(rank: number): { color: string; bg: string; border: string; 
   if (rank === 1) return { color: "#fbbf24", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.25)", label: "Gold" };
   if (rank === 2) return { color: "#94a3b8", bg: "rgba(148,163,184,0.06)", border: "rgba(148,163,184,0.2)", label: "Silver" };
   if (rank === 3) return { color: "#d97706", bg: "rgba(217,119,6,0.06)", border: "rgba(217,119,6,0.2)", label: "Bronze" };
-  return { color: "rgba(255,255,255,0.3)", bg: "transparent", border: "rgba(255,255,255,0.06)", label: "" };
+  return { color: "rgba(0,0,0,0.4)", bg: "transparent", border: "rgba(0,0,0,0.06)", label: "" };
 }
 
 function RankIcon({ rank }: { rank: number }) {
   if (rank === 1) return <Crown size={16} style={{ color: "#fbbf24" }} />;
   if (rank === 2) return <Medal size={16} style={{ color: "#94a3b8" }} />;
   if (rank === 3) return <Medal size={16} style={{ color: "#d97706" }} />;
-  return <span className="text-xs font-mono" style={{ color: "rgba(255,255,255,0.3)" }}>#{rank}</span>;
+  return <span className="text-xs font-mono" style={{ color: "rgba(0,0,0,0.4)" }}>#{rank}</span>;
 }
 
 /* ─── Component ─── */
@@ -79,8 +79,8 @@ export default function LeaderboardPage() {
   // Auth loading
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a0a0a" }}>
-        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.15)", borderTopColor: "transparent" }} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#FAFAF7" }}>
+        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(0,0,0,0.25)", borderTopColor: "transparent" }} />
       </div>
     );
   }
@@ -88,26 +88,26 @@ export default function LeaderboardPage() {
   // Not signed in
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "#0a0a0a" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "#FAFAF7" }}>
         <div
           className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
         >
-          <Lock size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
+          <Lock size={32} style={{ color: "rgba(0,0,0,0.3)" }} />
         </div>
         <h2
           className="text-3xl mb-3"
-          style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+          style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
         >
           Sign in to view the leaderboard
         </h2>
-        <p className="text-sm mb-8" style={{ color: "rgba(255,255,255,0.4)" }}>
+        <p className="text-sm mb-8" style={{ color: "rgba(0,0,0,0.45)" }}>
           See how you stack up against the competition.
         </p>
         <Link
           href="/login"
           className="px-8 py-3 text-sm font-semibold rounded-full transition-colors duration-200"
-          style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+          style={{ background: "#0a0a0a", color: "#0a0a0a" }}
         >
           Sign In
         </Link>
@@ -116,7 +116,7 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       <AppNav />
       <div className="pt-20">
         <ResultsTabs />
@@ -140,17 +140,17 @@ export default function LeaderboardPage() {
               </div>
               <h1
                 className="text-4xl md:text-5xl mb-4"
-                style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
               >
                 VIP Only
               </h1>
-              <p className="text-base mb-8 max-w-md mx-auto" style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.7 }}>
+              <p className="text-base mb-8 max-w-md mx-auto" style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.7 }}>
                 The leaderboard is an exclusive feature for VIP members. See how you rank against the best sim players on the platform.
               </p>
               <Link
                 href="/subscribe"
                 className="inline-block px-10 py-3.5 text-sm font-semibold rounded-full transition-all duration-200"
-                style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                style={{ background: "#0a0a0a", color: "#0a0a0a" }}
               >
                 Upgrade to VIP
               </Link>
@@ -165,13 +165,13 @@ export default function LeaderboardPage() {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
                 <h1
                   className="text-5xl md:text-7xl font-normal leading-[1.05] mb-5"
-                  style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                  style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
                 >
                   Leaderboard
                 </h1>
                 <p
                   className="text-lg md:text-xl max-w-2xl"
-                  style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}
+                  style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}
                 >
                   Top sim performers this week.
                 </p>
@@ -192,10 +192,10 @@ export default function LeaderboardPage() {
                   transition={{ duration: 0.5 }}
                 >
                   <Trophy size={48} style={{ color: "rgba(255,255,255,0.1)", margin: "0 auto 16px" }} />
-                  <p className="text-lg" style={{ color: "rgba(255,255,255,0.3)", fontFamily: "'DM Serif Display', serif" }}>
+                  <p className="text-lg" style={{ color: "rgba(0,0,0,0.4)", fontFamily: "'DM Serif Display', serif" }}>
                     No sim data yet
                   </p>
-                  <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+                  <p className="text-sm mt-2" style={{ color: "rgba(0,0,0,0.3)" }}>
                     Start placing sim bets to appear on the leaderboard.
                   </p>
                 </motion.div>
@@ -205,19 +205,19 @@ export default function LeaderboardPage() {
                   <div className="hidden md:block">
                     <div
                       className="rounded-xl overflow-hidden"
-                      style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+                      style={{ border: "1px solid rgba(0,0,0,0.06)" }}
                     >
                       {/* Header Row */}
                       <div
                         className="grid grid-cols-[60px_1fr_100px_100px_120px_120px] px-6 py-4"
-                        style={{ background: "rgba(255,255,255,0.025)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                        style={{ background: "#FFFFFF", borderBottom: "1px solid rgba(0,0,0,0.06)" }}
                       >
-                        <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>Rank</span>
-                        <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>User</span>
-                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(255,255,255,0.3)" }}>Sim ROI</span>
-                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(255,255,255,0.3)" }}>Win Rate</span>
-                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(255,255,255,0.3)" }}>Total Profit</span>
-                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(255,255,255,0.3)" }}>W / L</span>
+                        <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: "rgba(0,0,0,0.4)" }}>Rank</span>
+                        <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: "rgba(0,0,0,0.4)" }}>User</span>
+                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(0,0,0,0.4)" }}>Sim ROI</span>
+                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(0,0,0,0.4)" }}>Win Rate</span>
+                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(0,0,0,0.4)" }}>Total Profit</span>
+                        <span className="text-[11px] uppercase tracking-wider font-medium text-right" style={{ color: "rgba(0,0,0,0.4)" }}>W / L</span>
                       </div>
 
                       {/* Rows */}
@@ -231,9 +231,9 @@ export default function LeaderboardPage() {
                             key={entry.userId}
                             className="grid grid-cols-[60px_1fr_100px_100px_120px_120px] px-6 py-4 items-center transition-colors duration-150"
                             style={{
-                              background: isUser ? "rgba(255,59,59,0.04)" : rank <= 3 ? accent.bg : "transparent",
-                              borderBottom: "1px solid rgba(255,255,255,0.04)",
-                              borderLeft: isUser ? "2px solid #FF3B3B" : rank <= 3 ? `2px solid ${accent.color}` : "2px solid transparent",
+                              background: isUser ? "rgba(0,0,0,0.04)" : rank <= 3 ? accent.bg : "transparent",
+                              borderBottom: "1px solid rgba(0,0,0,0.04)",
+                              borderLeft: isUser ? "2px solid #0a0a0a" : rank <= 3 ? `2px solid ${accent.color}` : "2px solid transparent",
                             }}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -245,14 +245,14 @@ export default function LeaderboardPage() {
                             <div className="flex items-center gap-3">
                               <span
                                 className="text-sm font-mono"
-                                style={{ color: isUser ? "#FF3B3B" : rank <= 3 ? accent.color : "rgba(255,255,255,0.6)" }}
+                                style={{ color: isUser ? "#0a0a0a" : rank <= 3 ? accent.color : "rgba(0,0,0,0.6)" }}
                               >
                                 {entry.displayName}
                               </span>
                               {isUser && (
                                 <span
                                   className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full"
-                                  style={{ background: "rgba(255,59,59,0.12)", color: "#FF3B3B", border: "1px solid rgba(255,59,59,0.2)" }}
+                                  style={{ background: "rgba(0,0,0,0.08)", color: "#0a0a0a", border: "1px solid rgba(0,0,0,0.18)" }}
                                 >
                                   You
                                 </span>
@@ -260,20 +260,20 @@ export default function LeaderboardPage() {
                             </div>
                             <span
                               className="text-sm font-mono text-right font-semibold"
-                              style={{ color: entry.roi > 0 ? "#22c55e" : entry.roi < 0 ? "#ef4444" : "rgba(255,255,255,0.4)" }}
+                              style={{ color: entry.roi > 0 ? "#22c55e" : entry.roi < 0 ? "#ef4444" : "rgba(0,0,0,0.45)" }}
                             >
                               {entry.roi > 0 ? "+" : ""}{entry.roi}%
                             </span>
-                            <span className="text-sm font-mono text-right" style={{ color: "rgba(255,255,255,0.5)" }}>
+                            <span className="text-sm font-mono text-right" style={{ color: "rgba(0,0,0,0.55)" }}>
                               {entry.winRate}%
                             </span>
                             <span
                               className="text-sm font-mono text-right font-semibold"
-                              style={{ color: entry.profit > 0 ? "#22c55e" : entry.profit < 0 ? "#ef4444" : "rgba(255,255,255,0.4)" }}
+                              style={{ color: entry.profit > 0 ? "#22c55e" : entry.profit < 0 ? "#ef4444" : "rgba(0,0,0,0.45)" }}
                             >
                               {formatCurrency(entry.profit)}
                             </span>
-                            <span className="text-sm font-mono text-right" style={{ color: "rgba(255,255,255,0.4)" }}>
+                            <span className="text-sm font-mono text-right" style={{ color: "rgba(0,0,0,0.45)" }}>
                               <span style={{ color: "#22c55e" }}>{entry.wins}</span>
                               {" / "}
                               <span style={{ color: "#ef4444" }}>{entry.losses}</span>
@@ -296,8 +296,8 @@ export default function LeaderboardPage() {
                           key={entry.userId}
                           className="rounded-xl p-4"
                           style={{
-                            background: isUser ? "rgba(255,59,59,0.04)" : rank <= 3 ? accent.bg : "rgba(255,255,255,0.02)",
-                            border: isUser ? "1px solid rgba(255,59,59,0.2)" : `1px solid ${accent.border}`,
+                            background: isUser ? "rgba(0,0,0,0.04)" : rank <= 3 ? accent.bg : "rgba(0,0,0,0.04)",
+                            border: isUser ? "1px solid rgba(0,0,0,0.18)" : `1px solid ${accent.border}`,
                           }}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -305,19 +305,19 @@ export default function LeaderboardPage() {
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: rank <= 3 ? accent.bg : "rgba(255,255,255,0.04)" }}>
+                              <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ background: rank <= 3 ? accent.bg : "rgba(0,0,0,0.04)" }}>
                                 <RankIcon rank={rank} />
                               </div>
                               <span
                                 className="text-sm font-mono"
-                                style={{ color: isUser ? "#FF3B3B" : rank <= 3 ? accent.color : "rgba(255,255,255,0.6)" }}
+                                style={{ color: isUser ? "#0a0a0a" : rank <= 3 ? accent.color : "rgba(0,0,0,0.6)" }}
                               >
                                 {entry.displayName}
                               </span>
                               {isUser && (
                                 <span
                                   className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full"
-                                  style={{ background: "rgba(255,59,59,0.12)", color: "#FF3B3B" }}
+                                  style={{ background: "rgba(0,0,0,0.08)", color: "#0a0a0a" }}
                                 >
                                   You
                                 </span>
@@ -325,23 +325,23 @@ export default function LeaderboardPage() {
                             </div>
                             <span
                               className="text-base font-mono font-bold"
-                              style={{ color: entry.roi > 0 ? "#22c55e" : entry.roi < 0 ? "#ef4444" : "rgba(255,255,255,0.4)" }}
+                              style={{ color: entry.roi > 0 ? "#22c55e" : entry.roi < 0 ? "#ef4444" : "rgba(0,0,0,0.45)" }}
                             >
                               {entry.roi > 0 ? "+" : ""}{entry.roi}%
                             </span>
                           </div>
                           <div className="flex items-center gap-4">
                             <div>
-                              <span className="text-[10px] uppercase tracking-wider block mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>Win Rate</span>
-                              <span className="text-xs font-mono" style={{ color: "rgba(255,255,255,0.5)" }}>{entry.winRate}%</span>
+                              <span className="text-[10px] uppercase tracking-wider block mb-0.5" style={{ color: "rgba(0,0,0,0.4)" }}>Win Rate</span>
+                              <span className="text-xs font-mono" style={{ color: "rgba(0,0,0,0.55)" }}>{entry.winRate}%</span>
                             </div>
                             <div>
-                              <span className="text-[10px] uppercase tracking-wider block mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>Profit</span>
+                              <span className="text-[10px] uppercase tracking-wider block mb-0.5" style={{ color: "rgba(0,0,0,0.4)" }}>Profit</span>
                               <span className="text-xs font-mono" style={{ color: entry.profit > 0 ? "#22c55e" : "#ef4444" }}>{formatCurrency(entry.profit)}</span>
                             </div>
                             <div>
-                              <span className="text-[10px] uppercase tracking-wider block mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>Record</span>
-                              <span className="text-xs font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
+                              <span className="text-[10px] uppercase tracking-wider block mb-0.5" style={{ color: "rgba(0,0,0,0.4)" }}>Record</span>
+                              <span className="text-xs font-mono" style={{ color: "rgba(0,0,0,0.45)" }}>
                                 <span style={{ color: "#22c55e" }}>{entry.wins}</span>
                                 {" / "}
                                 <span style={{ color: "#ef4444" }}>{entry.losses}</span>
@@ -358,8 +358,8 @@ export default function LeaderboardPage() {
                     <motion.div
                       className="mt-12 rounded-xl p-6 md:p-8"
                       style={{
-                        background: "rgba(255,59,59,0.04)",
-                        border: "1px solid rgba(255,59,59,0.15)",
+                        background: "rgba(0,0,0,0.04)",
+                        border: "1px solid rgba(0,0,0,0.08)",
                       }}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -367,18 +367,18 @@ export default function LeaderboardPage() {
                     >
                       <h2
                         className="text-xl md:text-2xl mb-6"
-                        style={{ fontFamily: "'DM Serif Display', serif", color: "#ededed" }}
+                        style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
                       >
                         Your Rank
                       </h2>
                       <div className="flex flex-wrap items-center gap-8 md:gap-12">
                         <div>
-                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>Position</span>
-                          <span className="text-3xl font-mono font-bold" style={{ color: "#FF3B3B" }}>#{userRank}</span>
-                          <span className="text-sm ml-2" style={{ color: "rgba(255,255,255,0.3)" }}>of {entries.length}</span>
+                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(0,0,0,0.4)" }}>Position</span>
+                          <span className="text-3xl font-mono font-bold" style={{ color: "#0a0a0a" }}>#{userRank}</span>
+                          <span className="text-sm ml-2" style={{ color: "rgba(0,0,0,0.4)" }}>of {entries.length}</span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>ROI</span>
+                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(0,0,0,0.4)" }}>ROI</span>
                           <span
                             className="text-2xl font-mono font-bold"
                             style={{ color: userEntry.roi > 0 ? "#22c55e" : "#ef4444" }}
@@ -387,11 +387,11 @@ export default function LeaderboardPage() {
                           </span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>Win Rate</span>
-                          <span className="text-2xl font-mono" style={{ color: "rgba(255,255,255,0.6)" }}>{userEntry.winRate}%</span>
+                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(0,0,0,0.4)" }}>Win Rate</span>
+                          <span className="text-2xl font-mono" style={{ color: "rgba(0,0,0,0.6)" }}>{userEntry.winRate}%</span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>Total Profit</span>
+                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(0,0,0,0.4)" }}>Total Profit</span>
                           <span
                             className="text-2xl font-mono font-bold"
                             style={{ color: userEntry.profit > 0 ? "#22c55e" : "#ef4444" }}
@@ -400,8 +400,8 @@ export default function LeaderboardPage() {
                           </span>
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(255,255,255,0.25)" }}>Record</span>
-                          <span className="text-2xl font-mono" style={{ color: "rgba(255,255,255,0.4)" }}>
+                          <span className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: "rgba(0,0,0,0.4)" }}>Record</span>
+                          <span className="text-2xl font-mono" style={{ color: "rgba(0,0,0,0.45)" }}>
                             <span style={{ color: "#22c55e" }}>{userEntry.wins}</span>
                             {" / "}
                             <span style={{ color: "#ef4444" }}>{userEntry.losses}</span>
@@ -415,20 +415,20 @@ export default function LeaderboardPage() {
                     <motion.div
                       className="mt-12 rounded-xl p-6 md:p-8 text-center"
                       style={{
-                        background: "rgba(255,255,255,0.02)",
-                        border: "1px solid rgba(255,255,255,0.06)",
+                        background: "rgba(0,0,0,0.04)",
+                        border: "1px solid rgba(0,0,0,0.06)",
                       }}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.5 }}
                     >
-                      <p className="text-base" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      <p className="text-base" style={{ color: "rgba(0,0,0,0.45)" }}>
                         You haven&apos;t placed any sim bets yet.
                       </p>
                       <Link
                         href="/simulator"
                         className="inline-block mt-4 px-8 py-3 text-sm font-semibold rounded-full transition-colors duration-200"
-                        style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+                        style={{ background: "#0a0a0a", color: "#0a0a0a" }}
                       >
                         Start Simulating
                       </Link>
@@ -442,19 +442,19 @@ export default function LeaderboardPage() {
       )}
 
       {/* ─── Footer ─── */}
-      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+      <footer className="px-6 py-12" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
             BayParlays. AI-powered parlay optimization.
           </p>
           <div className="flex items-center gap-6">
-            <Link href="/terms" className="text-xs transition-colors duration-200" style={{ color: "rgba(255,255,255,0.2)" }}>
+            <Link href="/terms" className="text-xs transition-colors duration-200" style={{ color: "rgba(0,0,0,0.3)" }}>
               Terms
             </Link>
-            <Link href="/privacy" className="text-xs transition-colors duration-200" style={{ color: "rgba(255,255,255,0.2)" }}>
+            <Link href="/privacy" className="text-xs transition-colors duration-200" style={{ color: "rgba(0,0,0,0.3)" }}>
               Privacy
             </Link>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+            <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
               Not financial advice. Gamble responsibly.
             </p>
           </div>
@@ -473,7 +473,7 @@ function TableSkeleton() {
         <div
           key={i}
           className="h-14 rounded-lg animate-pulse"
-          style={{ background: "rgba(255,255,255,0.025)", opacity: 1 - i * 0.08 }}
+          style={{ background: "#FFFFFF", opacity: 1 - i * 0.08 }}
         />
       ))}
     </div>

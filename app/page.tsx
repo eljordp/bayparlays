@@ -209,7 +209,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a] overflow-x-hidden">
       <AppNav />
 
       {/* ── LOCK OF THE DAY (top hero) ── */}
@@ -228,7 +228,7 @@ export default function Home() {
               <motion.p
                 variants={fadeUp}
                 custom={0}
-                className="text-sm text-white/30 mb-6"
+                className="text-sm text-black/45 mb-6"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
                 {formatDate()}
@@ -244,13 +244,13 @@ export default function Home() {
                 <br />
                 the edge.
                 <br />
-                <span className="text-[#FF3B3B]">You place the bet.</span>
+                <span className="text-[#0a0a0a]">You place the bet.</span>
               </motion.h1>
 
               <motion.p
                 variants={fadeUp}
                 custom={2}
-                className="text-base md:text-lg text-white/40 mb-10 max-w-md leading-relaxed"
+                className="text-base md:text-lg text-black/55 mb-10 max-w-md leading-relaxed"
               >
                 Scanning odds across 12+ sportsbooks in real time.
               </motion.p>
@@ -262,14 +262,14 @@ export default function Home() {
               >
                 <Link
                   href="/subscribe"
-                  className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-7 py-3.5 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
+                  className="inline-flex items-center gap-2 bg-[#0a0a0a] text-white px-7 py-3.5 text-sm font-semibold rounded-full hover:bg-[#1f1f1f] transition-colors duration-200"
                 >
                   Start Free Trial
                   <ChevronRight className="w-4 h-4" />
                 </Link>
                 <a
                   href="#how-it-pays"
-                  className="inline-flex items-center gap-2 border border-white/20 text-white/60 px-7 py-3.5 text-sm font-medium rounded-full hover:border-white/40 hover:text-white transition-all duration-200"
+                  className="inline-flex items-center gap-2 border border-black/20 text-black/60 px-7 py-3.5 text-sm font-medium rounded-full hover:border-black/40 hover:text-black transition-all duration-200"
                 >
                   See How It Works
                 </a>
@@ -293,7 +293,7 @@ export default function Home() {
       </section>
 
       {/* ── SOCIAL PROOF STRIP ── */}
-      <section className="py-10 md:py-14 bg-[#111111] border-y border-white/[0.06]">
+      <section className="py-10 md:py-14 bg-white border-y border-black/[0.06]">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
             {[
@@ -312,7 +312,7 @@ export default function Home() {
                 className="text-center"
               >
                 <div
-                  className="text-2xl md:text-3xl font-bold text-white mb-1"
+                  className="text-2xl md:text-3xl font-bold text-[#0a0a0a] mb-1"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   <AnimatedCounter
@@ -321,7 +321,7 @@ export default function Home() {
                     suffix={stat.suffix}
                   />
                 </div>
-                <div className="text-xs text-white/30 uppercase tracking-widest">
+                <div className="text-xs text-black/45 uppercase tracking-widest">
                   {stat.label}
                 </div>
               </motion.div>
@@ -332,17 +332,17 @@ export default function Home() {
 
       {/* ── PARLAY OF THE DAY ── */}
       {potd && (
-        <section className="py-16 md:py-24 border-b border-white/[0.04]">
+        <section className="py-16 md:py-24 border-b border-black/[0.04]">
           <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
             {/* Header with flashing POTD badge */}
             <div className="flex items-center gap-4 mb-10">
-              <div className="flex items-center gap-2 bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 rounded-full px-4 py-2">
-                <span className="w-2 h-2 rounded-full bg-[#FF3B3B] animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-wider text-[#FF3B3B]">
+              <div className="flex items-center gap-2 bg-black/[0.05] border border-black/10 rounded-full px-4 py-2">
+                <span className="w-2 h-2 rounded-full bg-[#0a0a0a] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[#0a0a0a]">
                   Parlay of the Day
                 </span>
               </div>
-              <span className="text-sm text-white/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
+              <span className="text-sm text-black/45" style={{ fontFamily: "var(--font-geist-mono)" }}>
                 {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </span>
             </div>
@@ -350,42 +350,42 @@ export default function Home() {
             {/* POTD content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Main card — takes 2 columns */}
-              <div className="lg:col-span-2 bg-[#111] border border-white/[0.06] rounded-2xl p-6 md:p-8">
+              <div className="lg:col-span-2 bg-white border border-black/[0.06] rounded-2xl p-6 md:p-8">
                 {/* Legs */}
                 <div className="space-y-4 mb-6">
                   {potd.legs?.map((leg: { sport: string; pick: string; game: string; odds: number; book: string }, i: number) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-1 rounded">
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-black/[0.06] text-[#0a0a0a] px-2 py-1 rounded">
                           {leg.sport}
                         </span>
                         <div>
-                          <div className="text-sm text-white/80 font-medium">{leg.pick}</div>
-                          <div className="text-xs text-white/30">{leg.game}</div>
+                          <div className="text-sm text-black/80 font-medium">{leg.pick}</div>
+                          <div className="text-xs text-black/45">{leg.game}</div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-bold text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                        <div className="text-sm font-bold text-[#0a0a0a]" style={{ fontFamily: "var(--font-geist-mono)" }}>
                           {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
                         </div>
-                        <div className="text-[10px] text-white/25">{leg.book}</div>
+                        <div className="text-[10px] text-black/40">{leg.book}</div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="h-px bg-white/[0.06] mb-4" />
+                <div className="h-px bg-black/[0.06] mb-4" />
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs text-white/30 uppercase tracking-wider mb-1">Combined Odds</div>
-                    <div className="text-3xl font-black text-[#FF3B3B]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <div className="text-xs text-black/45 uppercase tracking-wider mb-1">Combined Odds</div>
+                    <div className="text-3xl font-black text-[#0a0a0a]" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       {potd.combinedOdds || potd.combined_odds}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-white/30 uppercase tracking-wider mb-1">$100 Pays</div>
-                    <div className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <div className="text-xs text-black/45 uppercase tracking-wider mb-1">$100 Pays</div>
+                    <div className="text-2xl font-bold text-[#0a0a0a]" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       ${potd.payout}
                     </div>
                   </div>
@@ -394,22 +394,22 @@ export default function Home() {
 
               {/* Side panel — stats */}
               <div className="space-y-4">
-                <div className="bg-[#111] border border-white/[0.06] rounded-2xl p-6">
-                  <div className="text-xs text-white/30 uppercase tracking-wider mb-2">Confidence</div>
-                  <div className="text-4xl font-black text-white" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                <div className="bg-white border border-black/[0.06] rounded-2xl p-6">
+                  <div className="text-xs text-black/45 uppercase tracking-wider mb-2">Confidence</div>
+                  <div className="text-4xl font-black text-[#0a0a0a]" style={{ fontFamily: "var(--font-geist-mono)" }}>
                     {potd.confidence}%
                   </div>
-                  <div className="mt-3 h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#FF3B3B] rounded-full" style={{ width: `${potd.confidence}%` }} />
+                  <div className="mt-3 h-2 bg-black/[0.06] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#0a0a0a] rounded-full" style={{ width: `${potd.confidence}%` }} />
                   </div>
                 </div>
-                <div className="bg-[#111] border border-white/[0.06] rounded-2xl p-6">
-                  <div className="text-xs text-white/30 uppercase tracking-wider mb-2">Expected Value</div>
+                <div className="bg-white border border-black/[0.06] rounded-2xl p-6">
+                  <div className="text-xs text-black/45 uppercase tracking-wider mb-2">Expected Value</div>
                   <div className="text-3xl font-black text-[#22C55E]" style={{ fontFamily: "var(--font-geist-mono)" }}>
                     +{(potd.evPercent || potd.ev_percent || 0).toFixed(1)}%
                   </div>
                 </div>
-                <Link href="/subscribe" className="block bg-[#FF3B3B] text-center text-[#0a0a0a] font-bold py-4 rounded-2xl hover:bg-[#FF5252] transition-colors">
+                <Link href="/subscribe" className="block bg-[#0a0a0a] text-center text-white font-bold py-4 rounded-2xl hover:bg-[#1f1f1f] transition-colors">
                   Get All Picks
                 </Link>
               </div>
@@ -419,7 +419,7 @@ export default function Home() {
       )}
 
       {/* ── WATCH IT WORK (How The AI Works Video) ── */}
-      <section className="py-20 md:py-32 border-b border-white/[0.04]">
+      <section className="py-20 md:py-32 border-b border-black/[0.04]">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <motion.div
             initial="hidden"
@@ -438,7 +438,7 @@ export default function Home() {
             <motion.div
               variants={fadeUp}
               custom={1}
-              className="w-16 h-0.5 bg-[#FF3B3B] mx-auto mb-10"
+              className="w-16 h-0.5 bg-[#0a0a0a] mx-auto mb-10"
             />
             <motion.div
               variants={fadeUp}
@@ -450,7 +450,7 @@ export default function Home() {
             <motion.p
               variants={fadeUp}
               custom={3}
-              className="text-base md:text-lg text-white/40 max-w-lg mx-auto leading-relaxed"
+              className="text-base md:text-lg text-black/55 max-w-lg mx-auto leading-relaxed"
             >
               Our AI scans odds, finds the edge, and builds your parlay in seconds.
             </motion.p>
@@ -460,36 +460,36 @@ export default function Home() {
 
       {/* ── CRAZIEST PARLAY OF THE DAY ── */}
       {crazy && (
-        <section className="py-16 md:py-24 bg-gradient-to-b from-[#FF3B3B]/[0.03] to-transparent border-y border-[#FF3B3B]/[0.08]">
+        <section className="py-16 md:py-24 bg-gradient-to-b from-black/[0.03] to-transparent border-y border-black/[0.06]">
           <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
             <div className="flex items-center justify-between mb-10">
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-[#FF3B3B]/20 border border-[#FF3B3B]/30 rounded-full px-4 py-2">
+                <div className="flex items-center gap-2 bg-black/10 border border-black/20 rounded-full px-4 py-2">
                   <span className="text-lg">🎰</span>
-                  <span className="text-xs font-black uppercase tracking-wider text-[#FF3B3B]">
+                  <span className="text-xs font-black uppercase tracking-wider text-[#0a0a0a]">
                     Craziest Parlay
                   </span>
                 </div>
-                <span className="text-sm text-white/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                <span className="text-sm text-black/45" style={{ fontFamily: "var(--font-geist-mono)" }}>
                   Today&apos;s long shot
                 </span>
               </div>
-              <Link href="/crazy" className="text-sm text-[#FF3B3B]/60 hover:text-[#FF3B3B] transition-colors flex items-center gap-1">
+              <Link href="/crazy" className="text-sm text-[#0a0a0a]/60 hover:text-[#0a0a0a] transition-colors flex items-center gap-1">
                 History &rarr;
               </Link>
             </div>
 
-            <div className="bg-[#0d0d0d] border border-[#FF3B3B]/10 rounded-2xl p-6 md:p-10">
+            <div className="bg-white border border-black/[0.06] rounded-2xl p-6 md:p-10">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
                 {/* Left: Big odds display + legs */}
                 <div>
                   {/* Big odds display */}
                   <div className="text-center lg:text-left mb-8">
-                    <div className="text-xs text-white/30 uppercase tracking-widest mb-3">If this hits...</div>
-                    <div className="text-6xl md:text-8xl font-black text-[#FF3B3B]" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <div className="text-xs text-black/45 uppercase tracking-widest mb-3">If this hits...</div>
+                    <div className="text-6xl md:text-8xl font-black text-[#0a0a0a]" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       {crazy.combined_odds}
                     </div>
-                    <div className="text-xl md:text-2xl text-white/60 mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <div className="text-xl md:text-2xl text-black/60 mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       $100 &rarr; ${crazy.payout?.toLocaleString()}
                     </div>
                   </div>
@@ -497,15 +497,15 @@ export default function Home() {
                   {/* Legs */}
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-1 gap-3">
                     {crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number }, i: number) => (
-                      <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                      <div key={i} className="bg-white border border-black/[0.06] rounded-xl p-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-[#FF3B3B]/15 text-[#FF3B3B] px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-black/[0.06] text-[#0a0a0a] px-2 py-0.5 rounded">
                             {leg.sport}
                           </span>
                         </div>
-                        <div className="text-sm font-medium text-white/80">{leg.pick}</div>
-                        <div className="text-xs text-white/30 mt-1">{leg.game}</div>
-                        <div className="text-lg font-bold text-white mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                        <div className="text-sm font-medium text-black/80">{leg.pick}</div>
+                        <div className="text-xs text-black/45 mt-1">{leg.game}</div>
+                        <div className="text-lg font-bold text-[#0a0a0a] mt-2" style={{ fontFamily: "var(--font-geist-mono)" }}>
                           {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
                         </div>
                       </div>
@@ -539,11 +539,11 @@ export default function Home() {
                     THIS HIT
                   </span>
                 ) : crazy.status === "lost" ? (
-                  <span className="inline-flex items-center gap-2 bg-white/[0.04] text-white/30 font-medium px-6 py-2 rounded-full text-sm">
+                  <span className="inline-flex items-center gap-2 bg-black/[0.04] text-black/45 font-medium px-6 py-2 rounded-full text-sm">
                     Didn&apos;t hit this time
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-2 bg-[#FF3B3B]/10 text-[#FF3B3B] font-bold px-6 py-2 rounded-full text-sm animate-pulse">
+                  <span className="inline-flex items-center gap-2 bg-black/[0.05] text-[#0a0a0a] font-bold px-6 py-2 rounded-full text-sm animate-pulse">
                     IN PLAY
                   </span>
                 )}
@@ -573,7 +573,7 @@ export default function Home() {
               <motion.div
                 variants={fadeUp}
                 custom={1}
-                className="w-16 h-0.5 bg-[#FF3B3B] mb-14"
+                className="w-16 h-0.5 bg-[#0a0a0a] mb-14"
               />
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
@@ -595,12 +595,12 @@ export default function Home() {
 
                 <motion.div variants={fadeUp} custom={3}>
                   <p
-                    className="text-sm text-[#FF3B3B]/60 uppercase tracking-[0.2em] mb-4 font-medium"
+                    className="text-sm text-[#0a0a0a]/60 uppercase tracking-[0.2em] mb-4 font-medium"
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
                     {featuredParlay.status === "won" ? "Verified Win" : featuredParlay.status === "pending" ? "In Progress" : "Track Record"}
                   </p>
-                  <p className="text-xl md:text-2xl text-white/80 leading-relaxed mb-6">
+                  <p className="text-xl md:text-2xl text-black/80 leading-relaxed mb-6">
                     {featuredParlay.status === "won" ? (
                       <>AI locked this parlay. Every leg hit.</>
                     ) : featuredParlay.status === "pending" ? (
@@ -609,22 +609,22 @@ export default function Home() {
                       <>AI generated this parlay. Not every pick wins.</>
                     )}
                   </p>
-                  <p className="text-base text-white/40 leading-relaxed mb-4">
+                  <p className="text-base text-black/55 leading-relaxed mb-4">
                     {featuredParlay.legs.length}-leg parlay at{" "}
-                    <span className="text-white/70 font-semibold" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <span className="text-black/70 font-semibold" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       {featuredParlay.combined_odds}
                     </span>
                     {" "}odds. Expected value:{" "}
-                    <span className="text-white/70 font-semibold" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <span className="text-black/70 font-semibold" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       {featuredParlay.ev_percent > 0 ? "+" : ""}{Number(featuredParlay.ev_percent).toFixed(1)}%
                     </span>
                   </p>
-                  <p className="text-sm text-white/25 mb-8" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                  <p className="text-sm text-black/40 mb-8" style={{ fontFamily: "var(--font-geist-mono)" }}>
                     Generated {new Date(featuredParlay.created_at).toLocaleString()}
                   </p>
                   <Link
                     href="/results"
-                    className="inline-flex items-center gap-2 text-sm text-[#FF3B3B]/70 hover:text-[#FF3B3B] transition-colors"
+                    className="inline-flex items-center gap-2 text-sm text-[#0a0a0a]/70 hover:text-[#0a0a0a] transition-colors"
                   >
                     See full track record
                     <ArrowRight className="w-4 h-4" />
@@ -638,7 +638,7 @@ export default function Home() {
 
       {/* ── LIVE ODDS STRIP ── */}
       {odds.length > 0 && (
-        <section className="py-14 md:py-20 border-y border-white/[0.04] bg-[#0d0d0d]">
+        <section className="py-14 md:py-20 border-y border-black/[0.04] bg-white">
           <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
             <motion.div
               initial="hidden"
@@ -651,9 +651,9 @@ export default function Home() {
                 className="flex items-center justify-between mb-8"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-2 h-2 bg-[#FF3B3B] rounded-full glow-pulse" />
+                  <span className="w-2 h-2 bg-[#0a0a0a] rounded-full glow-pulse" />
                   <h2
-                    className="text-xs font-medium uppercase tracking-[0.2em] text-white/30"
+                    className="text-xs font-medium uppercase tracking-[0.2em] text-black/45"
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
                     Live Odds &mdash; NBA
@@ -661,7 +661,7 @@ export default function Home() {
                 </div>
                 <Link
                   href="/odds"
-                  className="text-xs text-white/25 hover:text-[#FF3B3B] transition-colors flex items-center gap-1"
+                  className="text-xs text-black/40 hover:text-[#0a0a0a] transition-colors flex items-center gap-1"
                 >
                   View all odds
                   <ArrowRight className="w-3 h-3" />
@@ -692,20 +692,20 @@ export default function Home() {
                   return (
                     <div
                       key={game.id}
-                      className="flex-shrink-0 w-[220px] py-4 px-5 bg-white/[0.02] border border-white/[0.04] rounded-xl hover:bg-white/[0.05] hover:border-white/[0.08] transition-all duration-300"
+                      className="flex-shrink-0 w-[220px] py-4 px-5 bg-white border border-black/[0.06] rounded-xl hover:bg-black/[0.02] hover:border-black/[0.12] transition-all duration-300"
                     >
-                      <div className="text-[11px] text-white/30 mb-3 truncate">
+                      <div className="text-[11px] text-black/45 mb-3 truncate">
                         {game.awayTeam} @ {game.homeTeam}
                       </div>
                       {bestLine && (
                         <div className="flex items-baseline justify-between">
                           <span
-                            className="text-lg font-bold text-[#FF3B3B]"
+                            className="text-lg font-bold text-[#0a0a0a]"
                             style={{ fontFamily: "var(--font-geist-mono)" }}
                           >
                             {formatOdds(bestLine.bestPrice)}
                           </span>
-                          <span className="text-[10px] text-white/20 uppercase">
+                          <span className="text-[10px] text-black/30 uppercase">
                             {bestLine.bestBook}
                           </span>
                         </div>
@@ -738,7 +738,7 @@ export default function Home() {
             <motion.p
               variants={fadeUp}
               custom={1}
-              className="text-base text-white/30 text-center mb-16 max-w-lg mx-auto"
+              className="text-base text-black/45 text-center mb-16 max-w-lg mx-auto"
             >
               Same sport. Same day. Different approach. Different result.
             </motion.p>
@@ -747,7 +747,7 @@ export default function Home() {
               {/* Without */}
               <motion.div variants={fadeUp} custom={2}>
                 <p
-                  className="text-xs uppercase tracking-[0.2em] text-white/25 mb-5 text-center"
+                  className="text-xs uppercase tracking-[0.2em] text-black/40 mb-5 text-center"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   Without BayParlays
@@ -788,7 +788,7 @@ export default function Home() {
               {/* With */}
               <motion.div variants={fadeUp} custom={3}>
                 <p
-                  className="text-xs uppercase tracking-[0.2em] text-[#FF3B3B]/50 mb-5 text-center font-medium"
+                  className="text-xs uppercase tracking-[0.2em] text-[#0a0a0a]/50 mb-5 text-center font-medium"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   With BayParlays
@@ -829,12 +829,12 @@ export default function Home() {
       </section>
 
       {/* ── EMAIL CAPTURE ── */}
-      <section className="py-16 md:py-24 border-t border-white/[0.04]">
+      <section className="py-16 md:py-24 border-t border-black/[0.04]">
         <div className="w-full max-w-[600px] mx-auto px-6 md:px-10 text-center">
           <h2 className="text-2xl md:text-3xl tracking-tight mb-4" style={{ fontFamily: "'DM Serif Display', serif" }}>
             Not ready to subscribe?
           </h2>
-          <p className="text-white/40 mb-8">
+          <p className="text-black/55 mb-8">
             Drop your email. We&apos;ll send you our best pick of the week — free.
           </p>
 
@@ -861,12 +861,12 @@ export default function Home() {
                 value={captureEmail}
                 onChange={(e) => setCaptureEmail(e.target.value)}
                 required
-                className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-full px-5 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#FF3B3B]/40"
+                className="flex-1 bg-white border border-black/[0.08] rounded-full px-5 py-3 text-sm text-[#0a0a0a] placeholder-black/40 focus:outline-none focus:border-black/40"
               />
               <button
                 type="submit"
                 disabled={emailLoading}
-                className="bg-[#FF3B3B] text-[#0a0a0a] px-6 py-3 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors disabled:opacity-50"
+                className="bg-[#0a0a0a] text-white px-6 py-3 text-sm font-semibold rounded-full hover:bg-[#1f1f1f] transition-colors disabled:opacity-50"
               >
                 {emailLoading ? "..." : "Send"}
               </button>
@@ -876,7 +876,7 @@ export default function Home() {
       </section>
 
       {/* ── PRICING CTA ── */}
-      <section className="py-24 md:py-36 bg-[#111111] border-y border-white/[0.06]">
+      <section className="py-24 md:py-36 bg-white border-y border-black/[0.06]">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10 text-center">
           <motion.div
             initial="hidden"
@@ -890,7 +890,7 @@ export default function Home() {
               style={{ fontFamily: "'DM Serif Display', serif" }}
             >
               <span
-                className="text-7xl md:text-8xl text-[#FF3B3B] block mb-2"
+                className="text-7xl md:text-8xl text-[#0a0a0a] block mb-2"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
                 $50
@@ -901,7 +901,7 @@ export default function Home() {
             <motion.p
               variants={fadeUp}
               custom={1}
-              className="text-base md:text-lg text-white/40 mb-10"
+              className="text-base md:text-lg text-black/55 mb-10"
             >
               7-day free trial. Cancel anytime. One winning parlay pays for a year.
             </motion.p>
@@ -909,7 +909,7 @@ export default function Home() {
             <motion.div variants={fadeUp} custom={2}>
               <Link
                 href="/subscribe"
-                className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-10 py-4 text-base font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
+                className="inline-flex items-center gap-2 bg-[#0a0a0a] text-white px-10 py-4 text-base font-semibold rounded-full hover:bg-[#1f1f1f] transition-colors duration-200"
               >
                 Start Free Trial
                 <ChevronRight className="w-5 h-5" />
@@ -920,58 +920,58 @@ export default function Home() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/[0.04] py-16 md:py-20">
+      <footer className="border-t border-black/[0.04] py-16 md:py-20">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-12">
             <div>
               <Logo size="sm" />
             </div>
 
-            <div className="flex flex-wrap gap-x-10 gap-y-3 text-sm text-white/30">
+            <div className="flex flex-wrap gap-x-10 gap-y-3 text-sm text-black/45">
               <Link
                 href="/parlays"
-                className="hover:text-white/60 transition-colors"
+                className="hover:text-black/60 transition-colors"
               >
                 Parlays
               </Link>
               <Link
                 href="/odds"
-                className="hover:text-white/60 transition-colors"
+                className="hover:text-black/60 transition-colors"
               >
                 Odds
               </Link>
               <Link
                 href="/builder"
-                className="hover:text-white/60 transition-colors"
+                className="hover:text-black/60 transition-colors"
               >
                 Builder
               </Link>
               <Link
                 href="/subscribe"
-                className="hover:text-white/60 transition-colors"
+                className="hover:text-black/60 transition-colors"
               >
                 Pricing
               </Link>
               <Link
                 href="/achievements"
-                className="hover:text-white/60 transition-colors"
+                className="hover:text-black/60 transition-colors"
               >
                 Achievements
               </Link>
               <Link
                 href="/leaderboard"
-                className="hover:text-white/60 transition-colors"
+                className="hover:text-black/60 transition-colors"
               >
                 Leaderboard
               </Link>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-white/20">
+          <div className="pt-8 border-t border-black/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-black/30">
               &copy; {new Date().getFullYear()} BayParlays. All rights reserved.
             </p>
-            <p className="text-xs text-white/15 max-w-lg text-center md:text-right leading-relaxed">
+            <p className="text-xs text-black/30 max-w-lg text-center md:text-right leading-relaxed">
               For entertainment purposes only. BayParlays does not accept or
               place bets. Please gamble responsibly. If you or someone you know
               has a gambling problem, call 1-800-GAMBLER.

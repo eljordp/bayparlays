@@ -123,7 +123,7 @@ export default function SharePage() {
     : [];
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       <AppNav />
 
       {/* ─── Content ─── */}
@@ -137,10 +137,10 @@ export default function SharePage() {
             className="text-center mb-12"
           >
             <div className="flex items-center justify-center gap-3 mb-6">
-              <Share2 size={16} style={{ color: "#FF3B3B" }} />
+              <Share2 size={16} style={{ color: "#0a0a0a" }} />
               <span
                 className="text-xs font-medium tracking-widest uppercase"
-                style={{ color: "#FF3B3B" }}
+                style={{ color: "#0a0a0a" }}
               >
                 Share Card
               </span>
@@ -149,14 +149,14 @@ export default function SharePage() {
               className="text-4xl md:text-6xl font-normal leading-[1.1] mb-5"
               style={{
                 fontFamily: "'DM Serif Display', serif",
-                color: "#ededed",
+                color: "#0a0a0a",
               }}
             >
               Share Today&apos;s Top Pick
             </h1>
             <p
               className="text-base md:text-lg max-w-lg mx-auto"
-              style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}
+              style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}
             >
               Screenshot or screen-record the animated card below to share on
               your social channels.
@@ -177,15 +177,15 @@ export default function SharePage() {
                 className="px-7 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-200"
                 style={{
                   background:
-                    format === f ? "#FF3B3B" : "rgba(255,255,255,0.06)",
-                  color: format === f ? "#0a0a0a" : "rgba(255,255,255,0.6)",
+                    format === f ? "#0a0a0a" : "rgba(0,0,0,0.06)",
+                  color: format === f ? "#FAFAF7" : "rgba(0,0,0,0.6)",
                   border:
                     format === f
-                      ? "2px solid #FF3B3B"
-                      : "2px solid rgba(255,255,255,0.12)",
+                      ? "2px solid #0a0a0a"
+                      : "2px solid rgba(0,0,0,0.12)",
                   boxShadow:
                     format === f
-                      ? "0 0 20px rgba(255,59,59,0.25)"
+                      ? "0 0 20px rgba(0,0,0,0.18)"
                       : "none",
                 }}
               >
@@ -207,18 +207,18 @@ export default function SharePage() {
                 style={{
                   width: format === "story" ? 300 : 400,
                   height: format === "story" ? 533 : 400,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(0,0,0,0.03)",
+                  border: "1px solid rgba(0,0,0,0.06)",
                 }}
               >
                 <div className="flex flex-col items-center gap-4">
                   <div
                     className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-                    style={{ borderColor: "rgba(255,59,59,0.3)", borderTopColor: "transparent" }}
+                    style={{ borderColor: "rgba(0,0,0,0.25)", borderTopColor: "transparent" }}
                   />
                   <span
                     className="text-sm"
-                    style={{ color: "rgba(255,255,255,0.3)" }}
+                    style={{ color: "rgba(0,0,0,0.4)" }}
                   >
                     Loading today&apos;s pick...
                   </span>
@@ -232,20 +232,20 @@ export default function SharePage() {
                 style={{
                   width: 400,
                   height: 300,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(0,0,0,0.03)",
+                  border: "1px solid rgba(0,0,0,0.06)",
                 }}
               >
                 <div className="text-center px-8">
                   <p
                     className="text-base font-medium mb-2"
-                    style={{ color: "rgba(255,255,255,0.6)" }}
+                    style={{ color: "rgba(0,0,0,0.6)" }}
                   >
                     {error}
                   </p>
                   <p
                     className="text-sm"
-                    style={{ color: "rgba(255,255,255,0.3)" }}
+                    style={{ color: "rgba(0,0,0,0.4)" }}
                   >
                     Check back soon.
                   </p>
@@ -279,7 +279,7 @@ export default function SharePage() {
           >
             <p
               className="text-sm"
-              style={{ color: "rgba(255,255,255,0.3)", lineHeight: 1.7 }}
+              style={{ color: "rgba(0,0,0,0.4)", lineHeight: 1.7 }}
             >
               Tip: Use your device&apos;s screen recorder while the animation
               plays for a video clip, or screenshot any frame for a static image.
@@ -298,9 +298,9 @@ export default function SharePage() {
               disabled={downloading || !parlay || loading}
               className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-50"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.8)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(0,0,0,0.06)",
+                color: "rgba(0,0,0,0.85)",
+                border: "1px solid rgba(0,0,0,0.1)",
               }}
             >
               <Download size={14} />
@@ -311,9 +311,9 @@ export default function SharePage() {
               href="/parlays"
               className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.8)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(0,0,0,0.06)",
+                color: "rgba(0,0,0,0.85)",
+                border: "1px solid rgba(0,0,0,0.1)",
               }}
             >
               <ExternalLink size={14} />
@@ -322,13 +322,13 @@ export default function SharePage() {
             <Link
               href="/builder"
               className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
-              style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+              style={{ background: "#0a0a0a", color: "#FAFAF7" }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#FF5252";
+                e.currentTarget.style.background = "#1a1a1a";
                 e.currentTarget.style.transform = "translateY(-1px)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#FF3B3B";
+                e.currentTarget.style.background = "#0a0a0a";
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
@@ -342,13 +342,13 @@ export default function SharePage() {
       {/* ─── Footer ─── */}
       <footer
         className="px-6 py-12"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
       >
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
             BayParlays. AI-powered parlay optimization.
           </p>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+          <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
             Not financial advice. Gamble responsibly.
           </p>
         </div>

@@ -186,7 +186,7 @@ export default function LiveScoreboard() {
   const finalGames = games.filter((g) => g.status === "final");
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a] overflow-x-hidden">
       <AppNav />
 
       {/* ── HEADER ── */}
@@ -200,11 +200,11 @@ export default function LiveScoreboard() {
             <div>
               <motion.div variants={fadeUp} custom={0} className="flex items-center gap-3 mb-5">
                 <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF3B3B] opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#FF3B3B]" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0a0a0a] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[#0a0a0a]" />
                 </span>
                 <span
-                  className="text-xs font-bold uppercase tracking-[0.2em] text-[#FF3B3B]"
+                  className="text-xs font-bold uppercase tracking-[0.2em] text-[#0a0a0a]"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   Live
@@ -223,7 +223,7 @@ export default function LiveScoreboard() {
               <motion.p
                 variants={fadeUp}
                 custom={2}
-                className="text-base text-white/35 mt-4 max-w-md"
+                className="text-base text-black/45 mt-4 max-w-md"
               >
                 Real-time scores. See your picks play out.
               </motion.p>
@@ -237,7 +237,7 @@ export default function LiveScoreboard() {
             >
               {updatedAt && (
                 <span
-                  className="text-xs text-white/25"
+                  className="text-xs text-black/40"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   Updated {timeAgo(updatedAt)}
@@ -246,7 +246,7 @@ export default function LiveScoreboard() {
               <button
                 onClick={() => fetchScores(true)}
                 disabled={refreshing}
-                className="flex items-center gap-2 text-xs text-white/40 hover:text-white border border-white/[0.08] hover:border-white/[0.15] px-4 py-2 rounded-full transition-all duration-200 disabled:opacity-40"
+                className="flex items-center gap-2 text-xs text-black/45 hover:text-black border border-black/[0.08] hover:border-black/[0.25] px-4 py-2 rounded-full transition-all duration-200 disabled:opacity-40"
               >
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`}
@@ -259,7 +259,7 @@ export default function LiveScoreboard() {
       </section>
 
       {/* ── SPORT TABS ── */}
-      <section className="border-b border-white/[0.06]">
+      <section className="border-b border-black/[0.06]">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="flex gap-1 overflow-x-auto scrollbar-hide">
             {SPORTS.map((s) => (
@@ -268,8 +268,8 @@ export default function LiveScoreboard() {
                 onClick={() => setSport(s.key)}
                 className={`relative px-6 py-4 text-sm font-medium transition-colors duration-200 whitespace-nowrap ${
                   sport === s.key
-                    ? "text-white"
-                    : "text-white/30 hover:text-white/60"
+                    ? "text-black"
+                    : "text-black/40 hover:text-black/60"
                 }`}
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
@@ -277,7 +277,7 @@ export default function LiveScoreboard() {
                 {sport === s.key && (
                   <motion.div
                     layoutId="sport-tab"
-                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#FF3B3B]"
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0a0a0a]"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -292,8 +292,8 @@ export default function LiveScoreboard() {
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-32">
-              <div className="w-8 h-8 border-2 border-white/10 border-t-[#FF3B3B] rounded-full animate-spin mb-4" />
-              <p className="text-sm text-white/25">Loading scores...</p>
+              <div className="w-8 h-8 border-2 border-black/10 border-t-[#0a0a0a] rounded-full animate-spin mb-4" />
+              <p className="text-sm text-black/40">Loading scores...</p>
             </div>
           ) : games.length === 0 ? (
             /* Empty state */
@@ -302,16 +302,16 @@ export default function LiveScoreboard() {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-32 text-center"
             >
-              <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-black/[0.03] border border-black/[0.06] flex items-center justify-center mb-6">
                 <span className="text-2xl">&#127944;</span>
               </div>
               <h3
-                className="text-xl text-white/60 mb-2"
+                className="text-xl text-black/60 mb-2"
                 style={{ fontFamily: "'DM Serif Display', serif" }}
               >
                 No games today
               </h3>
-              <p className="text-sm text-white/25 max-w-sm">
+              <p className="text-sm text-black/40 max-w-sm">
                 Check back when games are scheduled. Try switching sports above.
               </p>
             </motion.div>
@@ -322,16 +322,16 @@ export default function LiveScoreboard() {
                 <div>
                   <div className="flex items-center gap-3 mb-8">
                     <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF3B3B] opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#FF3B3B]" />
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0a0a0a] opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0a0a0a]" />
                     </span>
                     <h2
-                      className="text-xs font-bold uppercase tracking-[0.2em] text-[#FF3B3B]"
+                      className="text-xs font-bold uppercase tracking-[0.2em] text-[#0a0a0a]"
                       style={{ fontFamily: "var(--font-geist-mono)" }}
                     >
                       Live Now
                     </h2>
-                    <span className="text-xs text-white/20" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <span className="text-xs text-black/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       {liveGames.length} {liveGames.length === 1 ? "game" : "games"}
                     </span>
                   </div>
@@ -353,12 +353,12 @@ export default function LiveScoreboard() {
                 <div>
                   <div className="flex items-center gap-3 mb-8">
                     <h2
-                      className="text-xs font-bold uppercase tracking-[0.2em] text-white/30"
+                      className="text-xs font-bold uppercase tracking-[0.2em] text-black/40"
                       style={{ fontFamily: "var(--font-geist-mono)" }}
                     >
                       Upcoming
                     </h2>
-                    <span className="text-xs text-white/15" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <span className="text-xs text-black/25" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       {upcomingGames.length} {upcomingGames.length === 1 ? "game" : "games"}
                     </span>
                   </div>
@@ -380,12 +380,12 @@ export default function LiveScoreboard() {
                 <div>
                   <div className="flex items-center gap-3 mb-8">
                     <h2
-                      className="text-xs font-bold uppercase tracking-[0.2em] text-white/25"
+                      className="text-xs font-bold uppercase tracking-[0.2em] text-black/40"
                       style={{ fontFamily: "var(--font-geist-mono)" }}
                     >
                       Final
                     </h2>
-                    <span className="text-xs text-white/15" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                    <span className="text-xs text-black/25" style={{ fontFamily: "var(--font-geist-mono)" }}>
                       {finalGames.length} {finalGames.length === 1 ? "game" : "games"}
                     </span>
                   </div>
@@ -407,33 +407,33 @@ export default function LiveScoreboard() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/[0.04] py-16 md:py-20 mt-8">
+      <footer className="border-t border-black/[0.04] py-16 md:py-20 mt-8">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-12">
             <Logo size="sm" />
-            <div className="flex flex-wrap gap-x-10 gap-y-3 text-sm text-white/30">
-              <Link href="/parlays" className="hover:text-white/60 transition-colors">
+            <div className="flex flex-wrap gap-x-10 gap-y-3 text-sm text-black/40">
+              <Link href="/parlays" className="hover:text-black/60 transition-colors">
                 Parlays
               </Link>
-              <Link href="/odds" className="hover:text-white/60 transition-colors">
+              <Link href="/odds" className="hover:text-black/60 transition-colors">
                 Odds
               </Link>
-              <Link href="/builder" className="hover:text-white/60 transition-colors">
+              <Link href="/builder" className="hover:text-black/60 transition-colors">
                 Builder
               </Link>
-              <Link href="/subscribe" className="hover:text-white/60 transition-colors">
+              <Link href="/subscribe" className="hover:text-black/60 transition-colors">
                 Pricing
               </Link>
-              <Link href="/live" className="hover:text-white/60 transition-colors">
+              <Link href="/live" className="hover:text-black/60 transition-colors">
                 Live
               </Link>
             </div>
           </div>
-          <div className="pt-8 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-white/20">
+          <div className="pt-8 border-t border-black/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-black/30">
               &copy; {new Date().getFullYear()} BayParlays. All rights reserved.
             </p>
-            <p className="text-xs text-white/15 max-w-lg text-center md:text-right leading-relaxed">
+            <p className="text-xs text-black/25 max-w-lg text-center md:text-right leading-relaxed">
               For entertainment purposes only. BayParlays does not accept or place bets.
               Please gamble responsibly. If you or someone you know has a gambling problem,
               call 1-800-GAMBLER.
@@ -477,10 +477,10 @@ function GameCard({
         relative rounded-xl border transition-all duration-300
         ${
           isLive
-            ? "bg-[#111] border-l-4 border-l-[#FF3B3B] border-t-white/[0.06] border-r-white/[0.06] border-b-white/[0.06] hover:border-t-white/[0.1] hover:border-r-white/[0.1] hover:border-b-white/[0.1]"
+            ? "bg-white border-l-4 border-l-[#0a0a0a] border-t-black/[0.06] border-r-black/[0.06] border-b-black/[0.06] hover:border-t-black/[0.1] hover:border-r-black/[0.1] hover:border-b-black/[0.1]"
             : isFinal
-            ? "bg-[#0e0e0e] border-white/[0.04] opacity-75 hover:opacity-90"
-            : "bg-[#0e0e0e] border-white/[0.06] hover:border-white/[0.1]"
+            ? "bg-white border-black/[0.04] opacity-75 hover:opacity-90"
+            : "bg-white border-black/[0.06] hover:border-black/[0.1]"
         }
       `}
     >
@@ -490,11 +490,11 @@ function GameCard({
           {isLive && (
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF3B3B] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF3B3B]" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0a0a0a] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#0a0a0a]" />
               </span>
               <span
-                className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#FF3B3B]"
+                className="text-[11px] font-bold uppercase tracking-[0.15em] text-[#0a0a0a]"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
                 Live
@@ -504,19 +504,19 @@ function GameCard({
           {isUpcoming && (
             <div className="flex items-center gap-2">
               <span
-                className="text-[11px] font-medium uppercase tracking-[0.15em] text-white/25"
+                className="text-[11px] font-medium uppercase tracking-[0.15em] text-black/40"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
                 Upcoming
               </span>
-              <span className="text-[11px] text-white/20" style={{ fontFamily: "var(--font-geist-mono)" }}>
+              <span className="text-[11px] text-black/30" style={{ fontFamily: "var(--font-geist-mono)" }}>
                 {formatGameTime(game.commenceTime)}
               </span>
             </div>
           )}
           {isFinal && (
             <span
-              className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/30"
+              className="text-[11px] font-bold uppercase tracking-[0.15em] text-black/40"
               style={{ fontFamily: "var(--font-geist-mono)" }}
             >
               Final
@@ -530,7 +530,7 @@ function GameCard({
           <div className="flex items-center justify-between">
             <span
               className={`text-base md:text-lg font-medium truncate pr-4 ${
-                isFinal && !awayWinning ? "text-white/30" : isUpcoming ? "text-white/60" : "text-white/80"
+                isFinal && !awayWinning ? "text-black/40" : isUpcoming ? "text-black/60" : "text-black/85"
               }`}
             >
               {game.awayTeam}
@@ -540,12 +540,12 @@ function GameCard({
                 <span
                   className={`text-2xl md:text-[36px] font-bold leading-none tabular-nums ${
                     isLive && awayWinning
-                      ? "text-white"
+                      ? "text-black"
                       : isLive
-                      ? "text-white/40"
+                      ? "text-black/45"
                       : isFinal && awayWinning
-                      ? "text-white"
-                      : "text-white/30"
+                      ? "text-black"
+                      : "text-black/40"
                   }`}
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
@@ -562,7 +562,7 @@ function GameCard({
           <div className="flex items-center justify-between">
             <span
               className={`text-base md:text-lg font-medium truncate pr-4 ${
-                isFinal && !homeWinning ? "text-white/30" : isUpcoming ? "text-white/60" : "text-white/80"
+                isFinal && !homeWinning ? "text-black/40" : isUpcoming ? "text-black/60" : "text-black/85"
               }`}
             >
               {game.homeTeam}
@@ -572,12 +572,12 @@ function GameCard({
                 <span
                   className={`text-2xl md:text-[36px] font-bold leading-none tabular-nums ${
                     isLive && homeWinning
-                      ? "text-white"
+                      ? "text-black"
                       : isLive
-                      ? "text-white/40"
+                      ? "text-black/45"
                       : isFinal && homeWinning
-                      ? "text-white"
-                      : "text-white/30"
+                      ? "text-black"
+                      : "text-black/40"
                   }`}
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
@@ -593,15 +593,15 @@ function GameCard({
 
         {/* Sim bet overlay */}
         {simBets.length > 0 && (
-          <div className="mt-5 pt-4 border-t border-white/[0.06]">
+          <div className="mt-5 pt-4 border-t border-black/[0.06]">
             {simBets.map((bet, i) => (
               <div
                 key={i}
-                className="inline-flex items-center gap-1.5 bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 rounded-full px-3 py-1 mr-2 mb-1"
+                className="inline-flex items-center gap-1.5 bg-black/[0.06] border border-black/[0.18] rounded-full px-3 py-1 mr-2 mb-1"
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#FF3B3B]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0a0a0a]" />
                 <span
-                  className="text-[10px] font-semibold text-[#FF3B3B]"
+                  className="text-[10px] font-semibold text-[#0a0a0a]"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   Your sim bet: {bet.pick}

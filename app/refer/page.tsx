@@ -93,7 +93,7 @@ export default function ReferPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a] overflow-x-hidden">
       <AppNav />
 
       {/* ── HEADER ── */}
@@ -103,7 +103,7 @@ export default function ReferPage() {
             <motion.p
               variants={fadeUp}
               custom={0}
-              className="text-xs font-medium uppercase tracking-[0.2em] text-[#FF3B3B]/60 mb-5"
+              className="text-xs font-medium uppercase tracking-[0.2em] text-[#0a0a0a]/60 mb-5"
             >
               Referral Program
             </motion.p>
@@ -118,7 +118,7 @@ export default function ReferPage() {
             <motion.p
               variants={fadeUp}
               custom={2}
-              className="text-lg md:text-xl text-white/40 max-w-lg mx-auto leading-relaxed"
+              className="text-lg md:text-xl text-black/45 max-w-lg mx-auto leading-relaxed"
             >
               Give your friends access. Get a free month for every signup.
             </motion.p>
@@ -137,7 +137,7 @@ export default function ReferPage() {
             {!referralCode ? (
               <motion.div variants={fadeUp} custom={0} className="space-y-5">
                 <div>
-                  <label className="block text-xs uppercase tracking-[0.15em] text-white/30 mb-2 font-medium">
+                  <label className="block text-xs uppercase tracking-[0.15em] text-black/40 mb-2 font-medium">
                     Your name (optional)
                   </label>
                   <input
@@ -145,13 +145,13 @@ export default function ReferPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. JP"
-                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-5 py-4 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF3B3B]/40 transition-colors"
+                    className="w-full bg-black/[0.04] border border-black/[0.08] rounded-xl px-5 py-4 text-sm text-black placeholder:text-black/30 focus:outline-none focus:border-[#0a0a0a]/40 transition-colors"
                   />
                 </div>
                 <button
                   onClick={handleGenerate}
                   disabled={loading}
-                  className="w-full bg-[#FF3B3B] text-[#0a0a0a] py-4 rounded-full text-sm font-semibold hover:bg-[#FF5252] transition-colors duration-200 disabled:opacity-60"
+                  className="w-full bg-[#0a0a0a] text-white py-4 rounded-full text-sm font-semibold hover:bg-[#222] transition-colors duration-200 disabled:opacity-60"
                 >
                   {loading ? "Generating..." : "Generate My Link"}
                 </button>
@@ -165,26 +165,26 @@ export default function ReferPage() {
               >
                 {/* Copyable link box */}
                 <div>
-                  <label className="block text-xs uppercase tracking-[0.15em] text-white/30 mb-2 font-medium">
+                  <label className="block text-xs uppercase tracking-[0.15em] text-black/40 mb-2 font-medium">
                     Your referral link
                   </label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-5 py-4 text-sm text-white/70 truncate font-mono">
+                    <div className="flex-1 bg-black/[0.04] border border-black/[0.08] rounded-xl px-5 py-4 text-sm text-black/70 truncate font-mono">
                       {referralLink}
                     </div>
                     <button
                       onClick={handleCopy}
-                      className="flex-shrink-0 bg-white/[0.06] border border-white/[0.08] rounded-xl p-4 hover:bg-white/[0.1] transition-colors"
+                      className="flex-shrink-0 bg-black/[0.06] border border-black/[0.08] rounded-xl p-4 hover:bg-black/[0.1] transition-colors"
                     >
                       {copied ? (
-                        <Check className="w-4 h-4 text-[#FF3B3B]" />
+                        <Check className="w-4 h-4 text-[#0a0a0a]" />
                       ) : (
-                        <Copy className="w-4 h-4 text-white/50" />
+                        <Copy className="w-4 h-4 text-black/55" />
                       )}
                     </button>
                   </div>
                   {copied && (
-                    <p className="text-xs text-[#FF3B3B]/70 mt-2">Copied to clipboard</p>
+                    <p className="text-xs text-[#0a0a0a]/70 mt-2">Copied to clipboard</p>
                   )}
                 </div>
 
@@ -192,21 +192,21 @@ export default function ReferPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleCopy}
-                    className="flex-1 flex items-center justify-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl py-3.5 text-sm text-white/60 hover:bg-white/[0.08] hover:text-white/80 transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 bg-black/[0.04] border border-black/[0.06] rounded-xl py-3.5 text-sm text-black/60 hover:bg-black/[0.08] hover:text-black/80 transition-all"
                   >
                     <Copy className="w-4 h-4" />
                     Copy Link
                   </button>
                   <button
                     onClick={handleShareTwitter}
-                    className="flex-1 flex items-center justify-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl py-3.5 text-sm text-white/60 hover:bg-white/[0.08] hover:text-white/80 transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 bg-black/[0.04] border border-black/[0.06] rounded-xl py-3.5 text-sm text-black/60 hover:bg-black/[0.08] hover:text-black/80 transition-all"
                   >
                     <Share2 className="w-4 h-4" />
                     Twitter
                   </button>
                   <button
                     onClick={handleShareIG}
-                    className="flex-1 flex items-center justify-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl py-3.5 text-sm text-white/60 hover:bg-white/[0.08] hover:text-white/80 transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 bg-black/[0.04] border border-black/[0.06] rounded-xl py-3.5 text-sm text-black/60 hover:bg-black/[0.08] hover:text-black/80 transition-all"
                   >
                     <Share2 className="w-4 h-4" />
                     IG Story
@@ -220,7 +220,7 @@ export default function ReferPage() {
 
       {/* ── STATS SECTION ── */}
       {stats && (
-        <section className="py-12 md:py-20 border-y border-white/[0.06] bg-[#111111]">
+        <section className="py-12 md:py-20 border-y border-black/[0.06] bg-[#F2F2EE]">
           <div className="w-full max-w-[800px] mx-auto px-6 md:px-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -229,40 +229,40 @@ export default function ReferPage() {
               className="grid grid-cols-3 gap-6 md:gap-10"
             >
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/[0.04] mb-3">
-                  <MousePointerClick className="w-4 h-4 text-[#FF3B3B]/60" />
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-black/[0.04] mb-3">
+                  <MousePointerClick className="w-4 h-4 text-[#0a0a0a]/60" />
                 </div>
                 <div
-                  className="text-3xl md:text-4xl font-bold text-white mb-1"
+                  className="text-3xl md:text-4xl font-bold text-black mb-1"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   {stats.clicks}
                 </div>
-                <div className="text-xs text-white/30 uppercase tracking-widest">Clicks</div>
+                <div className="text-xs text-black/40 uppercase tracking-widest">Clicks</div>
               </div>
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/[0.04] mb-3">
-                  <Users className="w-4 h-4 text-[#FF3B3B]/60" />
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-black/[0.04] mb-3">
+                  <Users className="w-4 h-4 text-[#0a0a0a]/60" />
                 </div>
                 <div
-                  className="text-3xl md:text-4xl font-bold text-white mb-1"
+                  className="text-3xl md:text-4xl font-bold text-black mb-1"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   {stats.signups}
                 </div>
-                <div className="text-xs text-white/30 uppercase tracking-widest">Signups</div>
+                <div className="text-xs text-black/40 uppercase tracking-widest">Signups</div>
               </div>
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/[0.04] mb-3">
-                  <Gift className="w-4 h-4 text-[#FF3B3B]/60" />
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-black/[0.04] mb-3">
+                  <Gift className="w-4 h-4 text-[#0a0a0a]/60" />
                 </div>
                 <div
-                  className="text-3xl md:text-4xl font-bold text-[#FF3B3B] mb-1"
+                  className="text-3xl md:text-4xl font-bold text-[#0a0a0a] mb-1"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   {stats.signups}
                 </div>
-                <div className="text-xs text-white/30 uppercase tracking-widest">Free Months</div>
+                <div className="text-xs text-black/40 uppercase tracking-widest">Free Months</div>
               </div>
             </motion.div>
           </div>
@@ -285,7 +285,7 @@ export default function ReferPage() {
             >
               How It Works
             </motion.h2>
-            <motion.div variants={fadeUp} custom={1} className="w-16 h-0.5 bg-[#FF3B3B] mx-auto mb-16" />
+            <motion.div variants={fadeUp} custom={1} className="w-16 h-0.5 bg-[#0a0a0a] mx-auto mb-16" />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16">
               {[
@@ -312,18 +312,18 @@ export default function ReferPage() {
                   className="text-center"
                 >
                   <span
-                    className="text-5xl md:text-6xl font-bold text-[#FF3B3B]/10 block mb-4"
+                    className="text-5xl md:text-6xl font-bold text-[#0a0a0a]/10 block mb-4"
                     style={{ fontFamily: "var(--font-geist-mono)" }}
                   >
                     {item.step}
                   </span>
                   <h3
-                    className="text-lg md:text-xl font-medium text-white mb-3"
+                    className="text-lg md:text-xl font-medium text-black mb-3"
                     style={{ fontFamily: "'DM Serif Display', serif" }}
                   >
                     {item.title}
                   </h3>
-                  <p className="text-sm text-white/35 leading-relaxed max-w-xs mx-auto">
+                  <p className="text-sm text-black/45 leading-relaxed max-w-xs mx-auto">
                     {item.desc}
                   </p>
                 </motion.div>
@@ -334,26 +334,26 @@ export default function ReferPage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/[0.04] py-16 md:py-20">
+      <footer className="border-t border-black/[0.04] py-16 md:py-20">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-12">
             <div>
               <Logo size="sm" />
             </div>
 
-            <div className="flex gap-10 text-sm text-white/30">
-              <Link href="/parlays" className="hover:text-white/60 transition-colors">Parlays</Link>
-              <Link href="/odds" className="hover:text-white/60 transition-colors">Odds</Link>
-              <Link href="/builder" className="hover:text-white/60 transition-colors">Builder</Link>
-              <Link href="/subscribe" className="hover:text-white/60 transition-colors">Pricing</Link>
+            <div className="flex gap-10 text-sm text-black/40">
+              <Link href="/parlays" className="hover:text-black/60 transition-colors">Parlays</Link>
+              <Link href="/odds" className="hover:text-black/60 transition-colors">Odds</Link>
+              <Link href="/builder" className="hover:text-black/60 transition-colors">Builder</Link>
+              <Link href="/subscribe" className="hover:text-black/60 transition-colors">Pricing</Link>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-white/20">
+          <div className="pt-8 border-t border-black/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-black/30">
               &copy; {new Date().getFullYear()} BayParlays. All rights reserved.
             </p>
-            <p className="text-xs text-white/15 max-w-lg text-center md:text-right leading-relaxed">
+            <p className="text-xs text-black/25 max-w-lg text-center md:text-right leading-relaxed">
               For entertainment purposes only. BayParlays does not accept or
               place bets. Please gamble responsibly. If you or someone you know
               has a gambling problem, call 1-800-GAMBLER.

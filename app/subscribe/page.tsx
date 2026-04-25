@@ -46,7 +46,7 @@ const faqs = [
 export default function SubscribePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
         <Loader2 className="w-6 h-6 animate-spin text-white/20" />
       </div>
     }>
@@ -144,7 +144,7 @@ function SubscribeContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a] overflow-x-hidden">
       <AppNav />
 
       {/* ── SUCCESS / CANCELED BANNERS ── */}

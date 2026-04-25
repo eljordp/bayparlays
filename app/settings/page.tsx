@@ -163,10 +163,10 @@ export default function SettingsPage() {
   }
 
   function getPlanDisplay() {
-    if (isAdmin) return { label: "Admin", sublabel: "Full Access", color: "text-[#FF3B3B]", bg: "bg-[#FF3B3B]/10" };
+    if (isAdmin) return { label: "Admin", sublabel: "Full Access", color: "text-[#0a0a0a]", bg: "bg-[#0a0a0a]/10" };
     if (isPro && subTier === "vip") return { label: "VIP", sublabel: "Active", color: "text-emerald-400", bg: "bg-emerald-400/10" };
     if (isPro) return { label: "Sharp", sublabel: "Active", color: "text-emerald-400", bg: "bg-emerald-400/10" };
-    return { label: "Free", sublabel: "No active subscription", color: "text-white/40", bg: "bg-white/[0.04]" };
+    return { label: "Free", sublabel: "No active subscription", color: "text-black/45", bg: "bg-black/[0.04]" };
   }
 
   const plan = getPlanDisplay();
@@ -181,14 +181,14 @@ export default function SettingsPage() {
   // Loading state
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-white/20" />
+      <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-black/30" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed] overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a] overflow-x-hidden">
       <AppNav />
 
       {/* ── CONTENT ── */}
@@ -208,19 +208,19 @@ export default function SettingsPage() {
               >
                 Sign in to view your profile
               </h1>
-              <p className="text-sm text-white/35 mb-8">
+              <p className="text-sm text-black/45 mb-8">
                 Access your account settings, subscription, and referral stats.
               </p>
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-8 py-3 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
+                className="inline-flex items-center gap-2 bg-[#0a0a0a] text-white px-8 py-3 text-sm font-semibold rounded-full hover:bg-[#222] transition-colors duration-200"
               >
                 Sign In
               </Link>
             </motion.div>
           ) : loadingProfile ? (
             <div className="flex items-center justify-center py-24">
-              <Loader2 className="w-6 h-6 animate-spin text-white/20" />
+              <Loader2 className="w-6 h-6 animate-spin text-black/30" />
             </div>
           ) : (
             /* ── SIGNED IN ── */
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                 >
                   Settings
                 </h1>
-                <p className="text-sm text-white/35">
+                <p className="text-sm text-black/45">
                   Manage your profile, subscription, and account.
                 </p>
               </motion.div>
@@ -247,7 +247,7 @@ export default function SettingsPage() {
               <motion.section
                 variants={fadeUp}
                 custom={1}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8"
+                className="rounded-2xl border border-black/[0.06] bg-black/[0.04] p-6 md:p-8"
               >
                 <h2
                   className="text-xl tracking-tight mb-6"
@@ -259,11 +259,11 @@ export default function SettingsPage() {
                 <div className="space-y-5">
                   {/* Email */}
                   <div>
-                    <label className="block text-xs uppercase tracking-[0.15em] text-white/25 mb-2 font-medium">
+                    <label className="block text-xs uppercase tracking-[0.15em] text-black/40 mb-2 font-medium">
                       Email
                     </label>
                     <p
-                      className="text-sm text-white/70"
+                      className="text-sm text-black/70"
                       style={{ fontFamily: "var(--font-geist-mono)" }}
                     >
                       {user.email}
@@ -272,7 +272,7 @@ export default function SettingsPage() {
 
                   {/* Name */}
                   <div>
-                    <label className="block text-xs uppercase tracking-[0.15em] text-white/25 mb-2 font-medium">
+                    <label className="block text-xs uppercase tracking-[0.15em] text-black/40 mb-2 font-medium">
                       Name
                     </label>
                     <input
@@ -280,18 +280,18 @@ export default function SettingsPage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your name"
-                      className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-[#FF3B3B]/40 transition-colors"
+                      className="w-full bg-black/[0.04] border border-black/[0.08] rounded-xl px-4 py-3 text-sm text-black/80 placeholder:text-black/30 focus:outline-none focus:border-[#0a0a0a]/40 transition-colors"
                       style={{ fontFamily: "var(--font-geist-mono)" }}
                     />
                   </div>
 
                   {/* Member since */}
                   <div>
-                    <label className="block text-xs uppercase tracking-[0.15em] text-white/25 mb-2 font-medium">
+                    <label className="block text-xs uppercase tracking-[0.15em] text-black/40 mb-2 font-medium">
                       Member Since
                     </label>
                     <p
-                      className="text-sm text-white/50"
+                      className="text-sm text-black/55"
                       style={{ fontFamily: "var(--font-geist-mono)" }}
                     >
                       {memberSince}
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-6 py-2.5 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 bg-[#0a0a0a] text-white px-6 py-2.5 text-sm font-semibold rounded-full hover:bg-[#222] transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {saving ? (
                       <>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
               <motion.section
                 variants={fadeUp}
                 custom={2}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8"
+                className="rounded-2xl border border-black/[0.06] bg-black/[0.04] p-6 md:p-8"
               >
                 <h2
                   className="text-xl tracking-tight mb-6"
@@ -348,7 +348,7 @@ export default function SettingsPage() {
                       {plan.label}
                     </span>
                   </div>
-                  <span className={`text-xs ${isAdmin ? "text-[#FF3B3B]/60" : isPro ? "text-emerald-400/60" : "text-white/30"}`}>
+                  <span className={`text-xs ${isAdmin ? "text-[#0a0a0a]/60" : isPro ? "text-emerald-400/60" : "text-black/40"}`}>
                     {plan.sublabel}
                   </span>
                 </div>
@@ -357,11 +357,11 @@ export default function SettingsPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                     <Link
                       href="/subscribe"
-                      className="inline-flex items-center gap-2 bg-[#FF3B3B] text-[#0a0a0a] px-6 py-2.5 text-sm font-semibold rounded-full hover:bg-[#FF5252] transition-colors duration-200"
+                      className="inline-flex items-center gap-2 bg-[#0a0a0a] text-white px-6 py-2.5 text-sm font-semibold rounded-full hover:bg-[#222] transition-colors duration-200"
                     >
                       Upgrade
                     </Link>
-                    <span className="text-xs text-white/20">
+                    <span className="text-xs text-black/30">
                       Get unlimited parlays, builder access, and more.
                     </span>
                   </div>
@@ -371,7 +371,7 @@ export default function SettingsPage() {
                   <div className="flex flex-col gap-3">
                     <Link
                       href="/subscribe"
-                      className="inline-flex text-xs text-white/30 hover:text-white/50 transition-colors underline underline-offset-4"
+                      className="inline-flex text-xs text-black/40 hover:text-black/55 transition-colors underline underline-offset-4"
                     >
                       Manage Subscription
                     </Link>
@@ -396,7 +396,7 @@ export default function SettingsPage() {
               <motion.section
                 variants={fadeUp}
                 custom={3}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8"
+                className="rounded-2xl border border-black/[0.06] bg-black/[0.04] p-6 md:p-8"
               >
                 <h2
                   className="text-xl tracking-tight mb-6"
@@ -409,24 +409,24 @@ export default function SettingsPage() {
                   <div className="space-y-5">
                     {/* Referral link */}
                     <div>
-                      <label className="block text-xs uppercase tracking-[0.15em] text-white/25 mb-2 font-medium">
+                      <label className="block text-xs uppercase tracking-[0.15em] text-black/40 mb-2 font-medium">
                         Your Link
                       </label>
                       <div className="flex items-center gap-2">
                         <div
-                          className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-xs text-white/50 truncate"
+                          className="flex-1 bg-black/[0.04] border border-black/[0.08] rounded-xl px-4 py-3 text-xs text-black/55 truncate"
                           style={{ fontFamily: "var(--font-geist-mono)" }}
                         >
                           {referralLink}
                         </div>
                         <button
                           onClick={copyReferralLink}
-                          className="flex-shrink-0 p-3 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+                          className="flex-shrink-0 p-3 rounded-xl bg-black/[0.04] border border-black/[0.08] hover:bg-black/[0.08] transition-colors"
                         >
                           {copied ? (
                             <Check className="w-4 h-4 text-emerald-400" />
                           ) : (
-                            <Copy className="w-4 h-4 text-white/40" />
+                            <Copy className="w-4 h-4 text-black/45" />
                           )}
                         </button>
                       </div>
@@ -436,37 +436,37 @@ export default function SettingsPage() {
                     {referralStats && (
                       <div className="flex gap-6">
                         <div className="flex items-center gap-2">
-                          <MousePointerClick className="w-4 h-4 text-white/20" />
+                          <MousePointerClick className="w-4 h-4 text-black/30" />
                           <span
-                            className="text-lg font-bold text-white/70"
+                            className="text-lg font-bold text-black/70"
                             style={{ fontFamily: "var(--font-geist-mono)" }}
                           >
                             {referralStats.clicks}
                           </span>
-                          <span className="text-xs text-white/25">clicks</span>
+                          <span className="text-xs text-black/40">clicks</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-white/20" />
+                          <Users className="w-4 h-4 text-black/30" />
                           <span
-                            className="text-lg font-bold text-white/70"
+                            className="text-lg font-bold text-black/70"
                             style={{ fontFamily: "var(--font-geist-mono)" }}
                           >
                             {referralStats.signups}
                           </span>
-                          <span className="text-xs text-white/25">signups</span>
+                          <span className="text-xs text-black/40">signups</span>
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div>
-                    <p className="text-sm text-white/35 mb-5">
+                    <p className="text-sm text-black/45 mb-5">
                       Share BayParlays with friends and track your referrals.
                     </p>
                     <button
                       onClick={handleGenerateReferral}
                       disabled={generatingRef}
-                      className="flex items-center gap-2 bg-white/[0.06] text-white/70 px-6 py-2.5 text-sm font-semibold rounded-full border border-white/[0.08] hover:bg-white/[0.1] transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 bg-black/[0.06] text-black/70 px-6 py-2.5 text-sm font-semibold rounded-full border border-black/[0.08] hover:bg-black/[0.1] transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {generatingRef ? (
                         <>
@@ -488,7 +488,7 @@ export default function SettingsPage() {
               <motion.section
                 variants={fadeUp}
                 custom={3.5}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8"
+                className="rounded-2xl border border-black/[0.06] bg-black/[0.04] p-6 md:p-8"
               >
                 <h2
                   className="text-xl tracking-tight mb-6"
@@ -507,13 +507,13 @@ export default function SettingsPage() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="group rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200"
+                      className="group rounded-xl border border-black/[0.06] bg-black/[0.04] p-4 hover:bg-black/[0.06] hover:border-black/[0.15] transition-all duration-200"
                     >
-                      <item.icon className="w-5 h-5 text-white/25 group-hover:text-[#FF3B3B] transition-colors duration-200 mb-3" />
-                      <p className="text-sm font-medium text-white/70 group-hover:text-white transition-colors duration-200">
+                      <item.icon className="w-5 h-5 text-black/40 group-hover:text-[#0a0a0a] transition-colors duration-200 mb-3" />
+                      <p className="text-sm font-medium text-black/70 group-hover:text-black transition-colors duration-200">
                         {item.label}
                       </p>
-                      <p className="text-xs text-white/25 mt-0.5">
+                      <p className="text-xs text-black/40 mt-0.5">
                         {item.desc}
                       </p>
                     </Link>
@@ -525,7 +525,7 @@ export default function SettingsPage() {
               <motion.section
                 variants={fadeUp}
                 custom={4}
-                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 md:p-8"
+                className="rounded-2xl border border-black/[0.06] bg-black/[0.04] p-6 md:p-8"
               >
                 <h2
                   className="text-xl tracking-tight mb-6"
@@ -537,16 +537,16 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <button
                     onClick={handleSignOut}
-                    className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors duration-200"
+                    className="flex items-center gap-2 text-sm text-black/55 hover:text-black transition-colors duration-200"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign Out
                   </button>
 
-                  <div className="pt-4 border-t border-white/[0.04]">
+                  <div className="pt-4 border-t border-black/[0.04]">
                     <button
                       onClick={() => setShowDeleteMsg(!showDeleteMsg)}
-                      className="flex items-center gap-2 text-sm text-[#FF3B3B]/50 hover:text-[#FF3B3B] transition-colors duration-200"
+                      className="flex items-center gap-2 text-sm text-[#0a0a0a]/50 hover:text-[#0a0a0a] transition-colors duration-200"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete Account
@@ -555,7 +555,7 @@ export default function SettingsPage() {
                       <motion.p
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className="text-xs text-white/30 mt-3 pl-6"
+                        className="text-xs text-black/40 mt-3 pl-6"
                       >
                         Contact support at eljordp@gmail.com to delete your account.
                       </motion.p>
@@ -569,19 +569,19 @@ export default function SettingsPage() {
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/[0.04] py-16 md:py-20">
+      <footer className="border-t border-black/[0.04] py-16 md:py-20">
         <div className="w-full max-w-[1400px] mx-auto px-6 md:px-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-8 mb-16">
             <div className="md:col-span-2">
               <Logo size="sm" />
-              <p className="text-sm text-white/30 mt-3 max-w-sm leading-relaxed">
+              <p className="text-sm text-black/40 mt-3 max-w-sm leading-relaxed">
                 AI-powered parlay optimization. We find the best odds across
                 every sportsbook so you can bet with a mathematical edge.
               </p>
             </div>
 
             <div>
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/20 mb-4 font-medium">
+              <h4 className="text-xs uppercase tracking-[0.15em] text-black/30 mb-4 font-medium">
                 Product
               </h4>
               <div className="space-y-3">
@@ -589,7 +589,7 @@ export default function SettingsPage() {
                   <Link
                     key={link}
                     href={`/${link.toLowerCase()}`}
-                    className="block text-sm text-white/40 hover:text-white/70 transition-colors"
+                    className="block text-sm text-black/45 hover:text-black/70 transition-colors"
                   >
                     {link}
                   </Link>
@@ -598,7 +598,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <h4 className="text-xs uppercase tracking-[0.15em] text-white/20 mb-4 font-medium">
+              <h4 className="text-xs uppercase tracking-[0.15em] text-black/30 mb-4 font-medium">
                 Company
               </h4>
               <div className="space-y-3">
@@ -606,7 +606,7 @@ export default function SettingsPage() {
                   <Link
                     key={link}
                     href={`/${link.toLowerCase()}`}
-                    className="block text-sm text-white/40 hover:text-white/70 transition-colors"
+                    className="block text-sm text-black/45 hover:text-black/70 transition-colors"
                   >
                     {link}
                   </Link>
@@ -615,11 +615,11 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-white/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-white/20">
+          <div className="pt-8 border-t border-black/[0.04] flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-black/30">
               &copy; {new Date().getFullYear()} BayParlays. All rights reserved.
             </p>
-            <p className="text-xs text-white/15 max-w-lg text-center md:text-right leading-relaxed">
+            <p className="text-xs text-black/25 max-w-lg text-center md:text-right leading-relaxed">
               For entertainment purposes only. BayParlays does not accept or
               place bets. Please gamble responsibly. If you or someone you
               know has a gambling problem, call 1-800-GAMBLER.

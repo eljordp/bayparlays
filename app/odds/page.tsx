@@ -160,7 +160,7 @@ export default function OddsPage() {
     data?.games.filter((g) => g.markets.some((m) => m.key === market)) || [];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a]">
       <AppNav />
       <div className="pt-20">
         <PicksTabs />
@@ -175,7 +175,7 @@ export default function OddsPage() {
           >
             Live Odds Comparison
           </h1>
-          <p className="mt-2 text-sm text-white/40">
+          <p className="mt-2 text-sm text-black/50">
             Best lines across every book, updated every 5 minutes.
             {data?.cachedAt && (
               <span className="ml-2">
@@ -198,8 +198,8 @@ export default function OddsPage() {
               onClick={() => setSport(s.key)}
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 sport === s.key
-                  ? "bg-[#FF3B3B] text-[#0a0a0a]"
-                  : "bg-white/[0.04] text-white/50 hover:bg-white/[0.08] hover:text-white"
+                  ? "bg-[#0a0a0a] text-[#0a0a0a]"
+                  : "bg-black/[0.04] text-black/55 hover:bg-black/[0.08] hover:text-black"
               }`}
             >
               {s.label}
@@ -208,15 +208,15 @@ export default function OddsPage() {
         </div>
 
         {/* ─── Market Tabs ────────────────────────────────────────────── */}
-        <div className="mb-8 flex gap-1 rounded-lg bg-white/[0.04] p-1 w-fit">
+        <div className="mb-8 flex gap-1 rounded-lg bg-black/[0.04] p-1 w-fit">
           {MARKETS.map((m) => (
             <button
               key={m.key}
               onClick={() => setMarket(m.key)}
               className={`rounded-md px-4 py-2 text-sm font-medium transition ${
                 market === m.key
-                  ? "bg-white/[0.1] text-white"
-                  : "text-white/40 hover:text-white/70"
+                  ? "bg-[#0a0a0a] text-white"
+                  : "text-black/50 hover:text-black/70"
               }`}
             >
               {m.label}
@@ -227,8 +227,8 @@ export default function OddsPage() {
         {/* ─── Loading State ──────────────────────────────────────────── */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-32">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[#FF3B3B]" />
-            <p className="mt-4 text-sm text-white/30">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-black/10 border-t-[#0a0a0a]" />
+            <p className="mt-4 text-sm text-black/45">
               Fetching odds across all sportsbooks...
             </p>
           </div>
@@ -241,7 +241,7 @@ export default function OddsPage() {
               <p className="text-sm text-red-400">{error}</p>
               <button
                 onClick={() => fetchOdds(sport)}
-                className="mt-3 text-xs text-white/40 underline hover:text-white"
+                className="mt-3 text-xs text-black/50 underline hover:text-black"
               >
                 Try again
               </button>
@@ -252,12 +252,12 @@ export default function OddsPage() {
         {/* ─── Empty State ────────────────────────────────────────────── */}
         {!loading && !error && filteredGames.length === 0 && (
           <div className="flex flex-col items-center justify-center py-32">
-            <p className="text-lg text-white/20">
+            <p className="text-lg text-black/35">
               No {SPORTS.find((s) => s.key === sport)?.label} games with{" "}
               {MARKETS.find((m) => m.key === market)?.label.toLowerCase()} data
               right now.
             </p>
-            <p className="mt-2 text-sm text-white/10">
+            <p className="mt-2 text-sm text-black/25">
               Check back closer to game time.
             </p>
           </div>
@@ -312,13 +312,13 @@ export default function OddsPage() {
             return (
               <div
                 key={game.id}
-                className="mb-5 overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"
+                className="mb-5 overflow-hidden rounded-xl border border-black/[0.06] bg-white"
               >
                 {/* Game header */}
                 <div className="flex items-center justify-between px-5 py-4 md:px-6">
                   <p className="text-sm sm:text-base font-semibold truncate">
                     {game.awayTeam}{" "}
-                    <span className="text-white/20 mx-1 sm:mx-2">@</span>{" "}
+                    <span className="text-black/35 mx-1 sm:mx-2">@</span>{" "}
                     {game.homeTeam}
                   </p>
                   <div className="flex items-center gap-3 shrink-0 ml-3">
@@ -328,7 +328,7 @@ export default function OddsPage() {
                         LIVE
                       </span>
                     )}
-                    <span className="text-sm text-white/30">{timeLabel}</span>
+                    <span className="text-sm text-black/45">{timeLabel}</span>
                   </div>
                 </div>
 
@@ -343,9 +343,9 @@ export default function OddsPage() {
                     const bookUrl = BOOK_URLS[b.bestBookKey];
 
                     return (
-                      <div key={name} className="rounded-lg bg-white/[0.02] border border-white/[0.05] px-4 py-4">
+                      <div key={name} className="rounded-lg bg-white border border-black/[0.06] px-4 py-4">
                         {/* Side label */}
-                        <div className="text-[11px] uppercase tracking-wider text-white/30 font-medium mb-3">
+                        <div className="text-[11px] uppercase tracking-wider text-black/45 font-medium mb-3">
                           {name}
                         </div>
 
@@ -360,16 +360,16 @@ export default function OddsPage() {
                             >
                               <span className="flex flex-col items-start font-mono tracking-tight tabular-nums">
                                 {b.bestPoint !== undefined && (
-                                  <span className="text-lg sm:text-xl font-bold text-white/70 leading-none">
+                                  <span className="text-lg sm:text-xl font-bold text-black/70 leading-none">
                                     {market === "totals" ? b.bestPoint : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint}`}
                                   </span>
                                 )}
-                                <span className="text-2xl sm:text-3xl font-black text-[#FF3B3B] leading-none mt-1">
+                                <span className="text-2xl sm:text-3xl font-black text-[#0a0a0a] leading-none mt-1">
                                   {formatOdds(b.bestPrice)}
                                 </span>
                               </span>
                               <svg
-                                className="h-3 w-3 text-[#FF3B3B]/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-3 w-3 text-[#0a0a0a]/40 opacity-0 group-hover:opacity-100 transition-opacity"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -385,16 +385,16 @@ export default function OddsPage() {
                           ) : (
                             <span className="flex flex-col items-start font-mono tracking-tight tabular-nums">
                               {b.bestPoint !== undefined && (
-                                <span className="text-lg sm:text-xl font-bold text-white/70 leading-none">
+                                <span className="text-lg sm:text-xl font-bold text-black/70 leading-none">
                                   {market === "totals" ? b.bestPoint : `${b.bestPoint > 0 ? "+" : ""}${b.bestPoint}`}
                                 </span>
                               )}
-                              <span className="text-2xl sm:text-3xl font-black text-[#FF3B3B] leading-none mt-1">
+                              <span className="text-2xl sm:text-3xl font-black text-[#0a0a0a] leading-none mt-1">
                                 {formatOdds(b.bestPrice)}
                               </span>
                             </span>
                           )}
-                          <div className="text-xs text-[#FF3B3B]/60 font-medium mt-1">
+                          <div className="text-xs text-[#0a0a0a]/60 font-medium mt-1">
                             {b.bestBook}
                           </div>
                         </div>
@@ -405,16 +405,16 @@ export default function OddsPage() {
                             {top3.map((r) => (
                               <span
                                 key={r.bookKey}
-                                className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/40"
+                                className="inline-flex items-center gap-1.5 rounded-md bg-black/[0.04] px-2.5 py-1 text-[11px] text-black/50"
                               >
-                                <span className="text-white/25">{r.book}</span>
-                                <span className="font-mono font-semibold text-white/50">
+                                <span className="text-black/40">{r.book}</span>
+                                <span className="font-mono font-semibold text-black/55">
                                   {formatOdds(r.price)}
                                 </span>
                               </span>
                             ))}
                             {remaining > 0 && (
-                              <span className="text-[11px] text-white/20 px-1">
+                              <span className="text-[11px] text-black/35 px-1">
                                 +{remaining} more
                               </span>
                             )}
@@ -431,10 +431,10 @@ export default function OddsPage() {
         {/* ─── Footer info ────────────────────────────────────────────── */}
         {data && !loading && (
           <div className="mt-10 flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-white/15">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-black/30">
               <p>Odds data updated regularly. Not financial advice.</p>
             </div>
-            <p className="text-[10px] text-white/10 text-center">
+            <p className="text-[10px] text-black/25 text-center">
               Links to sportsbooks may be affiliate links. BayParlays may earn a commission at no cost to you.
             </p>
           </div>

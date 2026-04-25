@@ -66,7 +66,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a]">
       <AppNav />
 
       {/* Login Form */}
@@ -79,13 +79,13 @@ export default function LoginPage() {
             {mode === "signin" ? "Welcome back" : "Start your free trial"}
           </h1>
           {mode === "signup" && (
-            <p className="text-center text-white/40 text-sm -mt-6 mb-6">
+            <p className="text-center text-black/45 text-sm -mt-6 mb-6">
               7 days of Sharp access. No card required.
             </p>
           )}
 
           {/* Tab Toggle */}
-          <div className="flex mb-8 bg-white/[0.04] rounded-full p-1">
+          <div className="flex mb-8 bg-black/[0.04] rounded-full p-1">
             <button
               onClick={() => {
                 setMode("signin");
@@ -93,8 +93,8 @@ export default function LoginPage() {
               }}
               className={`flex-1 text-sm font-medium py-2.5 rounded-full transition-all duration-200 ${
                 mode === "signin"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-white/40 hover:text-white/60"
+                  ? "bg-black/[0.08] text-black"
+                  : "text-black/45 hover:text-black/60"
               }`}
             >
               Sign In
@@ -106,8 +106,8 @@ export default function LoginPage() {
               }}
               className={`flex-1 text-sm font-medium py-2.5 rounded-full transition-all duration-200 ${
                 mode === "signup"
-                  ? "bg-white/[0.08] text-white"
-                  : "text-white/40 hover:text-white/60"
+                  ? "bg-black/[0.08] text-black"
+                  : "text-black/45 hover:text-black/60"
               }`}
             >
               Sign Up
@@ -118,7 +118,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs text-white/30 uppercase tracking-wider mb-2"
+                className="block text-xs text-black/40 uppercase tracking-wider mb-2"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
                 Email
@@ -130,7 +130,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF3B3B]/40 focus:ring-1 focus:ring-[#FF3B3B]/20 transition-all"
+                className="w-full bg-black/[0.04] border border-black/[0.08] rounded-xl px-4 py-3 text-sm text-black placeholder:text-black/30 focus:outline-none focus:border-[#0a0a0a]/40 focus:ring-1 focus:ring-[#0a0a0a]/20 transition-all"
                 placeholder="you@email.com"
               />
             </div>
@@ -138,7 +138,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-xs text-white/30 uppercase tracking-wider mb-2"
+                className="block text-xs text-black/40 uppercase tracking-wider mb-2"
                 style={{ fontFamily: "var(--font-geist-mono)" }}
               >
                 Password
@@ -152,7 +152,7 @@ export default function LoginPage() {
                 autoComplete={
                   mode === "signin" ? "current-password" : "new-password"
                 }
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF3B3B]/40 focus:ring-1 focus:ring-[#FF3B3B]/20 transition-all"
+                className="w-full bg-black/[0.04] border border-black/[0.08] rounded-xl px-4 py-3 text-sm text-black placeholder:text-black/30 focus:outline-none focus:border-[#0a0a0a]/40 focus:ring-1 focus:ring-[#0a0a0a]/20 transition-all"
                 placeholder="Min. 6 characters"
               />
             </div>
@@ -161,7 +161,7 @@ export default function LoginPage() {
               <div>
                 <label
                   htmlFor="confirmPassword"
-                  className="block text-xs text-white/30 uppercase tracking-wider mb-2"
+                  className="block text-xs text-black/40 uppercase tracking-wider mb-2"
                   style={{ fontFamily: "var(--font-geist-mono)" }}
                 >
                   Confirm Password
@@ -173,14 +173,14 @@ export default function LoginPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   autoComplete="new-password"
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF3B3B]/40 focus:ring-1 focus:ring-[#FF3B3B]/20 transition-all"
+                  className="w-full bg-black/[0.04] border border-black/[0.08] rounded-xl px-4 py-3 text-sm text-black placeholder:text-black/30 focus:outline-none focus:border-[#0a0a0a]/40 focus:ring-1 focus:ring-[#0a0a0a]/20 transition-all"
                   placeholder="Repeat password"
                 />
               </div>
             )}
 
             {error && (
-              <div className="bg-[#FF3B3B]/10 border border-[#FF3B3B]/20 rounded-xl px-4 py-3 text-sm text-[#FF3B3B]">
+              <div className="bg-[#0a0a0a]/10 border border-[#0a0a0a]/20 rounded-xl px-4 py-3 text-sm text-[#0a0a0a]">
                 {error}
               </div>
             )}
@@ -188,7 +188,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#FF3B3B] text-[#0a0a0a] font-semibold py-3.5 rounded-full hover:bg-[#FF5252] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full bg-[#0a0a0a] text-white font-semibold py-3.5 rounded-full hover:bg-[#222] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               {loading
                 ? "Loading..."
@@ -202,12 +202,12 @@ export default function LoginPage() {
             <div className="mt-6 text-center">
               <button
                 onClick={() => setShowForgot(!showForgot)}
-                className="text-xs text-white/25 hover:text-white/50 transition-colors"
+                className="text-xs text-black/40 hover:text-black/55 transition-colors"
               >
                 Forgot password?
               </button>
               {showForgot && (
-                <p className="mt-3 text-xs text-white/30 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3">
+                <p className="mt-3 text-xs text-black/40 bg-black/[0.04] border border-black/[0.06] rounded-xl px-4 py-3">
                   Email us at support@bayparlays.com and we will reset your
                   password.
                 </p>
@@ -215,7 +215,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <p className="mt-8 text-center text-xs text-white/15">
+          <p className="mt-8 text-center text-xs text-black/25">
             By signing up, you agree to our terms of service.
           </p>
         </div>

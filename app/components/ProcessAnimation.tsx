@@ -95,21 +95,21 @@ function PhaseScanning({
               key={book}
               animate={{
                 backgroundColor: isActive
-                  ? "rgba(255,59,59,0.15)"
-                  : "rgba(255,255,255,0.04)",
+                  ? "rgba(0,0,0,0.08)"
+                  : "rgba(0,0,0,0.04)",
                 borderColor: isActive
-                  ? "rgba(255,59,59,0.4)"
-                  : "rgba(255,255,255,0.06)",
+                  ? "rgba(0,0,0,0.25)"
+                  : "rgba(0,0,0,0.06)",
                 scale: isActive ? 1.05 : 1,
               }}
               transition={{ duration: 0.15 }}
               style={{
                 padding: "5px 10px",
                 borderRadius: 6,
-                border: "1px solid rgba(255,255,255,0.06)",
+                border: "1px solid rgba(0,0,0,0.06)",
                 fontSize: 10,
                 fontWeight: 600,
-                color: isActive ? "#FF3B3B" : "rgba(255,255,255,0.35)",
+                color: isActive ? "#0a0a0a" : "rgba(0,0,0,0.45)",
                 letterSpacing: "0.02em",
               }}
             >
@@ -142,7 +142,7 @@ function PhaseScanning({
             fontFamily:
               'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
             fontSize: 10,
-            color: "rgba(255,255,255,0.08)",
+            color: "rgba(0,0,0,0.08)",
             lineHeight: 1.8,
           }}
         >
@@ -161,7 +161,7 @@ function PhaseScanning({
       <div
         style={{
           height: 3,
-          backgroundColor: "rgba(255,255,255,0.04)",
+          backgroundColor: "rgba(0,0,0,0.04)",
           borderRadius: 2,
           overflow: "hidden",
         }}
@@ -170,7 +170,7 @@ function PhaseScanning({
           style={{
             height: "100%",
             width: `${progress}%`,
-            background: "linear-gradient(90deg, #FF3B3B, #ff6b6b)",
+            background: "linear-gradient(90deg, #0a0a0a, #4a4a4a)",
             borderRadius: 2,
           }}
         />
@@ -197,8 +197,8 @@ function PhaseAnalyzing({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             style={{
-              backgroundColor: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(255,255,255,0.05)",
+              backgroundColor: "rgba(0,0,0,0.02)",
+              border: "1px solid rgba(0,0,0,0.06)",
               borderRadius: 10,
               padding: "10px 14px",
             }}
@@ -219,8 +219,8 @@ function PhaseAnalyzing({
                     fontWeight: 800,
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
-                    color: "rgba(255,59,59,0.6)",
-                    backgroundColor: "rgba(255,59,59,0.06)",
+                    color: "rgba(0,0,0,0.5)",
+                    backgroundColor: "rgba(0,0,0,0.04)",
                     padding: "2px 6px",
                     borderRadius: 3,
                     fontFamily:
@@ -233,7 +233,7 @@ function PhaseAnalyzing({
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: "rgba(255,255,255,0.7)",
+                    color: "rgba(0,0,0,0.7)",
                   }}
                 >
                   {matchup.game}
@@ -243,7 +243,7 @@ function PhaseAnalyzing({
                 style={{
                   fontSize: 10,
                   fontWeight: 600,
-                  color: "rgba(255,255,255,0.25)",
+                  color: "rgba(0,0,0,0.4)",
                 }}
               >
                 {matchup.pick}
@@ -259,25 +259,25 @@ function PhaseAnalyzing({
                     key={j}
                     animate={{
                       backgroundColor: isBest
-                        ? "rgba(255,59,59,0.12)"
-                        : "rgba(255,255,255,0.03)",
+                        ? "rgba(0,0,0,0.08)"
+                        : "rgba(0,0,0,0.03)",
                       borderColor: isBest
-                        ? "rgba(255,59,59,0.3)"
-                        : "rgba(255,255,255,0.04)",
+                        ? "rgba(0,0,0,0.25)"
+                        : "rgba(0,0,0,0.04)",
                     }}
                     transition={{ duration: 0.3 }}
                     style={{
                       flex: 1,
                       padding: "6px 8px",
                       borderRadius: 6,
-                      border: "1px solid rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(0,0,0,0.04)",
                       textAlign: "center",
                     }}
                   >
                     <div
                       style={{
                         fontSize: 8,
-                        color: "rgba(255,255,255,0.2)",
+                        color: "rgba(0,0,0,0.3)",
                         marginBottom: 2,
                         letterSpacing: "0.05em",
                       }}
@@ -290,7 +290,7 @@ function PhaseAnalyzing({
                         fontWeight: 700,
                         fontFamily:
                           'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
-                        color: isBest ? "#FF3B3B" : "rgba(255,255,255,0.4)",
+                        color: isBest ? "#0a0a0a" : "rgba(0,0,0,0.45)",
                       }}
                     >
                       {formatOdds(book.odds)}
@@ -310,8 +310,8 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
   return (
     <div
       style={{
-        backgroundColor: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        backgroundColor: "rgba(0,0,0,0.02)",
+        border: "1px solid rgba(0,0,0,0.06)",
         borderRadius: 14,
         padding: 16,
       }}
@@ -335,7 +335,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
                 justifyContent: "space-between",
                 padding: "9px 12px",
                 borderRadius: 8,
-                backgroundColor: "rgba(255,255,255,0.02)",
+                backgroundColor: "rgba(0,0,0,0.02)",
               }}
             >
               <div
@@ -355,8 +355,8 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
                     width: 18,
                     height: 18,
                     borderRadius: "50%",
-                    backgroundColor: "rgba(255,59,59,0.12)",
-                    border: "1.5px solid rgba(255,59,59,0.3)",
+                    backgroundColor: "rgba(0,0,0,0.08)",
+                    border: "1.5px solid rgba(0,0,0,0.25)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -365,7 +365,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                     <path
                       d="M2 5L4.5 7.5L8 3"
-                      stroke="#FF3B3B"
+                      stroke="#0a0a0a"
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -380,7 +380,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
                       fontWeight: 700,
                       letterSpacing: "0.1em",
                       textTransform: "uppercase",
-                      color: "rgba(255,255,255,0.25)",
+                      color: "rgba(0,0,0,0.4)",
                       marginRight: 6,
                     }}
                   >
@@ -390,7 +390,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
                     style={{
                       fontSize: 13,
                       fontWeight: 600,
-                      color: "rgba(255,255,255,0.85)",
+                      color: "rgba(0,0,0,0.85)",
                     }}
                   >
                     {pick.pick}
@@ -402,7 +402,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: "#FF3B3B",
+                  color: "#0a0a0a",
                   fontFamily:
                     'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
                 }}
@@ -423,7 +423,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
           style={{
             marginTop: 14,
             paddingTop: 12,
-            borderTop: "1px solid rgba(255,255,255,0.06)",
+            borderTop: "1px solid rgba(0,0,0,0.06)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -435,7 +435,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
               fontWeight: 500,
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.25)",
+              color: "rgba(0,0,0,0.4)",
             }}
           >
             Combined
@@ -451,7 +451,7 @@ function PhaseBuilding({ lockedLegs }: { lockedLegs: number }) {
             style={{
               fontSize: 22,
               fontWeight: 900,
-              color: "#FF3B3B",
+              color: "#0a0a0a",
               fontFamily:
                 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace',
               letterSpacing: "-0.02em",
@@ -552,7 +552,7 @@ function PhaseWinner({ countUp }: { countUp: number }) {
         transition={{ delay: 0.6 }}
         style={{
           fontSize: 11,
-          color: "rgba(255,255,255,0.25)",
+          color: "rgba(0,0,0,0.4)",
           letterSpacing: "0.08em",
         }}
       >
@@ -590,9 +590,9 @@ const PHASE_LABELS: Record<number, string> = {
 };
 
 const PHASE_DOTS: Record<number, string> = {
-  0: "rgba(255,59,59,0.5)",
-  1: "rgba(255,59,59,0.5)",
-  2: "rgba(255,59,59,0.8)",
+  0: "rgba(0,0,0,0.5)",
+  1: "rgba(0,0,0,0.5)",
+  2: "rgba(0,0,0,0.65)",
   3: "rgba(34,197,94,0.8)",
 };
 
@@ -693,8 +693,8 @@ export function ProcessAnimation() {
         maxWidth: 400,
         height: 500,
         borderRadius: 20,
-        backgroundColor: "#0c0c0c",
-        border: "1px solid rgba(255,255,255,0.06)",
+        backgroundColor: "#FFFFFF",
+        border: "1px solid rgba(0,0,0,0.06)",
         overflow: "hidden",
         position: "relative",
         fontFamily: "system-ui, -apple-system, sans-serif",
@@ -711,7 +711,7 @@ export function ProcessAnimation() {
           width: 300,
           height: 300,
           background:
-            "radial-gradient(circle, rgba(255,59,59,0.04) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(0,0,0,0.04) 0%, transparent 70%)",
           borderRadius: "50%",
           pointerEvents: "none",
         }}
@@ -721,7 +721,7 @@ export function ProcessAnimation() {
       <div
         style={{
           padding: "20px 22px 16px",
-          borderBottom: "1px solid rgba(255,255,255,0.04)",
+          borderBottom: "1px solid rgba(0,0,0,0.04)",
         }}
       >
         {/* Top row: BayParlays branding + step indicator */}
@@ -738,11 +738,11 @@ export function ProcessAnimation() {
               fontSize: 13,
               fontWeight: 800,
               letterSpacing: "-0.01em",
-              color: "rgba(255,255,255,0.15)",
+              color: "rgba(0,0,0,0.25)",
             }}
           >
             Bay
-            <span style={{ color: "rgba(255,59,59,0.3)" }}>Parlays</span>
+            <span style={{ color: "rgba(0,0,0,0.25)" }}>Parlays</span>
           </span>
 
           {/* Step dots */}
@@ -757,7 +757,7 @@ export function ProcessAnimation() {
                   backgroundColor:
                     i <= phase
                       ? PHASE_DOTS[phase]
-                      : "rgba(255,255,255,0.06)",
+                      : "rgba(0,0,0,0.08)",
                   transition: "background-color 0.3s ease",
                 }}
               />
@@ -803,7 +803,7 @@ export function ProcessAnimation() {
                 color:
                   phase === 3
                     ? "#22c55e"
-                    : "rgba(255,255,255,0.75)",
+                    : "rgba(0,0,0,0.7)",
               }}
             >
               {PHASE_LABELS[phase]}

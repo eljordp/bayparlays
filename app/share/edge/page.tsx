@@ -155,7 +155,7 @@ export default function ShareEdgePage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0a" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
       <AppNav />
 
       {/* ─── Content ─── */}
@@ -169,10 +169,10 @@ export default function ShareEdgePage() {
             className="text-center mb-12"
           >
             <div className="flex items-center justify-center gap-3 mb-6">
-              <Share2 size={16} style={{ color: "#FF3B3B" }} />
+              <Share2 size={16} style={{ color: "#0a0a0a" }} />
               <span
                 className="text-xs font-medium tracking-widest uppercase"
-                style={{ color: "#FF3B3B" }}
+                style={{ color: "#0a0a0a" }}
               >
                 Sharp Edge Share Card
               </span>
@@ -181,14 +181,14 @@ export default function ShareEdgePage() {
               className="text-4xl md:text-6xl font-normal leading-[1.1] mb-5"
               style={{
                 fontFamily: "'DM Serif Display', serif",
-                color: "#ededed",
+                color: "#0a0a0a",
               }}
             >
               Share Today&apos;s Sharpest Edge
             </h1>
             <p
               className="text-base md:text-lg max-w-lg mx-auto"
-              style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}
+              style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}
             >
               A single-leg pick where the book is slow. Screenshot or
               screen-record the card to share on your socials.
@@ -209,15 +209,15 @@ export default function ShareEdgePage() {
                 className="px-7 py-3 rounded-full text-sm font-bold uppercase tracking-wider transition-all duration-200"
                 style={{
                   background:
-                    format === f ? "#FF3B3B" : "rgba(255,255,255,0.06)",
-                  color: format === f ? "#0a0a0a" : "rgba(255,255,255,0.6)",
+                    format === f ? "#0a0a0a" : "rgba(0,0,0,0.06)",
+                  color: format === f ? "#FAFAF7" : "rgba(0,0,0,0.6)",
                   border:
                     format === f
-                      ? "2px solid #FF3B3B"
-                      : "2px solid rgba(255,255,255,0.12)",
+                      ? "2px solid #0a0a0a"
+                      : "2px solid rgba(0,0,0,0.12)",
                   boxShadow:
                     format === f
-                      ? "0 0 20px rgba(255,59,59,0.25)"
+                      ? "0 0 20px rgba(0,0,0,0.18)"
                       : "none",
                 }}
               >
@@ -239,21 +239,21 @@ export default function ShareEdgePage() {
                 style={{
                   width: format === "story" ? 320 : 480,
                   height: format === "story" ? 568 : 480,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(0,0,0,0.03)",
+                  border: "1px solid rgba(0,0,0,0.06)",
                 }}
               >
                 <div className="flex flex-col items-center gap-4">
                   <div
                     className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
                     style={{
-                      borderColor: "rgba(255,59,59,0.3)",
+                      borderColor: "rgba(0,0,0,0.25)",
                       borderTopColor: "transparent",
                     }}
                   />
                   <span
                     className="text-sm"
-                    style={{ color: "rgba(255,255,255,0.3)" }}
+                    style={{ color: "rgba(0,0,0,0.4)" }}
                   >
                     Finding the sharpest edge...
                   </span>
@@ -267,20 +267,20 @@ export default function ShareEdgePage() {
                 style={{
                   width: 400,
                   height: 300,
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "rgba(0,0,0,0.03)",
+                  border: "1px solid rgba(0,0,0,0.06)",
                 }}
               >
                 <div className="text-center px-8">
                   <p
                     className="text-base font-medium mb-2"
-                    style={{ color: "rgba(255,255,255,0.6)" }}
+                    style={{ color: "rgba(0,0,0,0.6)" }}
                   >
                     {error}
                   </p>
                   <p
                     className="text-sm"
-                    style={{ color: "rgba(255,255,255,0.3)" }}
+                    style={{ color: "rgba(0,0,0,0.4)" }}
                   >
                     Check back soon — lines move all day.
                   </p>
@@ -311,14 +311,14 @@ export default function ShareEdgePage() {
             <div
               className="inline-flex items-center gap-3 px-5 py-3 rounded-full"
               style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "rgba(0,0,0,0.03)",
+                border: "1px solid rgba(0,0,0,0.08)",
               }}
             >
-              <Camera size={14} style={{ color: "rgba(255,255,255,0.5)" }} />
+              <Camera size={14} style={{ color: "rgba(0,0,0,0.55)" }} />
               <span
                 className="text-xs"
-                style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}
+                style={{ color: "rgba(0,0,0,0.6)", lineHeight: 1.6 }}
               >
                 Share on Instagram: screen-record while it plays, or
                 screenshot a frame — paste into your IG Story or Feed.
@@ -337,11 +337,11 @@ export default function ShareEdgePage() {
               onClick={handleCopyLink}
               className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                color: copied ? "#22c55e" : "rgba(255,255,255,0.8)",
+                background: "rgba(0,0,0,0.06)",
+                color: copied ? "#22c55e" : "rgba(0,0,0,0.85)",
                 border: copied
                   ? "1px solid rgba(34,197,94,0.3)"
-                  : "1px solid rgba(255,255,255,0.1)",
+                  : "1px solid rgba(0,0,0,0.1)",
               }}
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -353,9 +353,9 @@ export default function ShareEdgePage() {
               disabled={downloading || !leg || loading}
               className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200 disabled:opacity-50"
               style={{
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.8)",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(0,0,0,0.06)",
+                color: "rgba(0,0,0,0.85)",
+                border: "1px solid rgba(0,0,0,0.1)",
               }}
             >
               <Download size={14} />
@@ -365,7 +365,7 @@ export default function ShareEdgePage() {
             <Link
               href="/edges"
               className="flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all duration-200"
-              style={{ background: "#FF3B3B", color: "#0a0a0a" }}
+              style={{ background: "#0a0a0a", color: "#FAFAF7" }}
             >
               See All Edges
               <ArrowUpRight size={14} strokeWidth={2.5} />
@@ -382,16 +382,16 @@ export default function ShareEdgePage() {
             <Link
               href="/share"
               className="flex items-center gap-1.5 transition-colors"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "rgba(0,0,0,0.45)" }}
             >
               <ExternalLink size={12} />
               Share a parlay instead
             </Link>
-            <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
+            <span style={{ color: "rgba(0,0,0,0.25)" }}>·</span>
             <Link
               href="/builder"
               className="flex items-center gap-1.5 transition-colors"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              style={{ color: "rgba(0,0,0,0.45)" }}
             >
               Build your own
             </Link>
@@ -402,13 +402,13 @@ export default function ShareEdgePage() {
       {/* ─── Footer ─── */}
       <footer
         className="px-6 py-12"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}
       >
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
             BayParlays. AI-powered parlay optimization.
           </p>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.15)" }}>
+          <p className="text-xs" style={{ color: "rgba(0,0,0,0.25)" }}>
             Not financial advice. Gamble responsibly.
           </p>
         </div>

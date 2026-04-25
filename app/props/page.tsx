@@ -108,20 +108,20 @@ function confidenceFromRelativeEdge(
   if (line <= 0 || !Number.isFinite(edge)) {
     return {
       label: "PASS",
-      className: "bg-white/5 text-white/30 border border-white/10",
+      className: "bg-black/5 text-black/45 border border-black/10",
     };
   }
   const ratio = edge / line;
   if (ratio >= 0.15) {
     return {
       label: "LOCK",
-      className: "bg-[#FF3B3B] text-[#0a0a0a]",
+      className: "bg-[#0a0a0a] text-[#0a0a0a]",
     };
   }
   if (ratio >= 0.08) {
     return {
       label: "STRONG",
-      className: "bg-[#FF3B3B]/20 text-[#FF3B3B] border border-[#FF3B3B]/40",
+      className: "bg-[#0a0a0a]/20 text-[#0a0a0a] border border-[#0a0a0a]/40",
     };
   }
   if (ratio >= 0.04) {
@@ -132,7 +132,7 @@ function confidenceFromRelativeEdge(
   }
   return {
     label: "PASS",
-    className: "bg-white/5 text-white/30 border border-white/10",
+    className: "bg-black/5 text-black/45 border border-black/10",
   };
 }
 
@@ -309,8 +309,8 @@ export default function PropsPage() {
         sport === "nba" ? (
           <>
             Example: if LeBron averages{" "}
-            <span className="text-white font-medium">27 PPG</span>, his{" "}
-            <span className="text-[#FF3B3B] font-medium">
+            <span className="text-[#0a0a0a] font-medium">27 PPG</span>, his{" "}
+            <span className="text-[#0a0a0a] font-medium">
               over 24.5 points
             </span>{" "}
             prop has an 80%+ hit rate historically.
@@ -318,8 +318,8 @@ export default function PropsPage() {
         ) : (
           <>
             Example: if A&apos;ja Wilson averages{" "}
-            <span className="text-white font-medium">23 PPG</span>, her{" "}
-            <span className="text-[#FF3B3B] font-medium">
+            <span className="text-[#0a0a0a] font-medium">23 PPG</span>, her{" "}
+            <span className="text-[#0a0a0a] font-medium">
               over 20.5 points
             </span>{" "}
             prop has a strong historical hit rate.
@@ -336,7 +336,7 @@ export default function PropsPage() {
       return (
         <>
           Soccer props from season totals — per-game goals and assists for{" "}
-          <span className="text-[#FF3B3B] font-medium">
+          <span className="text-[#0a0a0a] font-medium">
             anytime goalscorer / anytime assist
           </span>{" "}
           bets, plus shots and shots-on-target for volume shooters. Lines stay
@@ -350,7 +350,7 @@ export default function PropsPage() {
         <>
           MLB props from season totals — pitcher K/9 vs typical strikeout
           lines, per-game hits/RBIs, and per-game HR rate for{" "}
-          <span className="text-[#FF3B3B] font-medium">anytime HR</span> bets.
+          <span className="text-[#0a0a0a] font-medium">anytime HR</span> bets.
           Small samples (early April) get sample-size adjusted edge.
         </>
       );
@@ -360,7 +360,7 @@ export default function PropsPage() {
         <>
           NHL props from season totals — per-game goals, points, and shots on
           goal. Great for{" "}
-          <span className="text-[#FF3B3B] font-medium">anytime goal</span> bets
+          <span className="text-[#0a0a0a] font-medium">anytime goal</span> bets
           and over-shot picks on high-volume shooters.
         </>
       );
@@ -369,14 +369,14 @@ export default function PropsPage() {
       <>
         NFL props from the last full regular season — QB passing yards + TDs,
         RB rushing yards, WR receiving yards, receptions, and{" "}
-        <span className="text-[#FF3B3B] font-medium">anytime TD</span> bets on
+        <span className="text-[#0a0a0a] font-medium">anytime TD</span> bets on
         high-volume targets. Sportsbook-style lines rounded to 5-yard steps.
       </>
     );
   })();
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0a0a0a]">
       <AppNav />
       <div className="pt-20">
         <PicksTabs />
@@ -386,10 +386,10 @@ export default function PropsPage() {
         {/* ─── Header ─────────────────────────────────────────────────── */}
         <div className="mb-10 md:mb-14">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF3B3B]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0a0a0a]">
               Prop Analyzer
             </span>
-            <span className="h-px flex-1 bg-white/10 max-w-[120px]" />
+            <span className="h-px flex-1 bg-black/10 max-w-[120px]" />
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-yellow-500/15 text-yellow-400">
               VIP
             </span>
@@ -400,11 +400,11 @@ export default function PropsPage() {
           >
             Player Props
           </h1>
-          <p className="mt-4 max-w-2xl text-base text-white/50 leading-relaxed">
+          <p className="mt-4 max-w-2xl text-base text-black/55 leading-relaxed">
             Top statistical picks based on season averages. Combine these with
             moneyline parlays for high-probability locks.
             {data?.updated && (
-              <span className="block mt-1 text-xs text-white/30">
+              <span className="block mt-1 text-xs text-black/45">
                 Updated{" "}
                 {new Date(data.updated).toLocaleTimeString("en-US", {
                   hour: "numeric",
@@ -417,7 +417,7 @@ export default function PropsPage() {
         </div>
 
         {/* ─── Sport Toggle ───────────────────────────────────────────── */}
-        <div className="mb-6 inline-flex flex-wrap rounded-lg border border-white/[0.08] bg-white/[0.02] p-1">
+        <div className="mb-6 inline-flex flex-wrap rounded-lg border border-black/[0.08] bg-white p-1">
           {(
             ["nba", "wnba", "mlb", "nhl", "nfl", "mls", "epl"] as Sport[]
           ).map((s) => {
@@ -428,8 +428,8 @@ export default function PropsPage() {
                 onClick={() => setSport(s)}
                 className={`rounded-md px-5 py-2 text-xs font-bold uppercase tracking-[0.15em] transition ${
                   active
-                    ? "bg-[#FF3B3B] text-[#0a0a0a]"
-                    : "text-white/50 hover:text-white"
+                    ? "bg-[#0a0a0a] text-[#0a0a0a]"
+                    : "text-black/55 hover:text-black"
                 }`}
               >
                 {SPORT_LABELS[s]}
@@ -439,19 +439,19 @@ export default function PropsPage() {
         </div>
 
         {/* ─── How This Works Card ────────────────────────────────────── */}
-        <div className="mb-10 rounded-xl border border-white/[0.06] bg-gradient-to-br from-[#FF3B3B]/[0.04] to-transparent px-5 py-5 md:px-7 md:py-6">
+        <div className="mb-10 rounded-xl border border-black/[0.06] bg-gradient-to-br from-[#0a0a0a]/[0.04] to-transparent px-5 py-5 md:px-7 md:py-6">
           <div className="flex items-start gap-4">
-            <div className="mt-1 h-10 w-10 rounded-lg bg-[#FF3B3B]/15 flex items-center justify-center shrink-0">
-              <span className="text-[#FF3B3B] text-lg font-bold">?</span>
+            <div className="mt-1 h-10 w-10 rounded-lg bg-[#0a0a0a]/15 flex items-center justify-center shrink-0">
+              <span className="text-[#0a0a0a] text-lg font-bold">?</span>
             </div>
             <div>
               <h3
-                className="text-lg font-semibold text-white"
+                className="text-lg font-semibold text-[#0a0a0a]"
                 style={{ fontFamily: "'DM Serif Display', serif" }}
               >
                 How this works
               </h3>
-              <p className="mt-1.5 text-sm text-white/60 leading-relaxed">
+              <p className="mt-1.5 text-sm text-black/60 leading-relaxed">
                 {howItWorks}
               </p>
             </div>
@@ -470,14 +470,14 @@ export default function PropsPage() {
                   onClick={() => setTab(k)}
                   className={`rounded-lg px-5 py-3 text-sm font-semibold transition whitespace-nowrap ${
                     active
-                      ? "bg-[#FF3B3B] text-[#0a0a0a]"
-                      : "bg-white/[0.04] text-white/60 hover:bg-white/[0.08] hover:text-white"
+                      ? "bg-[#0a0a0a] text-[#0a0a0a]"
+                      : "bg-black/[0.04] text-black/60 hover:bg-black/[0.08] hover:text-black"
                   }`}
                 >
                   <div>{cat.label}</div>
                   <div
                     className={`text-[10px] font-normal ${
-                      active ? "text-[#0a0a0a]/60" : "text-white/30"
+                      active ? "text-[#0a0a0a]/60" : "text-black/45"
                     }`}
                   >
                     Top {cat.rows.length || 10}
@@ -491,8 +491,8 @@ export default function PropsPage() {
         {/* ─── Loading State ──────────────────────────────────────────── */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-32">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-[#FF3B3B]" />
-            <p className="mt-4 text-sm text-white/30">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-black/10 border-t-[#0a0a0a]" />
+            <p className="mt-4 text-sm text-black/45">
               Pulling {SPORT_LABELS[sport]} season stats from ESPN...
             </p>
           </div>
@@ -505,7 +505,7 @@ export default function PropsPage() {
               <p className="text-sm text-red-400">{error}</p>
               <button
                 onClick={fetchProps}
-                className="mt-3 text-xs text-white/40 underline hover:text-white"
+                className="mt-3 text-xs text-black/50 underline hover:text-black"
               >
                 Try again
               </button>
@@ -516,11 +516,11 @@ export default function PropsPage() {
         {/* ─── Empty State ────────────────────────────────────────────── */}
         {!loading && !error && rows.length === 0 && (
           <div className="flex flex-col items-center justify-center py-32">
-            <p className="text-lg text-white/20">
+            <p className="text-lg text-black/35">
               No {(currentCategory?.label || "").toLowerCase()} data available
               right now.
             </p>
-            <p className="mt-2 text-sm text-white/10">
+            <p className="mt-2 text-sm text-black/25">
               {sport === "nba"
                 ? "Check back after tonight's games."
                 : "Check back after today's games."}
@@ -540,26 +540,26 @@ export default function PropsPage() {
               return (
                 <div
                   key={`${row.player}-${i}`}
-                  className="group grid grid-cols-12 gap-3 md:gap-6 items-center rounded-xl border border-white/[0.06] bg-gradient-to-r from-white/[0.02] to-transparent px-4 py-5 md:px-7 md:py-6 hover:border-white/[0.12] transition-colors"
+                  className="group grid grid-cols-12 gap-3 md:gap-6 items-center rounded-xl border border-black/[0.06] bg-gradient-to-r from-black/[0.02] to-transparent px-4 py-5 md:px-7 md:py-6 hover:border-black/[0.16] transition-colors"
                 >
                   {/* Rank */}
-                  <div className="col-span-1 text-white/20 font-mono text-sm md:text-base">
+                  <div className="col-span-1 text-black/35 font-mono text-sm md:text-base">
                     {String(i + 1).padStart(2, "0")}
                   </div>
 
                   {/* Player + team */}
                   <div className="col-span-6 md:col-span-4">
                     <div
-                      className="text-base md:text-xl font-bold text-white leading-tight"
+                      className="text-base md:text-xl font-bold text-[#0a0a0a] leading-tight"
                       style={{ fontFamily: "'DM Serif Display', serif" }}
                     >
                       {row.player}
                     </div>
                     <div className="mt-1 flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/[0.06] text-white/60">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/[0.06] text-black/60">
                         {row.team || "—"}
                       </span>
-                      <span className="text-[11px] text-white/30">
+                      <span className="text-[11px] text-black/45">
                         {row.games} {currentDisplay.gamesLabel}
                       </span>
                     </div>
@@ -567,11 +567,11 @@ export default function PropsPage() {
 
                   {/* Average */}
                   <div className="col-span-5 md:col-span-3 text-right md:text-left">
-                    <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1">
+                    <div className="text-[10px] uppercase tracking-wider text-black/45 mb-1">
                       {currentDisplay.averageLabel}
                     </div>
                     <div
-                      className="text-3xl md:text-4xl font-bold text-[#FF3B3B] leading-none font-mono"
+                      className="text-3xl md:text-4xl font-bold text-[#0a0a0a] leading-none font-mono"
                       style={{ fontFamily: "'Geist Mono', monospace" }}
                     >
                       {formatAvg(row.average)}
@@ -581,7 +581,7 @@ export default function PropsPage() {
                   {/* Line */}
                   <div className="hidden md:block md:col-span-2">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-[10px] uppercase tracking-wider text-white/30">
+                      <span className="text-[10px] uppercase tracking-wider text-black/45">
                         {row.source === "underdog" ? "Underdog line" : "Typical line"}
                       </span>
                       {row.source === "underdog" && (
@@ -599,12 +599,12 @@ export default function PropsPage() {
                       )}
                     </div>
                     <div
-                      className="text-lg font-semibold text-white/80"
+                      className="text-lg font-semibold text-black/80"
                       style={{ fontFamily: "'Geist Mono', monospace" }}
                     >
                       O {row.typicalLine}
                     </div>
-                    <div className="text-[11px] text-white/40 mt-0.5">
+                    <div className="text-[11px] text-black/50 mt-0.5">
                       {currentDisplay.unit}
                       {row.source === "underdog" && row.overOdds !== null && row.overOdds !== undefined && (
                         <> · O {row.overOdds > 0 ? "+" : ""}{row.overOdds}</>
@@ -613,7 +613,7 @@ export default function PropsPage() {
                   </div>
 
                   {/* Confidence + copy */}
-                  <div className="col-span-12 md:col-span-2 flex md:flex-col items-center md:items-end gap-2 md:gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-white/[0.04]">
+                  <div className="col-span-12 md:col-span-2 flex md:flex-col items-center md:items-end gap-2 md:gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-black/[0.04]">
                     <span
                       className={`text-[10px] font-bold uppercase tracking-[0.15em] px-2.5 py-1 rounded-full ${conf.className}`}
                     >
@@ -621,13 +621,13 @@ export default function PropsPage() {
                     </span>
                     <button
                       onClick={() => copyPick(row)}
-                      className="text-[11px] text-white/40 hover:text-white transition-colors underline-offset-2 hover:underline md:hidden"
+                      className="text-[11px] text-black/50 hover:text-black transition-colors underline-offset-2 hover:underline md:hidden"
                     >
                       {isCopied ? "Copied" : "Copy pick"}
                     </button>
                     <button
                       onClick={() => copyPick(row)}
-                      className="hidden md:inline text-[11px] text-white/40 hover:text-[#FF3B3B] transition-colors"
+                      className="hidden md:inline text-[11px] text-black/50 hover:text-[#0a0a0a] transition-colors"
                     >
                       {isCopied ? "Copied" : "Copy pick"}
                     </button>
@@ -646,7 +646,7 @@ export default function PropsPage() {
                     {/* Mobile line row */}
                     <div className="md:hidden ml-auto text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <span className="text-[10px] uppercase tracking-wider text-white/30">
+                        <span className="text-[10px] uppercase tracking-wider text-black/45">
                           {row.source === "underdog" ? "Underdog" : "Line"}
                         </span>
                         {row.source === "underdog" && (
@@ -663,7 +663,7 @@ export default function PropsPage() {
                         )}
                       </div>
                       <div
-                        className="text-sm font-semibold text-white/80"
+                        className="text-sm font-semibold text-black/80"
                         style={{ fontFamily: "'Geist Mono', monospace" }}
                       >
                         O {row.typicalLine}
@@ -676,27 +676,27 @@ export default function PropsPage() {
 
             {/* ─── Locked rows (non-VIP preview) ─────────────────────── */}
             {lockedRows.length > 0 && (
-              <div className="relative mt-6 rounded-xl border border-white/[0.06] bg-[#0a0a0a] overflow-hidden">
+              <div className="relative mt-6 rounded-xl border border-black/[0.06] bg-[#0a0a0a] overflow-hidden">
                 {/* Blurred preview underneath */}
                 <div className="pointer-events-none select-none blur-sm opacity-40">
                   {lockedRows.map((row, i) => (
                     <div
                       key={`locked-${row.player}-${i}`}
-                      className="grid grid-cols-12 gap-3 md:gap-6 items-center px-4 py-5 md:px-7 md:py-6 border-b border-white/[0.04] last:border-b-0"
+                      className="grid grid-cols-12 gap-3 md:gap-6 items-center px-4 py-5 md:px-7 md:py-6 border-b border-black/[0.04] last:border-b-0"
                     >
-                      <div className="col-span-1 text-white/20 font-mono text-sm">
+                      <div className="col-span-1 text-black/35 font-mono text-sm">
                         {String(i + 4).padStart(2, "0")}
                       </div>
                       <div className="col-span-6 md:col-span-4">
                         <div className="text-base md:text-xl font-bold">
                           {row.player}
                         </div>
-                        <div className="text-[11px] text-white/30 mt-1">
+                        <div className="text-[11px] text-black/45 mt-1">
                           {row.team} · {row.games} {currentDisplay.gamesLabel}
                         </div>
                       </div>
                       <div className="col-span-5 md:col-span-3 text-right md:text-left">
-                        <div className="text-3xl md:text-4xl font-bold text-[#FF3B3B]">
+                        <div className="text-3xl md:text-4xl font-bold text-[#0a0a0a]">
                           {formatAvg(row.average)}
                         </div>
                       </div>
@@ -710,18 +710,18 @@ export default function PropsPage() {
                     VIP Exclusive
                   </div>
                   <h3
-                    className="text-2xl md:text-3xl font-bold text-white"
+                    className="text-2xl md:text-3xl font-bold text-[#0a0a0a]"
                     style={{ fontFamily: "'DM Serif Display', serif" }}
                   >
                     {lockedRows.length} more locks waiting
                   </h3>
-                  <p className="mt-2 text-sm text-white/50 max-w-md">
+                  <p className="mt-2 text-sm text-black/55 max-w-md">
                     Full prop analyzer — all 10 picks per category, updated every
                     6 hours. Stack with parlays for compounding edge.
                   </p>
                   <Link
                     href="/subscribe"
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#FF3B3B] px-6 py-3 text-sm font-semibold text-[#0a0a0a] hover:bg-[#FF5252] transition-colors"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-3 text-sm font-semibold text-[#0a0a0a] hover:bg-[#FF5252] transition-colors"
                   >
                     Upgrade to VIP
                     <span aria-hidden>→</span>
@@ -733,21 +733,21 @@ export default function PropsPage() {
         )}
 
         {/* ─── Footer Disclaimer ──────────────────────────────────────── */}
-        <div className="mt-16 md:mt-24 border-t border-white/[0.06] pt-8 pb-4">
-          <p className="text-xs text-white/30 leading-relaxed max-w-3xl">
-            <span className="text-white/50 font-semibold">Disclaimer —</span>{" "}
+        <div className="mt-16 md:mt-24 border-t border-black/[0.06] pt-8 pb-4">
+          <p className="text-xs text-black/45 leading-relaxed max-w-3xl">
+            <span className="text-black/55 font-semibold">Disclaimer —</span>{" "}
             Season averages. Actual prop lines and odds vary by sportsbook.
             Combine with moneyline parlays for stacked probability. Past
             performance does not guarantee future results. Bet responsibly.
           </p>
-          <p className="mt-2 text-[11px] text-white/20">
+          <p className="mt-2 text-[11px] text-black/35">
             Data: ESPN public API. Cached 6 hours.
             {!hasVipAccess && !loading && isPro && (
               <span className="ml-2">
                 Sharp tier shows top 3 per category.{" "}
                 <Link
                   href="/subscribe"
-                  className="text-[#FF3B3B] hover:underline"
+                  className="text-[#0a0a0a] hover:underline"
                 >
                   Upgrade to VIP
                 </Link>{" "}
