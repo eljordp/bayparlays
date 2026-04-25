@@ -27,10 +27,10 @@ interface ParlayRow {
   clv_percent: number | null;
 }
 
-// Public track record only counts parlays the AI would actually stand behind.
-// Historical rows (pre-filter era) with low confidence get excluded retroactively
-// so the page doesn't broadcast noise.
-const MIN_CONFIDENCE_FOR_TRACK_RECORD = 60;
+// Public track record counts every parlay the AI has surfaced. The earlier
+// confidence>=60 cutoff filtered out everything (model never scores that high),
+// so the page reported 0-0. Show the full record — honest and complete.
+const MIN_CONFIDENCE_FOR_TRACK_RECORD = 0;
 
 // Under this total, surface a "still building" caveat in the response so the
 // UI can show sample-size honesty instead of pretending 10 bets is signal.

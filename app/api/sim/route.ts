@@ -158,13 +158,12 @@ export async function GET(req: NextRequest) {
     .eq("user_id", userId)
     .single();
 
-  // Get last 20 sim parlays
   const { data: parlays } = await supabase
     .from("sim_parlays")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(500);
 
   return NextResponse.json({
     bankroll: bankroll || null,

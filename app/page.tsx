@@ -11,6 +11,7 @@ import { StaticParlayCard } from "@/app/components/StaticParlayCard";
 import { BettingSlip } from "@/app/components/BettingSlip";
 import { AppNav } from "@/app/components/AppNav";
 import { LockOfTheDay } from "@/app/components/LockOfTheDay";
+import { useAuth } from "@/app/components/AuthProvider";
 
 /* ─── Types ─── */
 
@@ -105,8 +106,19 @@ function formatDate(): string {
 
 /* ─── PAGE ─── */
 
+interface TrackStats {
+  winRate: number;
+  won: number;
+  lost: number;
+  roi: number;
+  totalProfit: number;
+  resolvedSample: number;
+}
+
 export default function Home() {
+  const { user } = useAuth();
   const [odds, setOdds] = useState<OddsGame[]>([]);
+  const [trackStats, setTrackStats] = useState<TrackStats | null>(null);
   const oddsScrollRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [potd, setPotd] = useState<any>(null);
@@ -117,6 +129,13 @@ export default function Home() {
   const [captureEmail, setCaptureEmail] = useState("");
   const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/track/results", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.stats) setTrackStats(d.stats as TrackStats); })
+      .catch(() => {});
+  }, []);
 
   // Track referral clicks from ?ref= param
   useEffect(() => {
@@ -246,13 +265,66 @@ export default function Home() {
                 <span className="text-[#0a0a0a]">You place the bet.</span>
               </motion.h1>
 
-              <motion.p
+              <motion.div
                 variants={fadeUp}
                 custom={2}
-                className="text-base md:text-lg text-black/55 mb-10 max-w-md leading-relaxed"
+                className="mb-10 max-w-md"
               >
-                Scanning odds across 12+ sportsbooks in real time.
-              </motion.p>
+                {trackStats && trackStats.resolvedSample > 0 ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-6 md:gap-8">
+                      <div>
+                        <div
+                          className="text-3xl md:text-4xl font-bold tracking-tight"
+                          style={{
+                            color: trackStats.winRate >= 50 ? "#22C55E" : "#0a0a0a",
+                            fontFamily: "var(--font-geist-mono)",
+                          }}
+                        >
+                          {trackStats.winRate.toFixed(1)}%
+                        </div>
+                        <div className="text-[10px] uppercase tracking-widest text-black/45 mt-1">
+                          Win Rate
+                        </div>
+                      </div>
+                      <div>
+                        <div
+                          className="text-3xl md:text-4xl font-bold tracking-tight text-[#0a0a0a]"
+                          style={{ fontFamily: "var(--font-geist-mono)" }}
+                        >
+                          {trackStats.won}-{trackStats.lost}
+                        </div>
+                        <div className="text-[10px] uppercase tracking-widest text-black/45 mt-1">
+                          Record
+                        </div>
+                      </div>
+                      <div>
+                        <div
+                          className="text-3xl md:text-4xl font-bold tracking-tight"
+                          style={{
+                            color: trackStats.roi >= 0 ? "#22C55E" : "#EF4444",
+                            fontFamily: "var(--font-geist-mono)",
+                          }}
+                        >
+                          {trackStats.roi >= 0 ? "+" : ""}
+                          {trackStats.roi.toFixed(1)}%
+                        </div>
+                        <div className="text-[10px] uppercase tracking-widest text-black/45 mt-1">
+                          ROI
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-black/40 mt-4">
+                      Live AI track record · {trackStats.resolvedSample} resolved picks
+                      {trackStats.resolvedSample < 50 && " · still building sample"}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-base md:text-lg text-black/55 leading-relaxed">
+                    Scanning odds across 12+ sportsbooks in real time.
+                  </p>
+                )}
+              </motion.div>
 
               <motion.div
                 variants={fadeUp}
@@ -260,10 +332,10 @@ export default function Home() {
                 className="flex flex-wrap items-center gap-4"
               >
                 <Link
-                  href="/subscribe"
+                  href={user ? "/parlays" : "/subscribe"}
                   className="inline-flex items-center gap-2 bg-[#0a0a0a] text-white px-7 py-3.5 text-sm font-semibold rounded-full hover:bg-[#1f1f1f] transition-colors duration-200"
                 >
-                  Start Free Trial
+                  {user ? "View Today's Picks" : "Start Free Trial"}
                   <ChevronRight className="w-4 h-4" />
                 </Link>
                 <a
@@ -930,10 +1002,10 @@ export default function Home() {
 
             <motion.div variants={fadeUp} custom={2}>
               <Link
-                href="/subscribe"
+                href={user ? "/parlays" : "/subscribe"}
                 className="inline-flex items-center gap-2 bg-[#0a0a0a] text-white px-10 py-4 text-base font-semibold rounded-full hover:bg-[#1f1f1f] transition-colors duration-200"
               >
-                Start Free Trial
+                {user ? "View Today's Picks" : "Start Free Trial"}
                 <ChevronRight className="w-5 h-5" />
               </Link>
             </motion.div>
@@ -1017,6 +1089,9 @@ interface HeroApiLeg {
   pick: string;
   odds: number;
   book: string;
+  reasons?: string[];
+  ourProb?: number;
+  impliedProb?: number;
 }
 
 interface HeroApiParlay {
@@ -1044,7 +1119,9 @@ const HERO_FALLBACK: HeroApiParlay = {
 };
 
 function LiveHeroParlay() {
+  const { user } = useAuth();
   const [parlay, setParlay] = useState<HeroApiParlay>(HERO_FALLBACK);
+  const [showWhy, setShowWhy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1069,13 +1146,89 @@ function LiveHeroParlay() {
     };
   }, []);
 
+  const topLeg = parlay.legs[0];
+  const topReasons = (topLeg?.reasons ?? []).slice(0, 2);
+  const ctaHref = user ? "/parlays" : "/login?mode=signup";
+  const ctaLabel = user ? "Try this in Simulator" : "Try this — sign up free";
+
   return (
-    <StaticParlayCard
-      legs={parlay.legs}
-      combinedOdds={parlay.combinedOdds}
-      evPercent={parlay.evPercent}
-      confidence={parlay.confidence}
-      payout={parlay.payout}
-    />
+    <div>
+      <StaticParlayCard
+        legs={parlay.legs}
+        combinedOdds={parlay.combinedOdds}
+        evPercent={parlay.evPercent}
+        confidence={parlay.confidence}
+        payout={parlay.payout}
+      />
+
+      <div className="mt-4 flex flex-col gap-3">
+        <Link
+          href={ctaHref}
+          className="inline-flex items-center justify-center gap-2 bg-[#0a0a0a] text-white px-5 py-3 text-sm font-semibold rounded-full hover:bg-[#1f1f1f] transition-colors duration-200"
+        >
+          {ctaLabel}
+          <ChevronRight className="w-4 h-4" />
+        </Link>
+
+        {topReasons.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowWhy((v) => !v)}
+              className="text-xs uppercase tracking-widest text-black/45 hover:text-black/70 transition-colors"
+            >
+              {showWhy ? "Hide the math —" : "See the math +"}
+            </button>
+            {showWhy && (
+              <div className="mt-3 rounded-xl bg-white border border-black/[0.06] p-4">
+                <p className="text-[10px] uppercase tracking-widest text-black/45 mb-2">
+                  Why the AI likes {topLeg.pick}
+                </p>
+                <ul className="space-y-2">
+                  {topReasons.map((r, i) => (
+                    <li
+                      key={i}
+                      className="text-xs text-black/70 leading-relaxed flex gap-2"
+                    >
+                      <span className="text-black/30 mt-0.5">·</span>
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
+                {typeof topLeg.ourProb === "number" &&
+                  typeof topLeg.impliedProb === "number" && (
+                    <div className="mt-3 pt-3 border-t border-black/[0.06] flex justify-between text-xs">
+                      <span className="text-black/45">Book says</span>
+                      <span
+                        className="font-semibold text-black/70"
+                        style={{ fontFamily: "var(--font-geist-mono)" }}
+                      >
+                        {(topLeg.impliedProb * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                {typeof topLeg.ourProb === "number" &&
+                  typeof topLeg.impliedProb === "number" && (
+                    <div className="mt-1 flex justify-between text-xs">
+                      <span className="text-black/45">AI says</span>
+                      <span
+                        className="font-semibold"
+                        style={{
+                          color:
+                            topLeg.ourProb > topLeg.impliedProb
+                              ? "#22C55E"
+                              : "#0a0a0a",
+                          fontFamily: "var(--font-geist-mono)",
+                        }}
+                      >
+                        {(topLeg.ourProb * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

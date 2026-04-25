@@ -192,13 +192,11 @@ export default function ParlaysPage() {
           const data = await res.json();
           const sigs = new Set<string>();
           for (const p of data.parlays || []) {
-            if (p.status === "pending") {
-              const sig = (p.legs || [])
-                .map((l: { game: string; pick: string }) => `${l.game}::${l.pick}`)
-                .sort()
-                .join("|");
-              sigs.add(sig);
-            }
+            const sig = (p.legs || [])
+              .map((l: { game: string; pick: string }) => `${l.game}::${l.pick}`)
+              .sort()
+              .join("|");
+            sigs.add(sig);
           }
           setPendingSimSigs(sigs);
         }
