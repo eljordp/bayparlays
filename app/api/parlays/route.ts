@@ -1993,15 +1993,28 @@ export async function GET(request: NextRequest) {
             console.error("Parlay insert failed:", insertErr);
           }
 
-          if (insertErr && /column .*(category|opening_lines)/i.test(insertErr.message || "")) {
-            // Fall back step 1: try without opening_lines but with category.
+          // Detect schema-drift errors via PostgREST error code (PGRST204 =
+          // schema cache miss for an unknown column) OR by substring match
+          // on the column name. The previous regex assumed "column X" word
+          // order; PostgREST uses "X column" so it never matched and the
+          // fallback never ran. Result: 3 days of zero inserts on prod.
+          const isSchemaMiss = (err: { message?: string | null; code?: string | null } | null) => {
+            if (!err) return false;
+            if (err.code === "PGRST204") return true;
+            const msg = err.message || "";
+            return /(category|opening_lines|closing_lines|clv_percent)/i.test(msg);
+          };
+
+          if (isSchemaMiss(insertErr)) {
+            // Fall back step 1: drop opening_lines, keep category
             const withCat = baseRows.map((r, i) => ({ ...r, category: trackable[i].category }));
             const { error: catErr } = await supabase.from("parlays").insert(withCat);
             insertDiag.secondAttempt = catErr
               ? { error: catErr.message, code: catErr.code }
               : { ok: true };
             if (catErr) console.error("Parlay insert (cat fallback) failed:", catErr);
-            if (catErr && /category/i.test(catErr.message || "")) {
+            if (isSchemaMiss(catErr)) {
+              // Fall back step 2: bare row, no category, no opening_lines
               const { error: bareErr } = await supabase.from("parlays").insert(baseRows);
               insertDiag.thirdAttempt = bareErr
                 ? { error: bareErr.message, code: bareErr.code }
