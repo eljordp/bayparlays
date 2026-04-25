@@ -1916,15 +1916,24 @@ export async function GET(request: NextRequest) {
     setCachedResponse(response, sports, numLegs, count, sortMode + ":" + tier);
 
     // Save parlays to tracking database (fire and forget, skip if recent insert)
+    // Diag: when ?debug=insert is on the URL, surface any insert errors in
+    // the response. /results has been showing 0 tracked parlays despite the
+    // cron running successfully, and the silent try/catch was swallowing
+    // whatever's actually failing. Remove this block once root-caused.
+    const debugInsert = searchParams.get("debug") === "insert";
+    const insertDiag: Record<string, unknown> = {};
     try {
       const { supabase } = await import("@/lib/supabase");
 
       // Check if we inserted parlays in the last 5 minutes to avoid duplicates
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const { count } = await supabase
+      const { count, error: countErr } = await supabase
         .from("parlays")
         .select("*", { count: "exact", head: true })
         .gte("created_at", fiveMinAgo);
+
+      insertDiag.recentCount = count;
+      if (countErr) insertDiag.countErr = countErr.message;
 
       if (!count || count === 0) {
         // Only track parlays that have real positive expected value.
@@ -1970,18 +1979,39 @@ export async function GET(request: NextRequest) {
 
           // Try the full payload first; if column migrations (010, 012) have
           // not been applied, fall back to dropping the new columns.
-          const { error: insertErr } = await supabase
+          const { error: insertErr, data: insertData } = await supabase
             .from("parlays")
-            .insert(rowsWithCategory);
+            .insert(rowsWithCategory)
+            .select();
+
+          insertDiag.attemptedCount = rowsWithCategory.length;
+          insertDiag.firstAttempt = insertErr
+            ? { error: insertErr.message, code: insertErr.code, details: insertErr.details }
+            : { ok: true, inserted: insertData?.length ?? 0 };
+
+          if (insertErr) {
+            console.error("Parlay insert failed:", insertErr);
+          }
 
           if (insertErr && /column .*(category|opening_lines)/i.test(insertErr.message || "")) {
             // Fall back step 1: try without opening_lines but with category.
             const withCat = baseRows.map((r, i) => ({ ...r, category: trackable[i].category }));
             const { error: catErr } = await supabase.from("parlays").insert(withCat);
+            insertDiag.secondAttempt = catErr
+              ? { error: catErr.message, code: catErr.code }
+              : { ok: true };
+            if (catErr) console.error("Parlay insert (cat fallback) failed:", catErr);
             if (catErr && /category/i.test(catErr.message || "")) {
-              await supabase.from("parlays").insert(baseRows);
+              const { error: bareErr } = await supabase.from("parlays").insert(baseRows);
+              insertDiag.thirdAttempt = bareErr
+                ? { error: bareErr.message, code: bareErr.code }
+                : { ok: true };
+              if (bareErr) console.error("Parlay insert (bare fallback) failed:", bareErr);
             }
           }
+        } else {
+          insertDiag.attemptedCount = 0;
+          insertDiag.note = "no parlays met EV>=5 gate";
         }
 
         // Snapshot current best lines for movement analysis.
@@ -1997,9 +2027,14 @@ export async function GET(request: NextRequest) {
       }
     } catch (e) {
       console.error("Failed to track parlays:", e);
+      insertDiag.outerCatch = String(e);
     }
 
-    return NextResponse.json(response, {
+    const responseBody = debugInsert
+      ? { ...response, _debugInsert: insertDiag }
+      : response;
+
+    return NextResponse.json(responseBody, {
       headers: {
         "X-Cache": "MISS",
         "X-Data-Source": "live",
