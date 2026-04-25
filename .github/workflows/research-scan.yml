@@ -1,0 +1,36 @@
+name: BayParlays Research Scan
+
+# Brute-force scans every valid 2/3/4-leg parlay from the day's edge-positive
+# leg pool and persists the top 500 by EV to research_parlays. Runs 2x/day:
+# morning slate post (12:00 UTC = 5am PT) and evening slate (00:00 UTC = 5pm PT).
+#
+# Uses Supabase service role to bypass the RLS public-read constraint on
+# inserts. Anon key would work too since the table policies allow inserts.
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run research scanner
+        env:
+          BAYPARLAYS_BASE_URL: https://bayparlays.vercel.app
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/research-scan.ts
