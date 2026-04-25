@@ -42,6 +42,19 @@ interface Leg {
   scored?: boolean;
   teamRecord?: TeamRecordInfo;
   reasons?: string[];
+  homeTeam?: string;
+  awayTeam?: string;
+  homeForm?: FormGame[];
+  awayForm?: FormGame[];
+}
+
+interface FormGame {
+  date: string;
+  opponent: string;
+  isHome: boolean;
+  teamScore: number;
+  opponentScore: number;
+  result: "W" | "L";
 }
 
 interface Parlay {
@@ -1153,6 +1166,10 @@ function ParlayCard({
 function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
   const [open, setOpen] = useState(false);
   const hasReasons = !!leg.reasons && leg.reasons.length > 0;
+  const hasForm =
+    (!!leg.homeForm && leg.homeForm.length > 0) ||
+    (!!leg.awayForm && leg.awayForm.length > 0);
+  const canExpand = hasReasons || hasForm;
   const edgePts =
     typeof leg.trueEdge === "number" ? leg.trueEdge * 100 : null;
   // Only surface the edge badge when the AI is finding VALUE (positive edge).
@@ -1167,10 +1184,10 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
       )}
       <button
         onClick={() => setOpen(!open)}
-        disabled={!hasReasons}
+        disabled={!canExpand}
         className="w-full flex items-center gap-3 py-3 text-left transition-colors"
         style={{
-          cursor: hasReasons ? "pointer" : "default",
+          cursor: canExpand ? "pointer" : "default",
           opacity: 1,
         }}
       >
@@ -1227,7 +1244,7 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
           </div>
         </div>
 
-        {hasReasons && (
+        {canExpand && (
           <div
             className="flex-shrink-0 transition-transform"
             style={{
@@ -1243,7 +1260,7 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
       </button>
 
       <AnimatePresence initial={false}>
-        {open && hasReasons && (
+        {open && canExpand && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -1251,38 +1268,133 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
             transition={{ duration: 0.22 }}
             style={{ overflow: "hidden" }}
           >
-            <div
-              className="mb-3 ml-[60px] rounded-lg p-3 space-y-2"
-              style={{
-                background: "rgba(255,255,255,0.025)",
-                border: "1px solid rgba(255,255,255,0.05)",
-              }}
-            >
-              <div
-                className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-2"
-                style={{ color: "rgba(255,59,59,0.8)" }}
-              >
-                Why this pick
-              </div>
-              {leg.reasons!.map((r, j) => (
+            <div className="mb-3 ml-[60px] space-y-3">
+              {hasReasons && (
                 <div
-                  key={j}
-                  className="flex items-start gap-2 text-xs"
-                  style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}
+                  className="rounded-lg p-3 space-y-2"
+                  style={{
+                    background: "rgba(255,255,255,0.025)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                  }}
                 >
-                  <span
-                    className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full"
-                    style={{ background: "rgba(255,59,59,0.6)" }}
-                  />
-                  <span>{r}</span>
+                  <div
+                    className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-2"
+                    style={{ color: "rgba(255,59,59,0.8)" }}
+                  >
+                    Why this pick
+                  </div>
+                  {leg.reasons!.map((r, j) => (
+                    <div
+                      key={j}
+                      className="flex items-start gap-2 text-xs"
+                      style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}
+                    >
+                      <span
+                        className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full"
+                        style={{ background: "rgba(255,59,59,0.6)" }}
+                      />
+                      <span>{r}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {hasForm && (
+                <div
+                  className="rounded-lg p-3"
+                  style={{
+                    background: "rgba(255,255,255,0.025)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                  }}
+                >
+                  <div
+                    className="text-[10px] uppercase tracking-[0.2em] font-semibold mb-3"
+                    style={{ color: "rgba(255,59,59,0.8)" }}
+                  >
+                    Recent form · last 5
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {!!leg.awayForm && leg.awayForm.length > 0 && (
+                      <FormColumn
+                        team={leg.awayTeam || leg.game.split(" vs ")[0] || "Away"}
+                        games={leg.awayForm}
+                      />
+                    )}
+                    {!!leg.homeForm && leg.homeForm.length > 0 && (
+                      <FormColumn
+                        team={leg.homeTeam || leg.game.split(" vs ")[1] || "Home"}
+                        games={leg.homeForm}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
+}
+
+function FormColumn({ team, games }: { team: string; games: FormGame[] }) {
+  const wins = games.filter((g) => g.result === "W").length;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span
+          className="text-xs font-semibold truncate"
+          style={{ color: "rgba(255,255,255,0.85)" }}
+        >
+          {team}
+        </span>
+        <span
+          className="text-[10px] tabular-nums"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+        >
+          {wins}-{games.length - wins} L5
+        </span>
+      </div>
+      <div className="space-y-1">
+        {games.map((g, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2 text-[11px] tabular-nums"
+            style={{ color: "rgba(255,255,255,0.65)" }}
+          >
+            <span
+              className="inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-bold"
+              style={{
+                background:
+                  g.result === "W" ? "rgba(34,197,94,0.18)" : "rgba(255,59,59,0.18)",
+                color: g.result === "W" ? "#22C55E" : "#FF3B3B",
+              }}
+            >
+              {g.result}
+            </span>
+            <span style={{ color: "rgba(255,255,255,0.4)" }}>
+              {g.isHome ? "vs" : "@"}
+            </span>
+            <span className="truncate flex-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+              {shortTeam(g.opponent)}
+            </span>
+            <span style={{ color: "rgba(255,255,255,0.85)" }}>
+              {g.teamScore}-{g.opponentScore}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Trim multi-word team names to last token for the form rows so they fit
+// in a tight column ("Los Angeles Lakers" -> "Lakers").
+function shortTeam(name: string): string {
+  if (!name) return "";
+  const parts = name.split(" ");
+  if (parts.length <= 1) return name;
+  return parts[parts.length - 1];
 }
 
 /* ─── Skeleton Card ─── */

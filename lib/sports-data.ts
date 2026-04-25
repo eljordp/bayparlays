@@ -244,6 +244,55 @@ export function normalizeGames(games: GameScore[]): NormalizedGame[] {
   return out;
 }
 
+// ─── Team Form (recent games detail) ────────────────────────────────────────
+// Returns the last N completed games for a given team with full score detail.
+// Surfaced inline on /parlays as ESPN-style context: bettors can see the
+// receipts without leaving the site.
+
+export interface FormGame {
+  date: string;        // ISO
+  opponent: string;
+  isHome: boolean;
+  teamScore: number;
+  opponentScore: number;
+  result: "W" | "L";
+}
+
+export function getTeamForm(
+  team: string,
+  games: NormalizedGame[],
+  n: number = 5,
+): FormGame[] {
+  const out: FormGame[] = [];
+  // Most-recent first
+  const sorted = [...games].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+  );
+  for (const g of sorted) {
+    if (out.length >= n) break;
+    if (g.home === team) {
+      out.push({
+        date: g.date,
+        opponent: g.away,
+        isHome: true,
+        teamScore: g.homeScore,
+        opponentScore: g.awayScore,
+        result: g.homeScore > g.awayScore ? "W" : "L",
+      });
+    } else if (g.away === team) {
+      out.push({
+        date: g.date,
+        opponent: g.home,
+        isHome: false,
+        teamScore: g.awayScore,
+        opponentScore: g.homeScore,
+        result: g.awayScore > g.homeScore ? "W" : "L",
+      });
+    }
+  }
+  return out;
+}
+
 // ─── Team Edge Scoring ──────────────────────────────────────────────────────
 // Returns a confidence adjustment (-30 to +30 range) based on team performance.
 

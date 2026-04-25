@@ -4,8 +4,10 @@ import {
   getRecentScores,
   normalizeGames,
   getTeamEdge,
+  getTeamForm,
   type TeamRecord,
   type NormalizedGame,
+  type FormGame,
 } from "@/lib/sports-data";
 import {
   calculateEloRatings,
@@ -127,6 +129,8 @@ interface ScoredLeg {
   pitcherNote?: string | null;  // e.g. "ace-vs-ace (avg ERA <3.25)"
   injuryNote?: string | null;   // e.g. "Warriors: Kuminga (Out); Lakers: Reaves (Day-To-Day)"
   restNote?: string | null;     // e.g. "Lakers: B2B (1d rest) · Warriors: 3d rest" (NBA/NHL)
+  homeForm?: FormGame[];        // last 5 completed games for the home team — ESPN-style inline context
+  awayForm?: FormGame[];        // last 5 completed games for the away team
 }
 
 interface ParlayLeg {
@@ -153,6 +157,8 @@ interface ParlayLeg {
   pitcherNote?: string | null;
   injuryNote?: string | null;
   restNote?: string | null;
+  homeForm?: FormGame[];
+  awayForm?: FormGame[];
 }
 
 type ParlayCategory = "ev" | "payout" | "confidence";
@@ -981,6 +987,16 @@ function extractLegsFromGame(
         );
       }
 
+      // ESPN-style form context — last 5 completed games for each team with
+      // full score detail. Free, displayed inline as expandable receipts so
+      // bettors don't have to leave the page to verify the AI's reasoning.
+      const homeForm = recentGames
+        ? getTeamForm(game.home_team, recentGames, 5)
+        : undefined;
+      const awayForm = recentGames
+        ? getTeamForm(game.away_team, recentGames, 5)
+        : undefined;
+
       legs.push({
         sport: sportLabel,
         sportKey: game.sport_key,
@@ -1008,6 +1024,8 @@ function extractLegsFromGame(
         pitcherNote,
         injuryNote,
         restNote,
+        homeForm,
+        awayForm,
       });
     }
   }
@@ -1317,6 +1335,10 @@ function buildParlays(
         ...(l.pitcherNote ? { pitcherNote: l.pitcherNote } : {}),
         ...(l.injuryNote ? { injuryNote: l.injuryNote } : {}),
         ...(l.restNote ? { restNote: l.restNote } : {}),
+        ...(l.homeForm && l.homeForm.length > 0 ? { homeForm: l.homeForm } : {}),
+        ...(l.awayForm && l.awayForm.length > 0 ? { awayForm: l.awayForm } : {}),
+        homeTeam: l.homeTeam,
+        awayTeam: l.awayTeam,
       })),
       combinedOdds: formatAmericanOdds(combinedAmerican),
       combinedDecimal: Math.round(combinedDecimal * 100) / 100,
@@ -1828,6 +1850,10 @@ export async function GET(request: NextRequest) {
           pitcherNote: l.pitcherNote ?? null,
           injuryNote: l.injuryNote ?? null,
           restNote: l.restNote ?? null,
+          homeForm: l.homeForm ?? null,
+          awayForm: l.awayForm ?? null,
+          homeTeam: l.homeTeam,
+          awayTeam: l.awayTeam,
           reasons: buildReasons(l),
         })),
         meta: {
