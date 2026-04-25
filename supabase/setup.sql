@@ -265,11 +265,12 @@ CREATE TABLE IF NOT EXISTS edge_picks (
   clv_percent numeric,
   profit numeric default 0,
   resolved_at timestamptz,
-  dedupe_key text generated always as (
-    game_id || '|' || market || '|' || pick || '|' ||
-    to_char(created_at at time zone 'UTC', 'YYYY-MM-DD')
-  ) stored,
-  UNIQUE (dedupe_key)
+  -- Composite unique replaces the older generated dedupe_key column.
+  -- Postgres rejects generated columns whose expressions aren't IMMUTABLE
+  -- (timezone conversions count as volatile). One archived edge per
+  -- (game, market, pick) is what the app expects; the engine handles
+  -- re-surfacing across days at the application layer.
+  UNIQUE (game_id, market, pick)
 );
 CREATE INDEX IF NOT EXISTS idx_edge_picks_status ON edge_picks(status);
 CREATE INDEX IF NOT EXISTS idx_edge_picks_created ON edge_picks(created_at desc);
