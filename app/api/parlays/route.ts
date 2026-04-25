@@ -1915,34 +1915,58 @@ export async function GET(request: NextRequest) {
     // Cache the response
     setCachedResponse(response, sports, numLegs, count, sortMode + ":" + tier);
 
-    // Save parlays to tracking database (fire and forget, skip if recent insert)
-    // Diag: when ?debug=insert is on the URL, surface any insert errors in
-    // the response. /results has been showing 0 tracked parlays despite the
-    // cron running successfully, and the silent try/catch was swallowing
-    // whatever's actually failing. Remove this block once root-caused.
+    // Save parlays to tracking database. Per-call dedup uses a leg-signature
+    // set against today's existing rows so cross-call duplicates within the
+    // daily cron's six combo batches don't pile up, but unique parlays from
+    // each batch persist (vs the old 5-min time gate which blocked all but
+    // the first batch's inserts and choked the data flow at ~5/run).
     const debugInsert = searchParams.get("debug") === "insert";
     const insertDiag: Record<string, unknown> = {};
     try {
       const { supabase } = await import("@/lib/supabase");
 
-      // Check if we inserted parlays in the last 5 minutes to avoid duplicates
-      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const { count, error: countErr } = await supabase
+      // Pull today's already-tracked parlay signatures so we skip duplicates
+      // without blocking unique inserts. Signature = sorted "gameId::pick"
+      // joined by "|" — exact match collapses identical parlays, different
+      // legs go through.
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      const { data: existing } = await supabase
         .from("parlays")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", fiveMinAgo);
+        .select("legs")
+        .gte("created_at", todayStart.toISOString());
+      const existingSigs = new Set<string>();
+      for (const row of existing || []) {
+        const legs = (row as { legs?: Array<{ gameId?: string; pick?: string }> }).legs;
+        if (!Array.isArray(legs)) continue;
+        const sig = legs
+          .map((l) => `${l.gameId ?? ""}::${l.pick ?? ""}`)
+          .sort()
+          .join("|");
+        existingSigs.add(sig);
+      }
+      insertDiag.existingTodayCount = existingSigs.size;
 
-      insertDiag.recentCount = count;
-      if (countErr) insertDiag.countErr = countErr.message;
-
-      if (!count || count === 0) {
+      {
         // Only track parlays that have real positive expected value.
         // evPercent > 5 means our model projects >5% EV over many bets —
         // enough buffer to absorb model error while still showing +EV.
         // Legs were already gated at trueEdge >= 3% per leg upstream, so this
         // is a belt-and-suspenders check at the parlay level.
         const MIN_EV_TO_TRACK = 5;
-        const trackable = parlays.filter((p) => p.evPercent >= MIN_EV_TO_TRACK);
+        const sigOf = (legs: Array<{ gameId?: string; pick?: string }>) =>
+          legs
+            .map((l) => `${l.gameId ?? ""}::${l.pick ?? ""}`)
+            .sort()
+            .join("|");
+        const trackable = parlays.filter((p) => {
+          if (p.evPercent < MIN_EV_TO_TRACK) return false;
+          const sig = sigOf(p.legs);
+          if (existingSigs.has(sig)) return false;
+          existingSigs.add(sig); // dedupe within this batch too
+          return true;
+        });
+        insertDiag.afterDedupCount = trackable.length;
 
         if (trackable.length > 0) {
           const nowIso = new Date().toISOString();

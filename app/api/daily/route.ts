@@ -31,8 +31,9 @@ export async function GET(req: NextRequest) {
   // Step 2: Generate fresh parlays — vary leg count AND category so the
   // public track record captures all three AI strategies, not just default EV.
   // Each call to /api/parlays is 1 Odds API hit (cached 5min); keeping combos
-  // modest for quota. Only parlays with confidence >= 60 actually persist (see
-  // /api/parlays insert path), so "count=5" won't flood the table with noise.
+  // modest for quota. Bumped to count=20 (was 5) since the insert-side dedup
+  // now handles cross-batch duplicates via leg-signature matching, so a wider
+  // pool gives the calibration loop more variance to learn from.
   // Favor 2-leg parlays: each extra leg adds ~5% vig, so 2-leg has structurally
   // better EV than 3-leg. Three 2-leg combos + two 3-leg combos, across all
   // three strategies. The EV gate at insert time (evPercent >= 5) means this
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
       const tier =
         combo.legs === 3 && combo.sort === "payout" ? "admin" : "sharp";
       const res = await fetch(
-        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=5&tier=${tier}`
+        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=20&tier=${tier}`
       );
       if (res.ok) {
         const data = await res.json();
