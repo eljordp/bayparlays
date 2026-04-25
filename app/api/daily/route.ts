@@ -38,18 +38,38 @@ export async function GET(req: NextRequest) {
   // better EV than 3-leg. Three 2-leg combos + two 3-leg combos, across all
   // three strategies. The EV gate at insert time (evPercent >= 5) means this
   // only fills the table with parlays the model actually stands behind.
+  // Pick in-season sports based on current month — out-of-season fetches
+  // burn API credits for empty data. April: NBA + NHL playoffs, MLB regular
+  // season. NFL / NCAAF / NCAAB all dormant. Re-evaluate at season changes.
+  const month = new Date().getUTCMonth(); // 0=Jan
+  const isInSeason = (sport: string): boolean => {
+    switch (sport) {
+      case "nba": return month >= 9 || month <= 5;       // Oct-Jun
+      case "nhl": return month >= 9 || month <= 5;       // Oct-Jun
+      case "mlb": return month >= 2 && month <= 9;       // Mar-Oct
+      case "nfl": return month >= 8 || month <= 1;       // Sep-Feb
+      case "ncaaf": return month >= 7 || month === 0;    // Aug-Jan
+      case "ncaab": return month >= 10 || month <= 3;    // Nov-Apr
+      case "wnba": return month >= 4 && month <= 9;      // May-Oct
+      case "mls": return month >= 1 && month <= 10;      // Feb-Nov
+      default: return true;
+    }
+  };
+  const inSeason = ["nba", "nhl", "mlb", "nfl", "ncaab", "ncaaf"].filter(isInSeason);
+  const corePool = inSeason.filter((s) => ["nba", "mlb", "nhl"].includes(s)).join(",")
+    || inSeason.join(","); // fallback if NBA/MLB/NHL all out
+  const longshotPool = inSeason.join(",");
+
   const sportCombos: { sports: string; legs: number; sort: "ev" | "payout" | "confidence" }[] = [
-    { sports: "nba,mlb,nhl", legs: 2, sort: "ev" },
-    { sports: "nba,mlb,nhl", legs: 2, sort: "confidence" },
-    { sports: "nba,mlb,nhl", legs: 2, sort: "payout" },
-    { sports: "nba,mlb,nhl", legs: 3, sort: "ev" },
-    { sports: "nba,mlb,nhl", legs: 3, sort: "confidence" },
+    { sports: corePool, legs: 2, sort: "ev" },
+    { sports: corePool, legs: 2, sort: "confidence" },
+    { sports: corePool, legs: 2, sort: "payout" },
+    { sports: corePool, legs: 3, sort: "ev" },
+    { sports: corePool, legs: 3, sort: "confidence" },
     // "Craziest Parlay of the Day" — 3-leg longshot generator. Tier=admin
     // relaxes edge/quality filters so legs with high odds (underdogs) can
-    // make it into the pool. sort=payout picks the highest combined_decimal
-    // from the pool. Widen sports to include college + NCAAB for more
-    // longshot candidates since NBA/MLB favorites are usually tightly priced.
-    { sports: "nba,mlb,nhl,ncaab,ncaaf", legs: 3, sort: "payout" },
+    // make it into the pool. Sport pool widens to include all in-season.
+    { sports: longshotPool, legs: 3, sort: "payout" },
   ];
 
   const generated: { sports: string; legs: number; sort: string; count: number }[] = [];

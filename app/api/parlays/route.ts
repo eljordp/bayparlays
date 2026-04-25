@@ -1380,7 +1380,13 @@ async function fetchOddsForSport(sportKey: string): Promise<OddsGame[]> {
     return [];
   }
 
-  const url = `${BASE_URL}/sports/${sportKey}/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american`;
+  // Restrict to 5 mainstream US books (DK, FanDuel, BetMGM, Caesars, Bovada)
+  // — these cover the books our retail audience actually bets at, and the
+  // narrower request is markedly cheaper in compute. Sharp-edge detection
+  // still works across 5 books; the marginal +EV from book #6-12 is dwarfed
+  // by the credits we save not querying them.
+  const BOOKMAKERS = "draftkings,fanduel,betmgm,caesars,bovada";
+  const url = `${BASE_URL}/sports/${sportKey}/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american&bookmakers=${BOOKMAKERS}`;
 
   const res = await fetch(url, { next: { revalidate: 1800 } });
 

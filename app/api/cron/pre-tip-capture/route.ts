@@ -18,9 +18,24 @@ export const maxDuration = 60;
 // 30-min /api/odds revalidate window cost zero extra credits.
 
 // Sports to capture — must be keys that /api/odds SPORT_MAP supports AND
-// sports we actually generate tracked parlays for. MLS is excluded because
-// /api/odds only has soccer → EPL, and no MLS parlays are tracked yet.
-const SPORTS = ["nba", "mlb", "nhl", "nfl", "ncaaf", "ncaab"];
+// sports we actually generate tracked parlays for. Filtered by in-season
+// month at runtime so off-season fetches don't burn credits returning empty.
+const ALL_SPORTS = ["nba", "mlb", "nhl", "nfl", "ncaaf", "ncaab"];
+
+function inSeasonSports(): string[] {
+  const month = new Date().getUTCMonth(); // 0=Jan
+  return ALL_SPORTS.filter((s) => {
+    switch (s) {
+      case "nba": return month >= 9 || month <= 5;
+      case "nhl": return month >= 9 || month <= 5;
+      case "mlb": return month >= 2 && month <= 9;
+      case "nfl": return month >= 8 || month <= 1;
+      case "ncaaf": return month >= 7 || month === 0;
+      case "ncaab": return month >= 10 || month <= 3;
+      default: return false;
+    }
+  });
+}
 
 // Only capture for games starting in this window (minutes from now).
 // Before LOWER: too early, line could still move. After UPPER: game started.
@@ -138,7 +153,7 @@ export async function GET(req: NextRequest) {
     Date.now() - DEDUP_WINDOW_MIN * 60 * 1000,
   ).toISOString();
 
-  for (const sport of SPORTS) {
+  for (const sport of inSeasonSports()) {
     try {
       const res = await fetch(`${baseUrl}/api/odds?sport=${sport}`, {
         cache: "no-store",

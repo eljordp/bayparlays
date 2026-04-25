@@ -205,12 +205,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Single API call with all markets — saves quota (1 call instead of 3)
+    // Single API call with all markets — saves quota (1 call instead of 3).
+    // Restrict to the 5 books our retail audience actually uses (DK, FanDuel,
+    // BetMGM, Caesars, Bovada) — narrower request, same edge-detection
+    // quality on the books that matter.
     const url = new URL(`${BASE_URL}/sports/${sportKey}/odds`);
     url.searchParams.set("apiKey", ODDS_API_KEY!);
     url.searchParams.set("regions", "us");
     url.searchParams.set("markets", "h2h,spreads,totals");
     url.searchParams.set("oddsFormat", "american");
+    url.searchParams.set("bookmakers", "draftkings,fanduel,betmgm,caesars,bovada");
 
     const res = await fetch(url.toString(), { next: { revalidate: 1800 } });
 
