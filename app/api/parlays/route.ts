@@ -47,6 +47,12 @@ import {
   type RestInfo,
 } from "@/lib/espn-rest-days";
 
+// Force dynamic rendering — the route reads request.url and Supabase state
+// at runtime, so any attempt by Next to pre-render at build time produces
+// a noisy DYNAMIC_SERVER_USAGE error in build logs (14 red lines on every
+// deploy). The runtime behavior is unchanged; this just silences the build.
+export const dynamic = "force-dynamic";
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
