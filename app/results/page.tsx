@@ -110,6 +110,25 @@ const CATEGORY_DESC: Record<ParlayCategory, string> = {
 
 /* ─── Helpers ─── */
 
+// Recompute per-bet profit/payout at $10/pick from the parlay's decimal odds —
+// the parlays table defaults stakes to $100, so the raw .profit / .payout
+// fields read as "+$987" / "-$100" and contradict the page's $10/unit framing.
+const TRACK_UNIT_STAKE = 10;
+
+function profitAtUnit(p: {
+  status?: string;
+  combined_decimal?: number | null;
+}): number {
+  if (p.status === "won")
+    return TRACK_UNIT_STAKE * ((p.combined_decimal ?? 1) - 1);
+  if (p.status === "lost") return -TRACK_UNIT_STAKE;
+  return 0;
+}
+
+function payoutAtUnit(p: { combined_decimal?: number | null }): number {
+  return TRACK_UNIT_STAKE * (p.combined_decimal ?? 1);
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", {
@@ -713,16 +732,21 @@ export default function ResultsPage() {
                                   {parlay.status}
                                 </span>
                               </div>
-                              <div
-                                className="text-sm text-right font-bold"
-                                style={{
-                                  color: parlay.profit > 0 ? "#22c55e" : parlay.profit < 0 ? "#ef4444" : "rgba(0,0,0,0.45)",
-                                  fontFamily: "var(--font-geist-mono)",
-                                }}
-                              >
-                                {parlay.profit > 0 ? "+" : ""}
-                                {parlay.profit !== 0 ? `$${Math.abs(parlay.profit).toLocaleString()}` : "--"}
-                              </div>
+                              {(() => {
+                                const p10 = profitAtUnit(parlay);
+                                return (
+                                  <div
+                                    className="text-sm text-right font-bold"
+                                    style={{
+                                      color: p10 > 0 ? "#22c55e" : p10 < 0 ? "#ef4444" : "rgba(0,0,0,0.45)",
+                                      fontFamily: "var(--font-geist-mono)",
+                                    }}
+                                  >
+                                    {p10 > 0 ? "+" : p10 < 0 ? "-" : ""}
+                                    {parlay.status === "pending" || p10 === 0 ? "--" : `$${Math.abs(p10).toFixed(0)}`}
+                                  </div>
+                                );
+                              })()}
                               <div className="flex justify-end" style={{ color: "rgba(0,0,0,0.4)" }}>
                                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                               </div>
@@ -771,16 +795,21 @@ export default function ResultsPage() {
                                     )}
                                   </div>
                                 </div>
-                                <span
-                                  className="text-sm font-bold"
-                                  style={{
-                                    color: parlay.profit > 0 ? "#22c55e" : parlay.profit < 0 ? "#ef4444" : "rgba(0,0,0,0.45)",
-                                    fontFamily: "var(--font-geist-mono)",
-                                  }}
-                                >
-                                  {parlay.profit > 0 ? "+" : ""}
-                                  {parlay.profit !== 0 ? `$${Math.abs(parlay.profit).toLocaleString()}` : "--"}
-                                </span>
+                                {(() => {
+                                  const p10 = profitAtUnit(parlay);
+                                  return (
+                                    <span
+                                      className="text-sm font-bold"
+                                      style={{
+                                        color: p10 > 0 ? "#22c55e" : p10 < 0 ? "#ef4444" : "rgba(0,0,0,0.45)",
+                                        fontFamily: "var(--font-geist-mono)",
+                                      }}
+                                    >
+                                      {p10 > 0 ? "+" : p10 < 0 ? "-" : ""}
+                                      {parlay.status === "pending" || p10 === 0 ? "--" : `$${Math.abs(p10).toFixed(0)}`}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </button>
@@ -873,20 +902,20 @@ export default function ResultsPage() {
                                     </div>
                                   ))}
 
-                                  {/* Payout row */}
-                                  {parlay.payout > 0 && (
+                                  {/* Payout row — at $10/pick */}
+                                  {parlay.combined_decimal && parlay.combined_decimal > 1 && (
                                     <div
                                       className="flex items-center justify-between px-4 md:px-6 py-3"
                                       style={{ borderTop: "1px solid rgba(0,0,0,0.06)", background: "rgba(255,255,255,0.01)" }}
                                     >
                                       <span className="text-xs uppercase tracking-wider" style={{ color: "rgba(0,0,0,0.4)" }}>
-                                        Payout
+                                        ${TRACK_UNIT_STAKE} pays
                                       </span>
                                       <span
                                         className="text-sm font-bold"
                                         style={{ color: "#0a0a0a", fontFamily: "var(--font-geist-mono)" }}
                                       >
-                                        ${parlay.payout.toLocaleString()}
+                                        ${payoutAtUnit(parlay).toFixed(2)}
                                       </span>
                                     </div>
                                   )}
