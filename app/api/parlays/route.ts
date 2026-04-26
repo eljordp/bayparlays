@@ -1876,7 +1876,7 @@ export async function GET(request: NextRequest) {
     //    has a prediction for. Wider net = larger calibration sample.
     if (format === "legs") {
       const lowEv = searchParams.get("lowEv") === "true";
-      const MIN_EV_VS_FAIR = lowEv ? 0 : 0.005;
+      const MIN_EV_VS_FAIR = lowEv ? -Infinity : 0.005;
       const MIN_BOOK_COUNT = lowEv ? 2 : 3;
       const MAX_DAYS_AHEAD = lowEv ? 5 : 3;
       const now = Date.now();
@@ -1886,6 +1886,10 @@ export async function GET(request: NextRequest) {
         if (!l.commenceTime) return false;
         const t = new Date(l.commenceTime).getTime();
         if (t < now || t > cutoff) return false;
+        // lowEv mode skips the EV>=0 gate so calibration captures every leg
+        // the model has a prediction for — including -EV ones, since tracking
+        // those is also valuable for understanding model accuracy.
+        if (lowEv) return true;
         if (typeof l.evVsFair !== "number") return false;
         return l.evVsFair >= MIN_EV_VS_FAIR;
       });
