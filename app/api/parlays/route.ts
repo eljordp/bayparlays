@@ -1867,26 +1867,25 @@ export async function GET(request: NextRequest) {
     // format=legs branch — return scored legs (not parlays) for the /edges
     // feed. Surfaces single-leg sharp-edge picks which is a strictly honest
     // product: "here's where the book is mispricing today."
+    //
+    // Two filter modes:
+    //  - default (strict): for /edges public feed. EV >= 0.5%, bookCount >= 3,
+    //    games within 3 days. Picks the user can act on with confidence.
+    //  - lowEv=true (research): for the calibration scanner. Drops the EV
+    //    threshold to 0 and bookCount to 2 so we capture every leg the model
+    //    has a prediction for. Wider net = larger calibration sample.
     if (format === "legs") {
-      // Filter to real market mispricings only — legs where the best book
-      // is pricing above the de-vigged consensus across the market. That
-      // is the only honest claim we can make. Model-edge-only picks (where
-      // our internal model disagrees with book but the market agrees with
-      // book) aren't shown here — those belong to a different product.
-      //
-      // Also require game starts within 3 days — sharp action happens in
-      // the 72hr window. Longer-dated games get priced loose by retail
-      // books and produce noise that isn't exploitable.
-      const MIN_EV_VS_FAIR = 0.005; // 0.5% minimum; sharp edges are flagged at 2%+
-      const MAX_DAYS_AHEAD = 3;
+      const lowEv = searchParams.get("lowEv") === "true";
+      const MIN_EV_VS_FAIR = lowEv ? 0 : 0.005;
+      const MIN_BOOK_COUNT = lowEv ? 2 : 3;
+      const MAX_DAYS_AHEAD = lowEv ? 5 : 3;
       const now = Date.now();
       const cutoff = now + MAX_DAYS_AHEAD * 24 * 60 * 60 * 1000;
       const edgeLegs = allLegs.filter((l) => {
-        if (l.bookCount < 3) return false;
+        if (l.bookCount < MIN_BOOK_COUNT) return false;
         if (!l.commenceTime) return false;
         const t = new Date(l.commenceTime).getTime();
         if (t < now || t > cutoff) return false;
-        // Only show picks with real positive EV vs no-vig consensus.
         if (typeof l.evVsFair !== "number") return false;
         return l.evVsFair >= MIN_EV_VS_FAIR;
       });

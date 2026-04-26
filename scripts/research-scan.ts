@@ -127,8 +127,11 @@ async function main() {
   }
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // 1. Fetch the scored leg pool from the live engine.
-  const url = `${BASE_URL}/api/parlays?sports=${SPORTS}&format=legs&count=${LEG_FETCH_COUNT}&tier=admin`;
+  // 1. Fetch the scored leg pool from the live engine. lowEv=true loosens
+  // the strict /edges filter (EV>=0.5%, bookCount>=3) to capture every leg
+  // the model has a prediction for — what we want for calibration training
+  // data, even if some legs aren't EV+ enough to publish to users.
+  const url = `${BASE_URL}/api/parlays?sports=${SPORTS}&format=legs&count=${LEG_FETCH_COUNT}&tier=admin&lowEv=true`;
   console.log(`[research] fetching legs: ${url}`);
   const res = await fetch(url);
   if (!res.ok) {
@@ -198,13 +201,16 @@ async function main() {
   }
   const scanId = (scanRow as { id: string }).id;
 
-  // 6. Persist top-K parlays. Store compact leg objects only — full leg
-  // metadata is reproducible from gameId + market + pick if needed.
+  // 6. Persist top-K parlays. Store compact leg objects + the human-readable
+  // game string (needed by /api/cron/resolve-research to match against game
+  // scores — gameId alone isn't enough since the scores feed keys by team
+  // name pattern, not Odds API gameId).
   const topK = candidates.slice(0, TOP_K_TO_PERSIST);
   const rows = topK.map((p) => ({
     scan_id: scanId,
     legs: p.legs.map((l) => ({
       gameId: l.gameId,
+      game: l.game,
       sport: l.sport,
       market: l.market,
       pick: l.pick,

@@ -1,0 +1,34 @@
+name: BayParlays Resolve Research Parlays
+
+# Grades pending research_parlays against actual game scores so the
+# calibration job can use them as training data. Without this, the 500
+# rows/scan that research-scan persists just sit at status='pending'
+# forever and never contribute to learning.
+#
+# Runs every 6 hours — most games end within 3-4 hours of tipoff so this
+# cadence catches them within one cycle. Each call hits The Odds API once
+# per sport with pending parlays (cached in-process), so total credit
+# burn is ~3-5/run.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # every 6 hours
+  workflow_dispatch: {}
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger /api/cron/resolve-research
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/resolve-research" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              --max-time 60
+          else
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/resolve-research" \
+              --max-time 60
+          fi
