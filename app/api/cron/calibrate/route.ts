@@ -37,27 +37,29 @@ export async function GET(req: NextRequest) {
   }
   const supabase = createClient(url, key);
 
+  // Only the parlays table carries ev_percent (the AI's predicted edge over
+  // book). sim_parlays records what users placed but doesn't store the AI's
+  // probability estimate at placement time, so we can't cleanly compare
+  // predicted vs actual on those. Sticking to parlays = honest signal.
   const allParlays: ResolvedParlay[] = [];
-  for (const tableName of ["parlays", "sim_parlays"] as const) {
-    let from = 0;
-    const PAGE = 1000;
-    while (true) {
-      const { data, error } = await supabase
-        .from(tableName)
-        .select("status, combined_decimal, ev_percent, sports, legs")
-        .neq("status", "pending")
-        .range(from, from + PAGE - 1);
-      if (error) {
-        return NextResponse.json(
-          { error: `${tableName}: ${error.message}` },
-          { status: 500 },
-        );
-      }
-      if (!data || data.length === 0) break;
-      allParlays.push(...(data as ResolvedParlay[]));
-      if (data.length < PAGE) break;
-      from += PAGE;
+  let from = 0;
+  const PAGE = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from("parlays")
+      .select("status, combined_decimal, ev_percent, sports, legs")
+      .neq("status", "pending")
+      .range(from, from + PAGE - 1);
+    if (error) {
+      return NextResponse.json(
+        { error: `parlays: ${error.message}` },
+        { status: 500 },
+      );
     }
+    if (!data || data.length === 0) break;
+    allParlays.push(...(data as ResolvedParlay[]));
+    if (data.length < PAGE) break;
+    from += PAGE;
   }
 
   if (allParlays.length === 0) {
