@@ -84,6 +84,14 @@ function emptyPayload() {
       winRate: number;
     }>,
     perLeg: { won: 0, total: 0, hitRate: 0, sampledParlays: 0 },
+    trend: {
+      last7WinRate: 0,
+      prior14WinRate: 0,
+      delta: 0,
+      last7Count: 0,
+      prior14Count: 0,
+    },
+    recentForm: { sample: 0, winRate: 0, isCold: false, isHot: false },
     insights: [] as Array<{ tone: "good" | "bad" | "neutral"; text: string }>,
     recentBets: [] as Array<{
       id: string;
@@ -201,6 +209,55 @@ export async function GET(req: NextRequest) {
         Math.round(
           last7.reduce((sum, p) => sum + (p.profit ?? 0), 0) * 100,
         ) / 100,
+    };
+
+    // --- Trend layer: last 7d vs prior 14d ---
+    // Powers "you're trending up" / "cold streak detected" insights. As the
+    // user accumulates more history, this gives the page a sense of
+    // momentum that absolute totals can't.
+    const twentyOneDaysAgo = new Date();
+    twentyOneDaysAgo.setDate(twentyOneDaysAgo.getDate() - 21);
+    const prior14 = rows.filter((p) => {
+      if (p.status === "pending") return false;
+      const createdAt = new Date(p.created_at);
+      return createdAt >= twentyOneDaysAgo && createdAt < sevenDaysAgo;
+    });
+    const last7Resolved = last7.length;
+    const prior14Resolved = prior14.length;
+    const last7WinRate =
+      last7Resolved > 0
+        ? (last7.filter((p) => p.status === "won").length / last7Resolved) * 100
+        : 0;
+    const prior14WinRate =
+      prior14Resolved > 0
+        ? (prior14.filter((p) => p.status === "won").length /
+            prior14Resolved) *
+          100
+        : 0;
+    const trend = {
+      last7WinRate: Math.round(last7WinRate * 100) / 100,
+      prior14WinRate: Math.round(prior14WinRate * 100) / 100,
+      delta: Math.round((last7WinRate - prior14WinRate) * 100) / 100,
+      last7Count: last7Resolved,
+      prior14Count: prior14Resolved,
+    };
+
+    // Cold/hot streak detection from the most recent 10 resolved bets.
+    // Streaks aren't just consecutive — a 2-8 stretch matters even if it
+    // wasn't all in a row. Surfaces the moment things go sideways.
+    const last10 = rows
+      .filter((p) => p.status !== "pending")
+      .slice(0, 10);
+    const last10WinRate =
+      last10.length > 0
+        ? (last10.filter((p) => p.status === "won").length / last10.length) *
+          100
+        : 0;
+    const recentForm = {
+      sample: last10.length,
+      winRate: Math.round(last10WinRate * 100) / 100,
+      isCold: last10.length >= 8 && last10WinRate < 25,
+      isHot: last10.length >= 8 && last10WinRate > 60,
     };
 
     // --- Sport breakdown (primary sport = first leg) ---
@@ -415,6 +472,40 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Trend insight — only fires when both windows have enough sample to
+    // be more than noise. Direction matters: improving = green, sliding =
+    // red. The delta gets surfaced in plain "+X pts" language.
+    if (trend.last7Count >= 8 && trend.prior14Count >= 8) {
+      if (trend.delta >= 8) {
+        insights.push({
+          tone: "good",
+          text: `You're trending up — last 7 days at ${trend.last7WinRate.toFixed(0)}% (${trend.last7Count} bets) vs prior 14 days at ${trend.prior14WinRate.toFixed(0)}%. +${trend.delta.toFixed(0)} pts. Whatever you adjusted, keep doing it.`,
+        });
+      } else if (trend.delta <= -8) {
+        insights.push({
+          tone: "bad",
+          text: `Sliding — last 7 days at ${trend.last7WinRate.toFixed(0)}% vs prior 14 at ${trend.prior14WinRate.toFixed(0)}%. ${trend.delta.toFixed(0)} pts. Pull back stake or pause for a day to reset.`,
+        });
+      }
+    }
+
+    // Cold streak — last 10 bets at <25%. Faster signal than the trend
+    // window. Designed to interrupt tilt before the user chases.
+    if (recentForm.isCold) {
+      insights.push({
+        tone: "bad",
+        text: `Cold streak: last ${recentForm.sample} bets at ${recentForm.winRate.toFixed(0)}%. Variance happens — but if you keep pressing, this is when bankrolls die. Drop stake or take a 24h break.`,
+      });
+    }
+
+    // Hot streak — different framing, NOT "keep pressing." Variance reverts.
+    if (recentForm.isHot) {
+      insights.push({
+        tone: "neutral",
+        text: `Heater: last ${recentForm.sample} bets at ${recentForm.winRate.toFixed(0)}%. Don't tilt up your stake — variance reverts. The math says you're due to cool off.`,
+      });
+    }
+
     // Per-leg vs parlay-rate gap — the most useful coaching insight when
     // sample is large enough. If individual picks hit at 60%+ but parlays
     // are at 40%, the format is the leak, not the picks.
@@ -503,6 +594,8 @@ export async function GET(req: NextRequest) {
         legCountBreakdown,
         oddsRangeBreakdown,
         perLeg,
+        trend,
+        recentForm,
         insights,
         recentBets,
       },
