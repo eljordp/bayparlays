@@ -137,6 +137,34 @@ function formatOdds(odds: number): string {
   return odds > 0 ? `+${odds}` : `${odds}`;
 }
 
+// Short, beginner-friendly tag for the bet type — reader doesn't need to
+// decode "+10.5" as a spread or "Over 8" as a total; the badge spells it out.
+// Returns null for unknown markets so the badge just hides instead of
+// rendering "?" garbage.
+function marketBadge(market: string | undefined | null): string | null {
+  switch ((market || "").toLowerCase()) {
+    case "moneyline":
+    case "h2h":
+    case "ml":
+      return "ML";
+    case "spread":
+    case "spreads":
+    case "runline":
+    case "puckline":
+      return "SPREAD";
+    case "total":
+    case "totals":
+    case "over":
+    case "under":
+      return "TOTAL";
+    case "prop":
+    case "props":
+      return "PROP";
+    default:
+      return null;
+  }
+}
+
 function confidenceLabel(c: number): { text: string; color: string; bg: string } {
   if (c >= 75) return { text: "High", color: "#0a0a0a", bg: "rgba(21,128,61,0.12)" };
   if (c >= 50) return { text: "Medium", color: "#FFB800", bg: "rgba(255,184,0,0.12)" };
@@ -1219,10 +1247,22 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
         <LegLogo leg={leg} />
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[15px] sm:text-base font-semibold truncate" style={{ color: "#0a0a0a" }}>
               {leg.pick}
             </span>
+            {marketBadge(leg.market) && (
+              <span
+                className="text-[10px] font-bold uppercase tracking-wider flex-shrink-0 px-1.5 py-0.5 rounded"
+                style={{
+                  color: "rgba(0,0,0,0.55)",
+                  background: "rgba(0,0,0,0.06)",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                }}
+              >
+                {marketBadge(leg.market)}
+              </span>
+            )}
             {showEdgeBadge && (
               <span
                 className="text-[10px] font-bold tabular-nums flex-shrink-0"
