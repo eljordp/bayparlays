@@ -33,9 +33,13 @@ interface Stats {
   winRate: number;
   totalProfit: number;
   roi: number;
+  unitStake?: number;
+  profitAtUnit?: number;
+  stakedAtUnit?: number;
+  bestPayoutAtUnit?: number;
   currentStreak: Streak;
   bestPayout: number;
-  last7Days: { won: number; lost: number; profit: number };
+  last7Days: { won: number; lost: number; profit: number; profitAtUnit?: number };
   resolvedSample?: number;
   smallSample?: boolean;
   avgClv?: number | null;
@@ -333,7 +337,9 @@ export default function ResultsPage() {
                         ? "#22c55e"
                         : "#ef4444"
                     }
-                    sublabel={formatMoney(stats.last7Days.profit)}
+                    sublabel={formatMoney(
+                      stats.last7Days.profitAtUnit ?? stats.last7Days.profit,
+                    )}
                     delay={0.1}
                   />
                   <StatCard
@@ -347,17 +353,21 @@ export default function ResultsPage() {
                   <StatCard
                     icon={<DollarSign size={16} />}
                     label="Total Profit"
-                    value={formatMoney(stats.totalProfit)}
-                    valueColor={stats.totalProfit >= 0 ? "#22c55e" : "#ef4444"}
-                    sublabel={`${stats.roi >= 0 ? "+" : ""}${stats.roi.toFixed(1)}% ROI`}
+                    value={formatMoney(stats.profitAtUnit ?? stats.totalProfit)}
+                    valueColor={
+                      (stats.profitAtUnit ?? stats.totalProfit) >= 0
+                        ? "#22c55e"
+                        : "#ef4444"
+                    }
+                    sublabel={`At $${stats.unitStake ?? 10}/pick`}
                     delay={0.2}
                   />
                   <StatCard
                     icon={<Zap size={16} />}
                     label="Best Payout"
-                    value={`$${stats.bestPayout.toLocaleString()}`}
+                    value={`$${(stats.bestPayoutAtUnit ?? stats.bestPayout).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                     valueColor="#0a0a0a"
-                    sublabel="Single parlay"
+                    sublabel={`Single parlay · $${stats.unitStake ?? 10} stake`}
                     delay={0.25}
                   />
                   {typeof stats.avgClv === "number" && (stats.clvSample ?? 0) > 0 && (

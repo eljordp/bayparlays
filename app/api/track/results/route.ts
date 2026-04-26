@@ -88,8 +88,9 @@ export async function GET() {
     // Beginner-friendly framing: recompute profit at a flat $10/pick. Same
     // record, same win rate — just a stake size that matches what the user
     // actually does in the Simulator ("Try $10 in Simulator"). Avoids the
-    // confusing "+$14K profit" reading on the home page when actual stored
-    // stakes default to $100.
+    // confusing "+$23K profit" reading when actual stored stakes default to
+    // $100. Best payout + last-7 profit get rescaled below once their source
+    // arrays exist, so the whole page tells a consistent dollar story.
     const UNIT_STAKE = 10;
     const profitAtUnit = rows.reduce((sum, p) => {
       if (p.status === "won") {
@@ -158,7 +159,23 @@ export async function GET() {
         Math.round(
           last7.reduce((sum, p) => sum + (p.profit ?? 0), 0) * 100,
         ) / 100,
+      profitAtUnit:
+        Math.round(
+          last7.reduce((sum, p) => {
+            if (p.status === "won")
+              return sum + UNIT_STAKE * ((p.combined_decimal ?? 1) - 1);
+            if (p.status === "lost") return sum - UNIT_STAKE;
+            return sum;
+          }, 0) * 100,
+        ) / 100,
     };
+
+    const bestPayoutAtUnit =
+      wonParlays.length > 0
+        ? Math.max(
+            ...wonParlays.map((p) => UNIT_STAKE * (p.combined_decimal ?? 1)),
+          )
+        : 0;
 
     // --- Sport breakdown (each parlay counted once, on primary sport) ---
     const sportMap = new Map<string, { won: number; lost: number }>();
@@ -270,6 +287,7 @@ export async function GET() {
           unitStake: UNIT_STAKE,
           profitAtUnit: Math.round(profitAtUnit * 100) / 100,
           stakedAtUnit,
+          bestPayoutAtUnit: Math.round(bestPayoutAtUnit * 100) / 100,
           currentStreak: { type: streakType, count: streakCount },
           bestPayout,
           last7Days,
