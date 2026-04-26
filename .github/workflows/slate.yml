@@ -1,0 +1,39 @@
+name: BayParlays Daily Slate
+
+# Generates the canonical slate of 12 parlays four times a day. Users see
+# the SAME parlays in the active window — fixes the "I refreshed and my
+# pick disappeared" UX problem and gives the data analyst (you, me)
+# clean per-slate buckets to compare hit rates across windows.
+#
+# Slate windows (UTC):
+#   12:00 → "morning" slate (5am PT) — drops over breakfast
+#   18:00 → "midday" slate (11am PT) — most users browse here
+#   00:00 → "evening" slate (5pm PT) — primetime drop, IG content moment
+#   04:00 → "late" slate (9pm PT) — west coast late games
+#
+# Each run hits /api/parlays internally to generate combos, so credit cost
+# is ~6-9 Odds API credits per slate (3 sort modes × 3 sport mix). Total:
+# ~25-35 credits/day for slate generation, on top of pre-tip-capture.
+
+on:
+  schedule:
+    - cron: "0 12,18,0,4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  slate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger /api/cron/generate-slate
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/generate-slate" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              --max-time 90
+          else
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/generate-slate" \
+              --max-time 90
+          fi

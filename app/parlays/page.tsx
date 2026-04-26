@@ -89,6 +89,8 @@ interface Meta {
 interface ParlayResponse {
   parlays: Parlay[];
   meta: Meta;
+  slate_id?: string | null;
+  mode?: string;
 }
 
 /* ─── Constants ─── */
@@ -220,6 +222,7 @@ function slipCombined(legs: Leg[]): {
 export default function ParlaysPage() {
   const [parlays, setParlays] = useState<Parlay[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
+  const [slateId, setSlateId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -354,40 +357,52 @@ export default function ParlaysPage() {
               ? 8
               : 4;
 
-      // "All" legs (selectedLegs = null) = fan-out: fetch 2/3/4-leg variants
-      // in parallel, merge, then curate a mix. Users get variety by default
-      // without clicking around. Specific leg selection skips the fan-out.
-      const legCounts = selectedLegs ? [selectedLegs] : [2, 3, 4];
-      const perCall = Math.max(
-        2,
-        Math.ceil(countForTier / legCounts.length),
-      );
+      // Default mode: read the active Daily Slate (12 fixed picks, refreshed
+      // 4x/day). Power users (admin) can opt out via ?live=1 in the URL to
+      // get live-generated combos. Filters apply client-side over the slate.
+      const liveOverride =
+        typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("live") === "1";
+      const useSlate = !liveOverride && effectiveTier !== "free"; // free still gets live (legacy)
 
-      const buildUrl = (legs: number) => {
-        const p = new URLSearchParams({
-          count: String(perCall),
-          tier: effectiveTier,
-          legs: String(legs),
-          sort: sortBy,
-        });
-        if (selectedSport !== "All") p.set("sports", selectedSport);
-        return `/api/parlays?${p.toString()}`;
-      };
-
-      const responses = await Promise.all(
-        legCounts.map((n) =>
-          fetch(buildUrl(n))
-            .then((r) => (r.ok ? (r.json() as Promise<ParlayResponse>) : null))
-            .catch(() => null),
-        ),
-      );
+      let responses: (ParlayResponse | null)[];
+      if (useSlate) {
+        const slateUrl = `/api/parlays?mode=slate&tier=${effectiveTier}`;
+        const r = await fetch(slateUrl, { cache: "no-store" })
+          .then((res) => (res.ok ? (res.json() as Promise<ParlayResponse>) : null))
+          .catch(() => null);
+        responses = [r];
+      } else {
+        // Live fan-out — preserved for free tier + ?live=1 admin override
+        const legCounts = selectedLegs ? [selectedLegs] : [2, 3, 4];
+        const perCall = Math.max(2, Math.ceil(countForTier / legCounts.length));
+        const buildUrl = (legs: number) => {
+          const p = new URLSearchParams({
+            count: String(perCall),
+            tier: effectiveTier,
+            legs: String(legs),
+            sort: sortBy,
+          });
+          if (selectedSport !== "All") p.set("sports", selectedSport);
+          return `/api/parlays?${p.toString()}`;
+        };
+        responses = await Promise.all(
+          legCounts.map((n) =>
+            fetch(buildUrl(n))
+              .then((r) => (r.ok ? (r.json() as Promise<ParlayResponse>) : null))
+              .catch(() => null),
+          ),
+        );
+      }
 
       const merged: Parlay[] = [];
       let lastMeta: Meta | null = null;
+      let captureSlateId: string | null = null;
       for (const r of responses) {
         if (!r) continue;
         merged.push(...r.parlays);
         lastMeta = r.meta;
+        if (r.slate_id) captureSlateId = r.slate_id;
       }
 
       // Re-sort merged picks by whatever mode is active so the Lock stays #1.
@@ -397,6 +412,7 @@ export default function ParlaysPage() {
 
       setParlays(merged.slice(0, countForTier));
       setMeta(lastMeta);
+      setSlateId(captureSlateId);
     } catch {
       setError("Unable to load parlays right now.");
       setParlays([]);
@@ -527,14 +543,26 @@ export default function ParlaysPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-6 flex-wrap">
               <div
                 className="w-2.5 h-2.5 rounded-full glow-pulse"
                 style={{ background: "#0a0a0a" }}
               />
               <span className="text-xs font-medium tracking-widest uppercase" style={{ color: "#0a0a0a" }}>
-                Live &middot; Updated every 5 minutes
+                {slateId
+                  ? (() => {
+                      // slate_id format: 2026-04-26-evening
+                      const parts = slateId.split("-");
+                      const window = parts[3] || "current";
+                      return `${window} slate · drops 4× daily`;
+                    })()
+                  : "Live · Updated every 5 minutes"}
               </span>
+              {slateId && (
+                <span className="text-[10px] tracking-wider text-black/35 font-mono">
+                  {slateId}
+                </span>
+              )}
             </div>
 
             <h1

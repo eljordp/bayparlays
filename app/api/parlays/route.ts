@@ -1685,6 +1685,75 @@ export async function GET(request: NextRequest) {
     // the wider slate. Free users get the tightest-quality pool.
     const tier = (searchParams.get("tier") || "sharp").toLowerCase();
 
+    // mode=slate returns the active Daily Slate (12 fixed picks rotated 4x/day)
+    // instead of generating fresh combos per request. Fixes the "I refreshed and
+    // my parlay disappeared" UX problem and gives users a stable set to bet on.
+    const mode = (searchParams.get("mode") || "live").toLowerCase();
+    if (mode === "slate") {
+      const { supabase } = await import("@/lib/supabase");
+      // Find the most recent slate_id (the active slate). Reading by created_at
+      // descending and taking the first slate_id surfaces the latest one
+      // regardless of which window it represents.
+      const { data: latest } = await supabase
+        .from("parlays")
+        .select("slate_id")
+        .not("slate_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const activeSlateId = latest?.slate_id;
+      if (!activeSlateId) {
+        return NextResponse.json(
+          {
+            parlays: [],
+            slate_id: null,
+            mode: "slate",
+            message: "No slate generated yet — first cron will fire soon.",
+          },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
+
+      const { data: slateRows } = await supabase
+        .from("parlays")
+        .select("*")
+        .eq("slate_id", activeSlateId)
+        .order("created_at", { ascending: false });
+
+      const parlays = (slateRows || []).map((p) => ({
+        id: p.id,
+        legs: p.legs,
+        combinedOdds: p.combined_odds,
+        combinedDecimal: p.combined_decimal,
+        ev: p.ev,
+        evPercent: p.ev_percent,
+        confidence: p.confidence,
+        payout: p.payout,
+        timestamp: p.created_at,
+        category: p.category,
+        impliedHitRate: p.combined_decimal && p.combined_decimal > 1
+          ? Math.round((1 / p.combined_decimal) * 10000) / 100
+          : undefined,
+        aiEstimate: p.confidence,
+      }));
+
+      return NextResponse.json(
+        {
+          parlays,
+          slate_id: activeSlateId,
+          mode: "slate",
+          meta: {
+            sportsScanned: sports,
+            gamesAnalyzed: 0,
+            legsEvaluated: 0,
+            generatedAt: latest?.slate_id ?? new Date().toISOString(),
+          },
+        },
+        { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60" } },
+      );
+    }
+
     // Check cache (cache key includes tier — free/sharp/vip responses differ)
     const cached = getCachedResponse(sports, numLegs, count, sortMode + ":" + tier);
     if (cached) {
