@@ -77,6 +77,46 @@ function getGameStatus(legs: SimLeg[]): GameStatus | null {
   return { kind: "awaiting", label: "Awaiting result" };
 }
 
+/* ─── Live game state — per-leg badges sourced from /api/track/game-status ─── */
+
+interface GameStatusRow {
+  key: string;
+  homeTeam: string;
+  awayTeam: string;
+  state: "pre" | "in" | "post";
+  statusDetail: string;
+  startsAt: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  period: number | null;
+  displayClock: string | null;
+}
+
+function normalizeGameKey(teamA: string, teamB: string): string {
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const [a, b] = [norm(teamA), norm(teamB)].sort();
+  return `${a}__${b}`;
+}
+
+function gameStringKey(game: string): string | null {
+  if (!game) return null;
+  const m = game.match(/^(.+?)\s+(?:vs|@|at)\s+(.+)$/i);
+  if (!m) return null;
+  return normalizeGameKey(m[1], m[2]);
+}
+
+function formatStartTime(iso: string): string {
+  const d = new Date(iso);
+  const now = Date.now();
+  const diffMin = Math.round((d.getTime() - now) / 60000);
+  if (diffMin <= 0) return "starting";
+  if (diffMin < 60) return `in ${diffMin}m`;
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  if (h < 12) return m > 0 ? `in ${h}h ${m}m` : `in ${h}h`;
+  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 type PickCategory = "ev" | "payout" | "confidence";
 
 interface SimParlay {
@@ -149,6 +189,11 @@ export default function SimulatorPage() {
   // Cash out state
   const [cashoutValues, setCashoutValues] = useState<Record<string, number>>({});
   const [cashingOut, setCashingOut] = useState<string | null>(null);
+
+  // Live game status keyed by normalized "teamA__teamB"
+  const [gameStatuses, setGameStatuses] = useState<Map<string, GameStatusRow>>(
+    new Map(),
+  );
 
   // Edit stake state
   const [editingParlay, setEditingParlay] = useState<string | null>(null);
@@ -251,6 +296,47 @@ export default function SimulatorPage() {
       fetchCashoutValues();
     }
   }, [parlays, fetchCashoutValues]);
+
+  // Live game state for every sport across pending parlays. One call covers
+  // today + yesterday across all requested sports, refreshed every 60s while
+  // any bet is open. Powers the per-leg LIVE/Final/Starts-In badges.
+  useEffect(() => {
+    const pending = parlays.filter((p) => p.status === "pending");
+    if (pending.length === 0) return;
+
+    const sports = new Set<string>();
+    for (const p of pending) {
+      for (const leg of p.legs) {
+        if (leg.sport) sports.add(leg.sport.toUpperCase());
+      }
+    }
+    if (sports.size === 0) return;
+
+    let cancelled = false;
+    async function fetchStatuses() {
+      try {
+        const res = await fetch(
+          `/api/track/game-status?sports=${Array.from(sports).join(",")}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const json: { games: GameStatusRow[] } = await res.json();
+        if (cancelled) return;
+        const map = new Map<string, GameStatusRow>();
+        for (const g of json.games) map.set(g.key, g);
+        setGameStatuses(map);
+      } catch {
+        // Non-fatal — leg badges just hide
+      }
+    }
+
+    fetchStatuses();
+    const id = setInterval(fetchStatuses, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [parlays]);
 
   useEffect(() => {
     if (isVip && user) {
@@ -897,20 +983,81 @@ export default function SimulatorPage() {
 
                         {expandedParlay === p.id && (
                           <div className="px-4 md:px-6 pb-4 space-y-2 border-t border-black/[0.04] pt-3">
-                            {p.legs.map((leg, j) => (
-                              <div key={j} className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[10px] font-bold uppercase tracking-wider bg-black/[0.06] text-black/45 px-1.5 py-0.5 rounded">
-                                    {leg.sport}
+                            {p.legs.map((leg, j) => {
+                              const gkey = gameStringKey(leg.game || "");
+                              const status = gkey ? gameStatuses.get(gkey) : null;
+                              return (
+                                <div key={j} className="flex items-center justify-between text-sm gap-3">
+                                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider bg-black/[0.06] text-black/45 px-1.5 py-0.5 rounded">
+                                      {leg.sport}
+                                    </span>
+                                    {status && (
+                                      <span
+                                        className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded inline-flex items-center gap-1"
+                                        style={{
+                                          background:
+                                            status.state === "in"
+                                              ? "rgba(34,197,94,0.12)"
+                                              : status.state === "post"
+                                                ? "rgba(0,0,0,0.06)"
+                                                : "rgba(59,130,246,0.10)",
+                                          color:
+                                            status.state === "in"
+                                              ? "#22c55e"
+                                              : status.state === "post"
+                                                ? "rgba(0,0,0,0.6)"
+                                                : "#60a5fa",
+                                          border: `1px solid ${
+                                            status.state === "in"
+                                              ? "rgba(34,197,94,0.25)"
+                                              : status.state === "post"
+                                                ? "rgba(0,0,0,0.08)"
+                                                : "rgba(59,130,246,0.2)"
+                                          }`,
+                                        }}
+                                      >
+                                        {status.state === "in" && (
+                                          <span
+                                            className="w-1.5 h-1.5 rounded-full"
+                                            style={{ background: "#22c55e" }}
+                                          />
+                                        )}
+                                        {status.state === "in"
+                                          ? `LIVE · ${status.statusDetail}${
+                                              status.homeScore !== null &&
+                                              status.awayScore !== null
+                                                ? ` · ${status.awayScore}-${status.homeScore}`
+                                                : ""
+                                            }`
+                                          : status.state === "post"
+                                            ? `Final · ${status.awayScore ?? "?"}-${status.homeScore ?? "?"}`
+                                            : status.startsAt
+                                              ? `Starts ${formatStartTime(status.startsAt)}`
+                                              : "Scheduled"}
+                                      </span>
+                                    )}
+                                    {!status && leg.commenceTime && (
+                                      <span
+                                        className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
+                                        style={{
+                                          background: "rgba(59,130,246,0.08)",
+                                          color: "#60a5fa",
+                                          border: "1px solid rgba(59,130,246,0.15)",
+                                        }}
+                                      >
+                                        Starts {formatStartTime(leg.commenceTime)}
+                                      </span>
+                                    )}
+                                    <span className="text-black/60 truncate">{leg.pick}</span>
+                                    <span className="text-black/40 text-xs truncate">{leg.game}</span>
+                                  </div>
+                                  <span className="text-black/55 flex-shrink-0" style={{ fontFamily: "var(--font-geist-mono)" }}>
+                                    {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
                                   </span>
-                                  <span className="text-black/60">{leg.pick}</span>
-                                  <span className="text-black/40 text-xs">{leg.game}</span>
                                 </div>
-                                <span className="text-black/55" style={{ fontFamily: "var(--font-geist-mono)" }}>
-                                  {leg.odds > 0 ? `+${leg.odds}` : leg.odds}
-                                </span>
-                              </div>
-                            ))}
+                              );
+                            })}
 
                             <div className="pt-3 mt-2 border-t border-black/[0.04] space-y-3">
                               {editingParlay === p.id ? (
