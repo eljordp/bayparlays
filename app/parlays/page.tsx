@@ -262,19 +262,24 @@ export default function ParlaysPage() {
 
   const { user, isPro, isAdmin: isAuthAdmin, tier } = useAuth();
 
-  // Fetch pending sim bets to mark parlays already placed
+  // Fetch placed sim bets to mark parlays already placed. Refreshed every 30s
+  // so cards generated AFTER the user placed bets correctly reflect what's
+  // already in their sim history (without this, the page mixed "in sim" cards
+  // with newly-cron'd cards and users couldn't tell what they'd actually placed).
   useEffect(() => {
     if (!user) {
-      // Logged-out users have no sims by definition — mark as loaded so the
-      // button renders its normal state instead of an indefinite "Checking".
       setPendingSimsLoaded(true);
       return;
     }
+    let cancelled = false;
     async function fetchPendingSims() {
       try {
-        const res = await fetch(`/api/sim?user_id=${user!.id}`);
+        const res = await fetch(`/api/sim?user_id=${user!.id}`, {
+          cache: "no-store",
+        });
         if (res.ok) {
           const data = await res.json();
+          if (cancelled) return;
           const sigs = new Set<string>();
           for (const p of data.parlays || []) {
             const sig = (p.legs || [])
@@ -288,10 +293,15 @@ export default function ParlaysPage() {
       } catch {
         // silent
       } finally {
-        setPendingSimsLoaded(true);
+        if (!cancelled) setPendingSimsLoaded(true);
       }
     }
     fetchPendingSims();
+    const id = setInterval(fetchPendingSims, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [user]);
 
   // Admin bypass — check for admin key in URL or localStorage
