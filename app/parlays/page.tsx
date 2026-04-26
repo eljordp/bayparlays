@@ -999,7 +999,10 @@ function ParlayCard({
             >
               $100 pays
             </div>
-            <div className="text-2xl sm:text-3xl font-bold text-white tabular-nums">
+            <div
+              className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums"
+              style={{ color: "#0a0a0a", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
+            >
               ${parlay.payout.toLocaleString()}
             </div>
           </div>
