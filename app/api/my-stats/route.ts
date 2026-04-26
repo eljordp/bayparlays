@@ -29,6 +29,9 @@ interface SimParlayRow {
   profit: number | null;
   resolved_at: string | null;
   category: Category | null;
+  legs_won: number | null;
+  legs_lost: number | null;
+  legs_total: number | null;
 }
 
 const NO_STORE_HEADERS = {
@@ -80,6 +83,7 @@ function emptyPayload() {
       profit: number;
       winRate: number;
     }>,
+    perLeg: { won: 0, total: 0, hitRate: 0, sampledParlays: 0 },
     insights: [] as Array<{ tone: "good" | "bad" | "neutral"; text: string }>,
     recentBets: [] as Array<{
       id: string;
@@ -222,14 +226,19 @@ export async function GET(req: NextRequest) {
       }),
     );
 
-    // --- Category breakdown ---
-    const categoryMap = new Map<Category, { won: number; lost: number }>();
+    // --- Category breakdown (with profit so insights can reason about $) ---
+    const categoryMap = new Map<
+      Category,
+      { won: number; lost: number; profit: number }
+    >();
     for (const p of rows) {
       if (p.status === "pending") continue;
       if (!p.category) continue;
-      const entry = categoryMap.get(p.category) ?? { won: 0, lost: 0 };
+      const entry =
+        categoryMap.get(p.category) ?? { won: 0, lost: 0, profit: 0 };
       if (p.status === "won") entry.won++;
       if (p.status === "lost") entry.lost++;
+      entry.profit += p.profit ?? 0;
       categoryMap.set(p.category, entry);
     }
     const categoryBreakdown = Array.from(categoryMap.entries()).map(
@@ -237,6 +246,7 @@ export async function GET(req: NextRequest) {
         category,
         won: data.won,
         lost: data.lost,
+        profit: Math.round(data.profit * 100) / 100,
         winRate:
           data.won + data.lost > 0
             ? Math.round((data.won / (data.won + data.lost)) * 10000) / 100
@@ -314,31 +324,79 @@ export async function GET(req: NextRequest) {
         };
       });
 
+    // --- Per-leg hit rate (only counts rows the resolver populated) ---
+    // Different from parlay hit rate — a 30% parlay record with 65% per-leg
+    // is "your picks are mostly right, the parlay format is what's eating
+    // you" — actionable, distinct insight.
+    let perLegWon = 0;
+    let perLegTotal = 0;
+    let perLegSampled = 0;
+    for (const p of rows) {
+      if (p.status === "pending") continue;
+      if (p.legs_total == null) continue; // Pre-migration row
+      perLegWon += p.legs_won ?? 0;
+      perLegTotal += p.legs_total;
+      perLegSampled++;
+    }
+    const perLeg = {
+      won: perLegWon,
+      total: perLegTotal,
+      hitRate:
+        perLegTotal > 0
+          ? Math.round((perLegWon / perLegTotal) * 10000) / 100
+          : 0,
+      sampledParlays: perLegSampled,
+    };
+
     // --- Coaching insights — auto-generated, plain English ---
     // Pulls from the breakdowns we just built. Each insight is short, names
     // the specific metric, and tells the user what to do with it. No filler.
     const insights: Array<{ tone: "good" | "bad" | "neutral"; text: string }> = [];
 
-    // Strongest category
+    // Category-level insights — judge on profit, not just hit rate. A 25%
+    // category that's net positive at long odds is doing exactly what it's
+    // designed for; flagging it as "leak" would be wrong.
     const cats = categoryBreakdown.filter((c) => c.won + c.lost >= 5);
     if (cats.length > 0) {
-      const best = cats.reduce((a, b) => (b.winRate > a.winRate ? b : a));
       const labelMap: Record<Category, string> = {
         ev: "Best EV",
         payout: "Highest Payout",
         confidence: "Most Confident",
       };
-      if (best.winRate >= 45) {
+      // Profitable + decent hit rate → flag as edge
+      const best = cats.reduce((a, b) =>
+        (b.profit ?? 0) > (a.profit ?? 0) ? b : a,
+      );
+      if ((best.profit ?? 0) > 0 && best.winRate >= 40) {
         insights.push({
           tone: "good",
-          text: `Your edge is ${labelMap[best.category]} (${best.winRate.toFixed(0)}% on ${best.won + best.lost} bets). Keep leaning here.`,
+          text: `Your edge is ${labelMap[best.category]} (${best.winRate.toFixed(0)}% on ${best.won + best.lost} bets, +$${(best.profit ?? 0).toFixed(0)}). Keep leaning here.`,
         });
       }
-      const worst = cats.reduce((a, b) => (b.winRate < a.winRate ? b : a));
-      if (worst.winRate < 25 && worst.category !== best.category) {
+      // Real leak = actually losing money, not just low hit rate
+      const losers = cats.filter((c) => (c.profit ?? 0) < -10);
+      if (losers.length > 0) {
+        const worst = losers.reduce((a, b) =>
+          (b.profit ?? 0) < (a.profit ?? 0) ? b : a,
+        );
         insights.push({
           tone: "bad",
-          text: `${labelMap[worst.category]} is leaking — ${worst.won}-${worst.lost} (${worst.winRate.toFixed(0)}%). Consider skipping these.`,
+          text: `${labelMap[worst.category]} is bleeding — ${worst.won}-${worst.lost}, $${(worst.profit ?? 0).toFixed(0)}. The math isn't working in this category.`,
+        });
+      }
+      // High-variance category — low hit but barely net positive. Flag as
+      // "watch, don't chase" instead of "stop." Sample needs more bets.
+      const highVariance = cats.find(
+        (c) =>
+          c.winRate < 20 &&
+          (c.profit ?? 0) >= 0 &&
+          (c.profit ?? 0) < 50 &&
+          c.won + c.lost < 25,
+      );
+      if (highVariance) {
+        insights.push({
+          tone: "neutral",
+          text: `${labelMap[highVariance.category]} is high-variance (${highVariance.won}-${highVariance.lost}, ${highVariance.winRate.toFixed(0)}%, +$${(highVariance.profit ?? 0).toFixed(0)}). Net positive but a swing away from breakeven — need 25+ bets to know if there's edge.`,
         });
       }
     }
@@ -357,15 +415,37 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Odds-range win rate sanity check
-    const longshots = oddsRangeBreakdown.find(
-      (o) => o.label.startsWith("Longshot") || o.label.startsWith("Long"),
+    // Per-leg vs parlay-rate gap — the most useful coaching insight when
+    // sample is large enough. If individual picks hit at 60%+ but parlays
+    // are at 40%, the format is the leak, not the picks.
+    if (perLeg.sampledParlays >= 15 && perLeg.hitRate > 0 && winRate > 0) {
+      const gap = perLeg.hitRate - winRate;
+      if (gap >= 15) {
+        insights.push({
+          tone: "neutral",
+          text: `Your per-leg hit rate (${perLeg.hitRate.toFixed(0)}%) is way higher than your parlay hit rate (${winRate.toFixed(0)}%). Picks are good — the parlay format is grinding you. Try more singles or 2-leg max.`,
+        });
+      }
+    }
+
+    // Odds-range insight — only flag as bad if the dollar math is also bad.
+    // A 10% hit rate at +1500 odds can still be net positive; calling it a
+    // "leak" would be wrong.
+    const longshots = oddsRangeBreakdown.find((o) =>
+      o.label.startsWith("Longshot"),
     );
-    if (longshots && longshots.won + longshots.lost >= 8 && longshots.winRate < 15) {
-      insights.push({
-        tone: "bad",
-        text: `Longshots aren't hitting (${longshots.won}-${longshots.lost}, ${longshots.winRate.toFixed(0)}%). Tighten to shorter parlays if you want consistent W's.`,
-      });
+    if (longshots && longshots.won + longshots.lost >= 10) {
+      if (longshots.profit < -20) {
+        insights.push({
+          tone: "bad",
+          text: `Longshots are losing money — ${longshots.won}-${longshots.lost}, $${longshots.profit.toFixed(0)}. The hits aren't paying enough to cover the misses. Fade this range.`,
+        });
+      } else if (longshots.winRate < 15 && longshots.profit < 30) {
+        insights.push({
+          tone: "neutral",
+          text: `Longshots are barely above water (${longshots.won}-${longshots.lost}, +$${longshots.profit.toFixed(0)}). High variance — one cold streak flips this red. Keep stake small here.`,
+        });
+      }
     }
 
     // Sport edge
@@ -422,6 +502,7 @@ export async function GET(req: NextRequest) {
         categoryBreakdown,
         legCountBreakdown,
         oddsRangeBreakdown,
+        perLeg,
         insights,
         recentBets,
       },

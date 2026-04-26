@@ -177,6 +177,12 @@ export async function GET() {
       let allResolved = true;
       let anyLost = false;
       let allWon = true;
+      // Track per-leg outcomes so /my-stats can compute per-leg hit rate
+      // (decoupled from parlay-level hit rate — a 30% parlay record with
+      // 65% per-leg hit rate tells the user "your picks are mostly right,
+      // the parlay format is what's eating you").
+      let legsWon = 0;
+      let legsLost = 0;
 
       for (const leg of legs) {
         const sportKey = SPORT_MAP[leg.sport?.toUpperCase()];
@@ -198,6 +204,9 @@ export async function GET() {
         } else if (!result) {
           anyLost = true;
           allWon = false;
+          legsLost++;
+        } else {
+          legsWon++;
         }
       }
 
@@ -229,6 +238,9 @@ export async function GET() {
           status: newStatus,
           profit,
           resolved_at: new Date().toISOString(),
+          legs_won: legsWon,
+          legs_lost: legsLost,
+          legs_total: legs.length,
         })
         .eq("id", parlay.id)
         .eq("status", "pending")

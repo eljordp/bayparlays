@@ -55,6 +55,7 @@ interface CategoryBreakdown {
   category: Category;
   won: number;
   lost: number;
+  profit?: number;
   winRate: number;
 }
 
@@ -144,12 +145,20 @@ interface Insight {
   text: string;
 }
 
+interface PerLegStats {
+  won: number;
+  total: number;
+  hitRate: number;
+  sampledParlays: number;
+}
+
 interface MyStatsData {
   stats: Stats;
   sportBreakdown: SportBreakdown[];
   categoryBreakdown: CategoryBreakdown[];
   legCountBreakdown?: LegCountBreakdown[];
   oddsRangeBreakdown?: OddsRangeBreakdown[];
+  perLeg?: PerLegStats;
   insights?: Insight[];
   recentBets: RecentBet[];
 }
@@ -343,6 +352,7 @@ export default function MyStatsPage() {
   const categoryBreakdown = data?.categoryBreakdown ?? [];
   const legCountBreakdown = data?.legCountBreakdown ?? [];
   const oddsRangeBreakdown = data?.oddsRangeBreakdown ?? [];
+  const perLeg = data?.perLeg;
   const insights = data?.insights ?? [];
   const recentBets = data?.recentBets ?? [];
   const maxSportWinRate = Math.max(...sportBreakdown.map((s) => s.winRate), 1);
@@ -1319,7 +1329,8 @@ export default function MyStatsPage() {
                 {/* ─── Deeper Stats ─── */}
                 {(insights.length > 0 ||
                   legCountBreakdown.length > 0 ||
-                  oddsRangeBreakdown.length > 0) && (
+                  oddsRangeBreakdown.length > 0 ||
+                  (perLeg && perLeg.total > 0)) && (
                   <motion.div
                     className="mt-16 md:mt-20"
                     initial={{ opacity: 0, y: 16 }}
@@ -1341,6 +1352,42 @@ export default function MyStatsPage() {
                     >
                       Where you&apos;re winning, where you&apos;re leaking, what to lean into. All from your sim history.
                     </p>
+
+                    {/* Per-leg hit rate — the diagnostic stat */}
+                    {perLeg && perLeg.total > 0 && (
+                      <div
+                        className="mb-8 rounded-xl p-5 md:p-6"
+                        style={{
+                          background: "#FFFFFF",
+                          border: "1px solid rgba(0,0,0,0.06)",
+                        }}
+                      >
+                        <div className="flex items-baseline justify-between gap-4 flex-wrap">
+                          <div>
+                            <div className="text-xs uppercase tracking-widest text-black/45 mb-2">
+                              Per-Leg Hit Rate
+                            </div>
+                            <div
+                              className="text-3xl md:text-4xl font-bold"
+                              style={{
+                                color:
+                                  perLeg.hitRate >= 50 ? "#22C55E" : "#0a0a0a",
+                                fontFamily: "var(--font-geist-mono)",
+                              }}
+                            >
+                              {perLeg.hitRate.toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-black/40 mt-2">
+                              {perLeg.won} of {perLeg.total} individual picks hit · across {perLeg.sampledParlays} resolved parlays
+                            </div>
+                          </div>
+                          <div className="max-w-sm text-xs leading-relaxed text-black/55">
+                            How often each individual leg hits, separate from whether the parlay cashed.
+                            A high per-leg with a low parlay rate means your picks are right but the parlay format is grinding you — go shorter.
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Insights — auto-generated coaching */}
                     {insights.length > 0 && (
