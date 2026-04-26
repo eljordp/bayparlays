@@ -1,12 +1,17 @@
 name: BayParlays Periodic Refresh
 
-# Runs every 3 hours. Hits /api/daily which resolves pending parlays
-# against real scores, generates fresh AI picks, and checks sim bets.
-# This replaces the Vercel Hobby once-a-day limit.
+# Hits /api/daily which resolves pending parlays against real scores,
+# generates fresh AI picks, and checks sim bets. Each invocation pulls
+# odds for ~3 sports across multiple combos = ~12-20 Odds API credits.
+#
+# Bumped from every 3 hours → every 6 hours on 2026-04-26 to extend Odds
+# API runway. Picks still generate 4x/day at 0/6/12/18 UTC, which lines
+# up with morning slate, midday refresh, evening slate, and overnight
+# resolution. Revert to */3 once on a 20K+ credits plan.
 
 on:
   schedule:
-    - cron: "0 */3 * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch: {} # lets you trigger manually from the Actions tab
 
 jobs:

@@ -12,8 +12,13 @@ on:
     # US game hours only — 5pm ET (22:00 UTC) through 1am ET next day (06:00
     # UTC). Outside this window most pre-tip captures would just be hitting
     # /api/odds for sports with no upcoming games — pure API-credit waste.
-    - cron: "*/10 22-23 * * *"
-    - cron: "*/10 0-5 * * *"
+    #
+    # Bumped from every 10 min → every 30 min on 2026-04-26 to extend Odds
+    # API runway on the 500/mo plan. CLV granularity drops 3x but the
+    # 30-min window still catches most pre-tip line moves. Revert to */10
+    # once on a 20K+ credits plan.
+    - cron: "*/30 22-23 * * *"
+    - cron: "*/30 0-5 * * *"
   workflow_dispatch: {}
 
 jobs:
