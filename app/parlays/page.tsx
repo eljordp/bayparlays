@@ -180,6 +180,41 @@ function timeAgo(timestamp: string): string {
   return `${hrs}h ago`;
 }
 
+// ── Build-Your-Own-Parlay slip helpers ─────────────────────────────────────
+// Friend feedback: "Ai suggests the picks right and I should also be able to
+// pair what I want in the simulator." So legs are individually addable to a
+// custom slip; AI does the research, user does the combination.
+
+const SLIP_MAX_LEGS = 8;
+const SLIP_DEFAULT_STAKE = 10;
+
+function legKey(leg: Pick<Leg, "game" | "pick">): string {
+  return `${leg.game}::${leg.pick}`;
+}
+
+function americanToDecimal(odds: number): number {
+  return odds > 0 ? odds / 100 + 1 : 100 / Math.abs(odds) + 1;
+}
+
+function decimalToAmerican(d: number): number {
+  if (d >= 2) return Math.round((d - 1) * 100);
+  return Math.round(-100 / (d - 1));
+}
+
+function slipCombined(legs: Leg[]): {
+  decimal: number;
+  american: number;
+  americanStr: string;
+} {
+  const decimal = legs.reduce(
+    (acc, l) => acc * americanToDecimal(l.odds),
+    1,
+  );
+  const american = decimalToAmerican(decimal);
+  const americanStr = american > 0 ? `+${american}` : `${american}`;
+  return { decimal, american, americanStr };
+}
+
 /* ─── Component ─── */
 
 export default function ParlaysPage() {
@@ -202,6 +237,28 @@ export default function ParlaysPage() {
   // resolves and flips it to "Already in Sim" — users who click fast enough
   // hit a 409 instead of seeing the blocked state upfront.
   const [pendingSimsLoaded, setPendingSimsLoaded] = useState(false);
+
+  // BYO slip state
+  const [slip, setSlip] = useState<Leg[]>([]);
+  const [slipExpanded, setSlipExpanded] = useState(false);
+  const [slipPlacing, setSlipPlacing] = useState(false);
+  const [slipFlash, setSlipFlash] = useState<string | null>(null);
+  const slipKeys = new Set(slip.map((l) => legKey(l)));
+
+  const addToSlip = useCallback((leg: Leg) => {
+    setSlip((prev) => {
+      const k = legKey(leg);
+      if (prev.some((l) => legKey(l) === k)) return prev;
+      if (prev.length >= SLIP_MAX_LEGS) return prev;
+      return [...prev, leg];
+    });
+  }, []);
+
+  const removeFromSlip = useCallback((key: string) => {
+    setSlip((prev) => prev.filter((l) => legKey(l) !== key));
+  }, []);
+
+  const clearSlip = useCallback(() => setSlip([]), []);
 
   const { user, isPro, isAdmin: isAuthAdmin, tier } = useAuth();
 
@@ -350,6 +407,63 @@ export default function ParlaysPage() {
     setCopiedId(parlay.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
+
+  async function placeSlip() {
+    if (!user || slip.length === 0 || slipPlacing) return;
+    setSlipPlacing(true);
+    try {
+      const { decimal, americanStr } = slipCombined(slip);
+      const stake = SLIP_DEFAULT_STAKE;
+      const payout = Math.round(stake * decimal * 100) / 100;
+      const res = await fetch("/api/sim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          legs: slip.map((l) => ({
+            sport: l.sport,
+            pick: l.pick,
+            game: l.game,
+            odds: l.odds,
+            book: l.book,
+            commenceTime: l.commenceTime,
+          })),
+          combined_odds: americanStr,
+          combined_decimal: decimal,
+          stake,
+          payout,
+        }),
+      });
+      if (res.ok) {
+        const flashMsg =
+          slip.length === 1
+            ? `Single sim'd · $${stake} → $${payout.toFixed(0)}`
+            : `Custom ${slip.length}-leg parlay sim'd · $${stake} → $${payout.toFixed(0)}`;
+        clearSlip();
+        setSlipExpanded(false);
+        setSlipFlash(flashMsg);
+        setTimeout(() => setSlipFlash(null), 3500);
+        // Mark these legs in pendingSimSigs so the AI cards reflect it
+        setPendingSimSigs((prev) => {
+          const next = new Set(prev);
+          const sig = slip
+            .map((l) => `${l.game}::${l.pick}`)
+            .sort()
+            .join("|");
+          next.add(sig);
+          return next;
+        });
+      } else {
+        setSlipFlash("Couldn't place — try again.");
+        setTimeout(() => setSlipFlash(null), 3500);
+      }
+    } catch {
+      setSlipFlash("Network error — try again.");
+      setTimeout(() => setSlipFlash(null), 3500);
+    } finally {
+      setSlipPlacing(false);
+    }
+  }
 
   const handleSaveCard = async (parlay: Parlay) => {
     // Build an OG image URL with the parlay encoded as a JSON query param,
@@ -664,6 +778,10 @@ export default function ParlaysPage() {
                       onSaveCard={handleSaveCard}
                       pendingSimSigs={pendingSimSigs}
                       pendingSimsLoaded={pendingSimsLoaded}
+                      slipKeys={slipKeys}
+                      onAddToSlip={addToSlip}
+                      onRemoveFromSlip={removeFromSlip}
+                      slipFull={slip.length >= SLIP_MAX_LEGS}
                       isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -689,6 +807,10 @@ export default function ParlaysPage() {
                       onSaveCard={handleSaveCard}
                         pendingSimSigs={pendingSimSigs}
                       pendingSimsLoaded={pendingSimsLoaded}
+                      slipKeys={slipKeys}
+                      onAddToSlip={addToSlip}
+                      onRemoveFromSlip={removeFromSlip}
+                      slipFull={slip.length >= SLIP_MAX_LEGS}
                         isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -752,6 +874,10 @@ export default function ParlaysPage() {
                       onSaveCard={handleSaveCard}
                         pendingSimSigs={pendingSimSigs}
                       pendingSimsLoaded={pendingSimsLoaded}
+                      slipKeys={slipKeys}
+                      onAddToSlip={addToSlip}
+                      onRemoveFromSlip={removeFromSlip}
+                      slipFull={slip.length >= SLIP_MAX_LEGS}
                         isLockOfDay={
                         idx === 0 &&
                         sortBy === "confidence" &&
@@ -817,7 +943,201 @@ export default function ParlaysPage() {
           </p>
         </div>
       </footer>
+
+      <BuildSlip
+        slip={slip}
+        expanded={slipExpanded}
+        placing={slipPlacing}
+        flash={slipFlash}
+        user={user}
+        onToggle={() => setSlipExpanded((v) => !v)}
+        onRemove={removeFromSlip}
+        onClear={clearSlip}
+        onPlace={placeSlip}
+      />
     </div>
+  );
+}
+
+/* ─── BYO Slip — floating bottom bar ─────────────────────────────────────── */
+
+function BuildSlip({
+  slip,
+  expanded,
+  placing,
+  flash,
+  user,
+  onToggle,
+  onRemove,
+  onClear,
+  onPlace,
+}: {
+  slip: Leg[];
+  expanded: boolean;
+  placing: boolean;
+  flash: string | null;
+  user: { id: string } | null;
+  onToggle: () => void;
+  onRemove: (key: string) => void;
+  onClear: () => void;
+  onPlace: () => void;
+}) {
+  if (slip.length === 0 && !flash) return null;
+
+  const { americanStr, decimal } = slipCombined(slip);
+  const payout = Math.round(SLIP_DEFAULT_STAKE * decimal * 100) / 100;
+  const isSingle = slip.length === 1;
+  const ctaLabel = !user
+    ? "Sign up to sim"
+    : placing
+      ? "Placing…"
+      : isSingle
+        ? `Sim Single · $${SLIP_DEFAULT_STAKE}`
+        : `Sim ${slip.length}-Leg · $${SLIP_DEFAULT_STAKE}`;
+
+  return (
+    <>
+      {/* Spacer so the page can scroll past the floating bar */}
+      <div style={{ height: 92 }} />
+
+      <div
+        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-6 md:w-[440px] z-40"
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid rgba(0,0,0,0.10)",
+          borderRadius: 16,
+          boxShadow: "0 10px 40px rgba(0,0,0,0.12)",
+        }}
+      >
+        {flash && (
+          <div
+            className="px-4 py-2 text-xs font-semibold rounded-t-2xl"
+            style={{
+              background: "rgba(34,197,94,0.10)",
+              color: "#15803d",
+              borderBottom: "1px solid rgba(34,197,94,0.20)",
+            }}
+          >
+            {flash}
+          </div>
+        )}
+
+        {slip.length > 0 && (
+          <>
+            {/* Compact bar */}
+            <button
+              onClick={onToggle}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-xs uppercase tracking-widest font-bold text-black/50 flex-shrink-0">
+                  My Slip
+                </span>
+                <span
+                  className="text-sm font-bold text-black/70 flex-shrink-0"
+                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                >
+                  {slip.length} {slip.length === 1 ? "leg" : "legs"}
+                </span>
+                <span
+                  className="text-sm font-bold text-[#0a0a0a] flex-shrink-0"
+                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                >
+                  {americanStr}
+                </span>
+                <span
+                  className="text-xs text-black/45 truncate"
+                  style={{ fontFamily: "var(--font-geist-mono)" }}
+                >
+                  pays ${payout.toFixed(2)}
+                </span>
+              </div>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  color: "rgba(0,0,0,0.45)",
+                  transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                  transition: "transform 0.2s",
+                }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {/* Expanded view: per-leg list with remove buttons */}
+            {expanded && (
+              <div
+                className="max-h-[40vh] overflow-y-auto border-t border-black/[0.06]"
+              >
+                {slip.map((l) => (
+                  <div
+                    key={legKey(l)}
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-black/[0.04] last:border-b-0"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-black/[0.06] text-black/50 px-1.5 py-0.5 rounded flex-shrink-0">
+                        {l.sport}
+                      </span>
+                      <span className="text-sm font-medium text-[#0a0a0a] truncate">
+                        {l.pick}
+                      </span>
+                      <span
+                        className="text-xs text-black/45 flex-shrink-0"
+                        style={{ fontFamily: "var(--font-geist-mono)" }}
+                      >
+                        {formatOdds(l.odds)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => onRemove(legKey(l))}
+                      className="text-xs text-black/40 hover:text-[#ef4444] transition-colors"
+                      aria-label="Remove leg"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Action row */}
+            <div className="flex items-center gap-2 p-3 border-t border-black/[0.06]">
+              {user ? (
+                <button
+                  onClick={onPlace}
+                  disabled={placing || slip.length === 0}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white rounded-full transition-colors disabled:opacity-50"
+                  style={{ background: "#0a0a0a" }}
+                >
+                  {ctaLabel}
+                </button>
+              ) : (
+                <Link
+                  href="/login?mode=signup"
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white rounded-full transition-colors text-center"
+                  style={{ background: "#0a0a0a" }}
+                >
+                  {ctaLabel}
+                </Link>
+              )}
+              <button
+                onClick={onClear}
+                className="px-3 py-2.5 text-xs text-black/45 hover:text-black/70 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -832,6 +1152,10 @@ function ParlayCard({
   pendingSimSigs,
   pendingSimsLoaded,
   isLockOfDay,
+  slipKeys,
+  onAddToSlip,
+  onRemoveFromSlip,
+  slipFull,
 }: {
   parlay: Parlay;
   index: number;
@@ -841,6 +1165,10 @@ function ParlayCard({
   pendingSimSigs?: Set<string>;
   pendingSimsLoaded?: boolean;
   isLockOfDay?: boolean;
+  slipKeys?: Set<string>;
+  onAddToSlip?: (leg: Leg) => void;
+  onRemoveFromSlip?: (key: string) => void;
+  slipFull?: boolean;
 }) {
   const { user, isPro } = useAuth();
   const [simPlacing, setSimPlacing] = useState(false);
@@ -993,7 +1321,15 @@ function ParlayCard({
       {/* Legs — one clean row each, with expandable "Why" reasoning */}
       <div className="px-5 md:px-6 py-3">
         {parlay.legs.map((leg, i) => (
-          <LegRow key={i} leg={leg} showDivider={i > 0} />
+          <LegRow
+            key={i}
+            leg={leg}
+            showDivider={i > 0}
+            inSlip={slipKeys?.has(legKey(leg)) ?? false}
+            slipFull={slipFull}
+            onAddToSlip={onAddToSlip}
+            onRemoveFromSlip={onRemoveFromSlip}
+          />
         ))}
       </div>
 
@@ -1213,7 +1549,21 @@ function ParlayCard({
 
 /* ─── Leg Row with expandable "Why" reasoning ─── */
 
-function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
+function LegRow({
+  leg,
+  showDivider,
+  inSlip,
+  slipFull,
+  onAddToSlip,
+  onRemoveFromSlip,
+}: {
+  leg: Leg;
+  showDivider: boolean;
+  inSlip?: boolean;
+  slipFull?: boolean;
+  onAddToSlip?: (leg: Leg) => void;
+  onRemoveFromSlip?: (key: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const hasReasons = !!leg.reasons && leg.reasons.length > 0;
   const hasForm =
@@ -1315,6 +1665,34 @@ function LegRow({ leg, showDivider }: { leg: Leg; showDivider: boolean }) {
           </div>
         )}
       </button>
+
+      {/* BYO slip toggle — sits below the leg row so it doesn't fight the
+          expand-row click target. Compact pill, swaps icon/copy when added. */}
+      {onAddToSlip && (
+        <div className="-mt-1 mb-2 flex justify-end">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (inSlip) {
+                onRemoveFromSlip?.(legKey(leg));
+              } else if (!slipFull) {
+                onAddToSlip(leg);
+              }
+            }}
+            disabled={!inSlip && slipFull}
+            className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors"
+            style={{
+              color: inSlip ? "#15803d" : slipFull ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.55)",
+              background: inSlip ? "rgba(34,197,94,0.10)" : "rgba(0,0,0,0.04)",
+              border: `1px solid ${inSlip ? "rgba(34,197,94,0.25)" : "rgba(0,0,0,0.08)"}`,
+              cursor: !inSlip && slipFull ? "not-allowed" : "pointer",
+            }}
+            aria-label={inSlip ? "Remove from slip" : "Add to slip"}
+          >
+            {inSlip ? "✓ In slip" : slipFull ? "Slip full" : "+ Add to slip"}
+          </button>
+        </div>
+      )}
 
       <AnimatePresence initial={false}>
         {open && canExpand && (
