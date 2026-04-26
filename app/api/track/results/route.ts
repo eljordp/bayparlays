@@ -85,6 +85,23 @@ export async function GET() {
         ? Math.round((totalProfit / totalStaked) * 10000) / 100
         : 0;
 
+    // Beginner-friendly framing: recompute profit at a flat $10/pick. Same
+    // record, same win rate — just a stake size that matches what the user
+    // actually does in the Simulator ("Try $10 in Simulator"). Avoids the
+    // confusing "+$14K profit" reading on the home page when actual stored
+    // stakes default to $100.
+    const UNIT_STAKE = 10;
+    const profitAtUnit = rows.reduce((sum, p) => {
+      if (p.status === "won") {
+        return sum + UNIT_STAKE * ((p.combined_decimal ?? 1) - 1);
+      }
+      if (p.status === "lost") {
+        return sum - UNIT_STAKE;
+      }
+      return sum;
+    }, 0);
+    const stakedAtUnit = (won + lost) * UNIT_STAKE;
+
     // --- Current streak ---
     let streakType: "W" | "L" = "W";
     let streakCount = 0;
@@ -250,6 +267,9 @@ export async function GET() {
           winRate,
           totalProfit: Math.round(totalProfit * 100) / 100,
           roi,
+          unitStake: UNIT_STAKE,
+          profitAtUnit: Math.round(profitAtUnit * 100) / 100,
+          stakedAtUnit,
           currentStreak: { type: streakType, count: streakCount },
           bestPayout,
           last7Days,

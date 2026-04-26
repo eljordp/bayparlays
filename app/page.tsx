@@ -112,6 +112,9 @@ interface TrackStats {
   lost: number;
   roi: number;
   totalProfit: number;
+  unitStake: number;
+  profitAtUnit: number;
+  stakedAtUnit: number;
   resolvedSample: number;
 }
 
@@ -302,20 +305,22 @@ export default function Home() {
                         <div
                           className="text-3xl md:text-4xl font-bold tracking-tight"
                           style={{
-                            color: trackStats.roi >= 0 ? "#22C55E" : "#EF4444",
+                            color: trackStats.profitAtUnit >= 0 ? "#22C55E" : "#EF4444",
                             fontFamily: "var(--font-geist-mono)",
                           }}
                         >
-                          {trackStats.roi >= 0 ? "+" : ""}
-                          {trackStats.roi.toFixed(1)}%
+                          {trackStats.profitAtUnit >= 0 ? "+" : "-"}$
+                          {Math.abs(trackStats.profitAtUnit).toLocaleString(undefined, {
+                            maximumFractionDigits: 0,
+                          })}
                         </div>
                         <div className="text-[10px] uppercase tracking-widest text-black/45 mt-1">
-                          ROI
+                          Profit
                         </div>
                       </div>
                     </div>
                     <p className="text-xs text-black/40 mt-4">
-                      Live AI track record · {trackStats.resolvedSample} resolved picks
+                      If you bet ${trackStats.unitStake} on every AI pick · {trackStats.resolvedSample} resolved
                       {trackStats.resolvedSample < 50 && " · still building sample"}
                     </p>
                   </>
