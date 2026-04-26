@@ -183,10 +183,18 @@ export async function GET() {
       // the parlay format is what's eating you").
       let legsWon = 0;
       let legsLost = 0;
+      // Per-leg outcome array (true=won, false=lost, null=ungraded). Stored
+      // alongside the aggregate counts so the calibration job can do
+      // per-market accuracy analysis instead of just parlay-level.
+      const legResults: (boolean | null)[] = [];
 
       for (const leg of legs) {
         const sportKey = SPORT_MAP[leg.sport?.toUpperCase()];
-        if (!sportKey) { allResolved = false; continue; }
+        if (!sportKey) {
+          allResolved = false;
+          legResults.push(null);
+          continue;
+        }
 
         const scores = scoresCache.get(sportKey) || [];
         const game = findGame(scores, leg.game);
@@ -194,6 +202,7 @@ export async function GET() {
         if (!game) {
           allResolved = false;
           allWon = false;
+          legResults.push(null);
           continue;
         }
 
@@ -201,12 +210,15 @@ export async function GET() {
         if (result === null) {
           allResolved = false;
           allWon = false;
+          legResults.push(null);
         } else if (!result) {
           anyLost = true;
           allWon = false;
           legsLost++;
+          legResults.push(false);
         } else {
           legsWon++;
+          legResults.push(true);
         }
       }
 
@@ -241,6 +253,7 @@ export async function GET() {
           legs_won: legsWon,
           legs_lost: legsLost,
           legs_total: legs.length,
+          leg_results: legResults,
         })
         .eq("id", parlay.id)
         .eq("status", "pending")

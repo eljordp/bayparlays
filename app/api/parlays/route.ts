@@ -53,6 +53,53 @@ import {
 // deploy). The runtime behavior is unchanged; this just silences the build.
 export const dynamic = "force-dynamic";
 
+// ─── Model calibration cache ─────────────────────────────────────────────────
+// Reads the latest model_calibration row per sport on first call, caches in
+// module memory for 5 minutes. Applied to combinedProb so future picks reflect
+// what the model has actually been right about. See migration 016 +
+// scripts/calibrate.ts for how the rows are computed.
+
+let calibrationCache: { factors: Map<string, number>; loadedAt: number } | null = null;
+const CALIBRATION_TTL_MS = 5 * 60 * 1000;
+
+async function getCalibrationFactors(): Promise<Map<string, number>> {
+  if (calibrationCache && Date.now() - calibrationCache.loadedAt < CALIBRATION_TTL_MS) {
+    return calibrationCache.factors;
+  }
+  const factors = new Map<string, number>();
+  try {
+    const { supabase } = await import("@/lib/supabase");
+    // Pull the most recent calibration row per sport. We grab the last 50
+    // rows and dedupe in JS (faster than a window function on a small table).
+    const { data } = await supabase
+      .from("model_calibration")
+      .select("sport, calibration_factor, computed_at")
+      .order("computed_at", { ascending: false })
+      .limit(50);
+    if (data) {
+      for (const row of data) {
+        const key = row.sport ?? "_GLOBAL";
+        if (!factors.has(key)) {
+          factors.set(key, row.calibration_factor);
+        }
+      }
+    }
+  } catch {
+    // Calibration unavailable — return empty map, callers fall back to 1.0.
+  }
+  calibrationCache = { factors, loadedAt: Date.now() };
+  return factors;
+}
+
+function calibrationFactorFor(
+  factors: Map<string, number>,
+  sport: string | undefined,
+): number {
+  if (sport && factors.has(sport)) return factors.get(sport)!;
+  if (factors.has("_GLOBAL")) return factors.get("_GLOBAL")!;
+  return 1.0;
+}
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const ODDS_API_KEY = process.env.ODDS_API_KEY;
@@ -1152,6 +1199,7 @@ function buildParlays(
   count: number,
   sortMode: "ev" | "payout" | "confidence" = "ev",
   tier: string = "sharp",
+  calibrationFactors: Map<string, number> = new Map(),
 ): Parlay[] {
   let sorted: ScoredLeg[];
   let viable: ScoredLeg[];
@@ -1286,7 +1334,16 @@ function buildParlays(
     // No more inflating by arbitrary edge boosts — ourProb is already the
     // probability after de-vig + Elo + form adjustments. Compounding it across
     // legs gives the real parlay hit rate the model is projecting.
-    const combinedProb = selected.reduce((acc, leg) => acc * leg.ourProb, 1);
+    const rawCombinedProb = selected.reduce((acc, leg) => acc * leg.ourProb, 1);
+
+    // Apply learned calibration. After every resolved parlay, the calibration
+    // job updates a per-sport scaling factor (actual hit rate / predicted hit
+    // rate). Multiplying combinedProb by it pulls the model's estimate toward
+    // observed reality. New sports with thin samples shrink toward 1.0 (no
+    // adjustment) so flukes don't yank the picks generator around.
+    const primarySport = selected[0]?.sport;
+    const calFactor = calibrationFactorFor(calibrationFactors, primarySport);
+    const combinedProb = Math.max(0.01, Math.min(0.99, rawCombinedProb * calFactor));
 
     const stake = 100;
     const ev = calculateEV(combinedDecimal, combinedProb, stake);
@@ -1932,8 +1989,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Pull learned calibration factors (cached 5 min) so combinedProb gets
+    // scaled toward observed reality. Empty map = no adjustment yet.
+    const calibrationFactors = await getCalibrationFactors();
+
     // Build optimized parlays
-    const parlays = buildParlays(allLegs, numLegs, count, sortMode, tier);
+    const parlays = buildParlays(allLegs, numLegs, count, sortMode, tier, calibrationFactors);
     const legsScored = allLegs.filter((l) => l.scored).length;
     const tierCfg = (TIER_CONFIG as Record<string, { poolSize: number }>)[tier] ?? TIER_CONFIG.sharp;
 

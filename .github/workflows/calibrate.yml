@@ -1,0 +1,33 @@
+name: BayParlays Model Calibration
+
+# Recomputes per-sport calibration factors from every resolved parlay and
+# writes them to model_calibration. /api/parlays reads the latest factors
+# and applies them to combinedProb so the model gradually corrects toward
+# observed reality.
+#
+# Daily is plenty — calibration moves slowly and a fresh run more often
+# than that just adds noise. No Odds API calls (Supabase only), so this
+# is essentially free to run.
+
+on:
+  schedule:
+    - cron: "0 8 * * *"  # 1am PT — after the day's last resolves are in
+  workflow_dispatch: {}
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger /api/cron/calibrate
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/calibrate" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              --max-time 60
+          else
+            curl -fsSL -X GET "https://bayparlays.vercel.app/api/cron/calibrate" \
+              --max-time 60
+          fi
