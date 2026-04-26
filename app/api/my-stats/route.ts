@@ -65,6 +65,22 @@ function emptyPayload() {
       lost: number;
       winRate: number;
     }>,
+    legCountBreakdown: [] as Array<{
+      label: string;
+      legs: number;
+      won: number;
+      lost: number;
+      profit: number;
+      winRate: number;
+    }>,
+    oddsRangeBreakdown: [] as Array<{
+      label: string;
+      won: number;
+      lost: number;
+      profit: number;
+      winRate: number;
+    }>,
+    insights: [] as Array<{ tone: "good" | "bad" | "neutral"; text: string }>,
     recentBets: [] as Array<{
       id: string;
       created_at: string;
@@ -228,6 +244,150 @@ export async function GET(req: NextRequest) {
       }),
     );
 
+    // --- Leg-count breakdown (1L/2L/3L/4L+) ---
+    const legCountMap = new Map<
+      number,
+      { won: number; lost: number; profit: number }
+    >();
+    for (const p of rows) {
+      if (p.status === "pending") continue;
+      const n = (p.legs ?? []).length;
+      const bucket = n >= 4 ? 4 : n; // 4 = "4L+"
+      const entry =
+        legCountMap.get(bucket) ?? { won: 0, lost: 0, profit: 0 };
+      if (p.status === "won") entry.won++;
+      if (p.status === "lost") entry.lost++;
+      entry.profit += p.profit ?? 0;
+      legCountMap.set(bucket, entry);
+    }
+    const legCountBreakdown = Array.from(legCountMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([legs, d]) => {
+        const total = d.won + d.lost;
+        return {
+          label: legs >= 4 ? "4L+" : `${legs}L`,
+          legs,
+          won: d.won,
+          lost: d.lost,
+          profit: Math.round(d.profit * 100) / 100,
+          winRate: total > 0
+            ? Math.round((d.won / total) * 10000) / 100
+            : 0,
+        };
+      });
+
+    // --- Odds-range breakdown ---
+    type Bucket = { won: number; lost: number; profit: number };
+    const oddsBuckets: Array<{
+      label: string;
+      min: number;
+      max: number;
+      data: Bucket;
+    }> = [
+      { label: "Short (-200 to +200)", min: 1, max: 3, data: { won: 0, lost: 0, profit: 0 } },
+      { label: "Medium (+200 to +500)", min: 3, max: 6, data: { won: 0, lost: 0, profit: 0 } },
+      { label: "Long (+500 to +1200)", min: 6, max: 13, data: { won: 0, lost: 0, profit: 0 } },
+      { label: "Longshot (+1200+)", min: 13, max: Infinity, data: { won: 0, lost: 0, profit: 0 } },
+    ];
+    for (const p of rows) {
+      if (p.status === "pending") continue;
+      const d = p.combined_decimal ?? 0;
+      const bucket = oddsBuckets.find((b) => d >= b.min && d < b.max);
+      if (!bucket) continue;
+      if (p.status === "won") bucket.data.won++;
+      if (p.status === "lost") bucket.data.lost++;
+      bucket.data.profit += p.profit ?? 0;
+    }
+    const oddsRangeBreakdown = oddsBuckets
+      .filter((b) => b.data.won + b.data.lost > 0)
+      .map((b) => {
+        const total = b.data.won + b.data.lost;
+        return {
+          label: b.label,
+          won: b.data.won,
+          lost: b.data.lost,
+          profit: Math.round(b.data.profit * 100) / 100,
+          winRate:
+            total > 0
+              ? Math.round((b.data.won / total) * 10000) / 100
+              : 0,
+        };
+      });
+
+    // --- Coaching insights — auto-generated, plain English ---
+    // Pulls from the breakdowns we just built. Each insight is short, names
+    // the specific metric, and tells the user what to do with it. No filler.
+    const insights: Array<{ tone: "good" | "bad" | "neutral"; text: string }> = [];
+
+    // Strongest category
+    const cats = categoryBreakdown.filter((c) => c.won + c.lost >= 5);
+    if (cats.length > 0) {
+      const best = cats.reduce((a, b) => (b.winRate > a.winRate ? b : a));
+      const labelMap: Record<Category, string> = {
+        ev: "Best EV",
+        payout: "Highest Payout",
+        confidence: "Most Confident",
+      };
+      if (best.winRate >= 45) {
+        insights.push({
+          tone: "good",
+          text: `Your edge is ${labelMap[best.category]} (${best.winRate.toFixed(0)}% on ${best.won + best.lost} bets). Keep leaning here.`,
+        });
+      }
+      const worst = cats.reduce((a, b) => (b.winRate < a.winRate ? b : a));
+      if (worst.winRate < 25 && worst.category !== best.category) {
+        insights.push({
+          tone: "bad",
+          text: `${labelMap[worst.category]} is leaking — ${worst.won}-${worst.lost} (${worst.winRate.toFixed(0)}%). Consider skipping these.`,
+        });
+      }
+    }
+
+    // Best leg count
+    const lcSized = legCountBreakdown.filter((l) => l.won + l.lost >= 5);
+    if (lcSized.length > 0) {
+      const bestLc = lcSized.reduce((a, b) =>
+        b.winRate > a.winRate ? b : a,
+      );
+      if (bestLc.winRate >= 40) {
+        insights.push({
+          tone: "good",
+          text: `${bestLc.label} parlays are your sweet spot (${bestLc.winRate.toFixed(0)}% on ${bestLc.won + bestLc.lost} bets, ${bestLc.profit >= 0 ? "+" : ""}$${bestLc.profit.toFixed(0)}).`,
+        });
+      }
+    }
+
+    // Odds-range win rate sanity check
+    const longshots = oddsRangeBreakdown.find(
+      (o) => o.label.startsWith("Longshot") || o.label.startsWith("Long"),
+    );
+    if (longshots && longshots.won + longshots.lost >= 8 && longshots.winRate < 15) {
+      insights.push({
+        tone: "bad",
+        text: `Longshots aren't hitting (${longshots.won}-${longshots.lost}, ${longshots.winRate.toFixed(0)}%). Tighten to shorter parlays if you want consistent W's.`,
+      });
+    }
+
+    // Sport edge
+    const topSport = sportBreakdown
+      .filter((s) => s.won + s.lost >= 8)
+      .sort((a, b) => b.winRate - a.winRate)[0];
+    if (topSport && topSport.winRate >= 50) {
+      insights.push({
+        tone: "good",
+        text: `${topSport.sport} is your strongest sport (${topSport.winRate.toFixed(0)}% on ${topSport.won + topSport.lost} bets). The AI's signal here matches your bets well.`,
+      });
+    }
+    const worstSport = sportBreakdown
+      .filter((s) => s.won + s.lost >= 8)
+      .sort((a, b) => a.winRate - b.winRate)[0];
+    if (worstSport && worstSport.winRate < 25 && worstSport !== topSport) {
+      insights.push({
+        tone: "bad",
+        text: `${worstSport.sport} is dragging the record (${worstSport.won}-${worstSport.lost}, ${worstSport.winRate.toFixed(0)}%). Worth pausing this sport for a week to see if the model's bias clears.`,
+      });
+    }
+
     // --- Recent bets (last 20) ---
     const recentBets = rows.slice(0, 20).map((p) => ({
       id: p.id,
@@ -260,6 +420,9 @@ export async function GET(req: NextRequest) {
         },
         sportBreakdown,
         categoryBreakdown,
+        legCountBreakdown,
+        oddsRangeBreakdown,
+        insights,
         recentBets,
       },
       { headers: NO_STORE_HEADERS },

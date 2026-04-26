@@ -122,10 +122,35 @@ function formatStartTime(iso: string): string {
   });
 }
 
+interface LegCountBreakdown {
+  label: string;
+  legs: number;
+  won: number;
+  lost: number;
+  profit: number;
+  winRate: number;
+}
+
+interface OddsRangeBreakdown {
+  label: string;
+  won: number;
+  lost: number;
+  profit: number;
+  winRate: number;
+}
+
+interface Insight {
+  tone: "good" | "bad" | "neutral";
+  text: string;
+}
+
 interface MyStatsData {
   stats: Stats;
   sportBreakdown: SportBreakdown[];
   categoryBreakdown: CategoryBreakdown[];
+  legCountBreakdown?: LegCountBreakdown[];
+  oddsRangeBreakdown?: OddsRangeBreakdown[];
+  insights?: Insight[];
   recentBets: RecentBet[];
 }
 
@@ -316,6 +341,9 @@ export default function MyStatsPage() {
   const stats = data?.stats;
   const sportBreakdown = data?.sportBreakdown ?? [];
   const categoryBreakdown = data?.categoryBreakdown ?? [];
+  const legCountBreakdown = data?.legCountBreakdown ?? [];
+  const oddsRangeBreakdown = data?.oddsRangeBreakdown ?? [];
+  const insights = data?.insights ?? [];
   const recentBets = data?.recentBets ?? [];
   const maxSportWinRate = Math.max(...sportBreakdown.map((s) => s.winRate), 1);
   const maxCategoryWinRate = Math.max(
@@ -1287,6 +1315,254 @@ export default function MyStatsPage() {
                     </div>
                   )}
                 </motion.div>
+
+                {/* ─── Deeper Stats ─── */}
+                {(insights.length > 0 ||
+                  legCountBreakdown.length > 0 ||
+                  oddsRangeBreakdown.length > 0) && (
+                  <motion.div
+                    className="mt-16 md:mt-20"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                  >
+                    <h2
+                      className="text-2xl md:text-3xl mb-3"
+                      style={{
+                        fontFamily: "'DM Serif Display', serif",
+                        color: "#0a0a0a",
+                      }}
+                    >
+                      Deeper Stats
+                    </h2>
+                    <p
+                      className="text-xs mb-8 max-w-2xl"
+                      style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}
+                    >
+                      Where you&apos;re winning, where you&apos;re leaking, what to lean into. All from your sim history.
+                    </p>
+
+                    {/* Insights — auto-generated coaching */}
+                    {insights.length > 0 && (
+                      <div className="mb-12 space-y-3">
+                        {insights.map((ins, i) => {
+                          const palette =
+                            ins.tone === "good"
+                              ? {
+                                  bg: "rgba(34,197,94,0.08)",
+                                  border: "rgba(34,197,94,0.20)",
+                                  text: "#15803d",
+                                  label: "EDGE",
+                                }
+                              : ins.tone === "bad"
+                                ? {
+                                    bg: "rgba(239,68,68,0.06)",
+                                    border: "rgba(239,68,68,0.18)",
+                                    text: "#b91c1c",
+                                    label: "LEAK",
+                                  }
+                                : {
+                                    bg: "rgba(0,0,0,0.04)",
+                                    border: "rgba(0,0,0,0.08)",
+                                    text: "#0a0a0a",
+                                    label: "NOTE",
+                                  };
+                          return (
+                            <div
+                              key={i}
+                              className="rounded-xl p-4 md:p-5 flex items-start gap-3"
+                              style={{
+                                background: palette.bg,
+                                border: `1px solid ${palette.border}`,
+                              }}
+                            >
+                              <span
+                                className="text-[10px] font-bold uppercase tracking-widest flex-shrink-0 px-2 py-0.5 rounded"
+                                style={{
+                                  color: palette.text,
+                                  background: "rgba(255,255,255,0.6)",
+                                  border: `1px solid ${palette.border}`,
+                                }}
+                              >
+                                {palette.label}
+                              </span>
+                              <span
+                                className="text-sm leading-relaxed"
+                                style={{ color: "rgba(0,0,0,0.75)" }}
+                              >
+                                {ins.text}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* By Leg Count */}
+                    {legCountBreakdown.length > 0 && (
+                      <div className="mb-12">
+                        <h3
+                          className="text-lg md:text-xl mb-4"
+                          style={{
+                            fontFamily: "'DM Serif Display', serif",
+                            color: "#0a0a0a",
+                          }}
+                        >
+                          By Parlay Size
+                        </h3>
+                        <div className="space-y-3">
+                          {legCountBreakdown.map((lc) => {
+                            const max = Math.max(
+                              ...legCountBreakdown.map((l) => l.winRate),
+                              1,
+                            );
+                            return (
+                              <div
+                                key={lc.label}
+                                className="flex items-center gap-4 md:gap-6"
+                              >
+                                <div
+                                  className="w-12 text-sm font-semibold flex-shrink-0"
+                                  style={{ color: "rgba(0,0,0,0.7)" }}
+                                >
+                                  {lc.label}
+                                </div>
+                                <div
+                                  className="text-xs flex-shrink-0 w-16 text-right"
+                                  style={{
+                                    color: "rgba(0,0,0,0.45)",
+                                    fontFamily: "var(--font-geist-mono)",
+                                  }}
+                                >
+                                  {lc.won}-{lc.lost}
+                                </div>
+                                <div
+                                  className="flex-1 h-7 rounded overflow-hidden"
+                                  style={{ background: "rgba(0,0,0,0.04)" }}
+                                >
+                                  <div
+                                    className="h-full rounded"
+                                    style={{
+                                      width: `${(lc.winRate / max) * 100}%`,
+                                      background:
+                                        lc.winRate >= 50
+                                          ? "linear-gradient(90deg, #22C55E, rgba(34,197,94,0.7))"
+                                          : "linear-gradient(90deg, #0a0a0a, rgba(0,0,0,0.5))",
+                                      minWidth: "2px",
+                                    }}
+                                  />
+                                </div>
+                                <div
+                                  className="w-20 text-right text-xs font-semibold flex-shrink-0"
+                                  style={{
+                                    color:
+                                      lc.profit >= 0 ? "#22C55E" : "#EF4444",
+                                    fontFamily: "var(--font-geist-mono)",
+                                  }}
+                                >
+                                  {lc.profit >= 0 ? "+" : "-"}$
+                                  {Math.abs(lc.profit).toFixed(0)}
+                                </div>
+                                <div
+                                  className="w-14 text-right text-sm font-bold flex-shrink-0"
+                                  style={{
+                                    color:
+                                      lc.winRate >= 50 ? "#22c55e" : "#ef4444",
+                                    fontFamily: "var(--font-geist-mono)",
+                                  }}
+                                >
+                                  {lc.winRate.toFixed(0)}%
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* By Odds Range */}
+                    {oddsRangeBreakdown.length > 0 && (
+                      <div className="mb-4">
+                        <h3
+                          className="text-lg md:text-xl mb-4"
+                          style={{
+                            fontFamily: "'DM Serif Display', serif",
+                            color: "#0a0a0a",
+                          }}
+                        >
+                          By Odds Range
+                        </h3>
+                        <div className="space-y-3">
+                          {oddsRangeBreakdown.map((or) => {
+                            const max = Math.max(
+                              ...oddsRangeBreakdown.map((o) => o.winRate),
+                              1,
+                            );
+                            return (
+                              <div
+                                key={or.label}
+                                className="flex items-center gap-4 md:gap-6"
+                              >
+                                <div
+                                  className="w-44 md:w-52 text-sm font-semibold flex-shrink-0 truncate"
+                                  style={{ color: "rgba(0,0,0,0.7)" }}
+                                >
+                                  {or.label}
+                                </div>
+                                <div
+                                  className="text-xs flex-shrink-0 w-16 text-right"
+                                  style={{
+                                    color: "rgba(0,0,0,0.45)",
+                                    fontFamily: "var(--font-geist-mono)",
+                                  }}
+                                >
+                                  {or.won}-{or.lost}
+                                </div>
+                                <div
+                                  className="flex-1 h-7 rounded overflow-hidden"
+                                  style={{ background: "rgba(0,0,0,0.04)" }}
+                                >
+                                  <div
+                                    className="h-full rounded"
+                                    style={{
+                                      width: `${(or.winRate / max) * 100}%`,
+                                      background:
+                                        or.winRate >= 50
+                                          ? "linear-gradient(90deg, #22C55E, rgba(34,197,94,0.7))"
+                                          : "linear-gradient(90deg, #0a0a0a, rgba(0,0,0,0.5))",
+                                      minWidth: "2px",
+                                    }}
+                                  />
+                                </div>
+                                <div
+                                  className="w-20 text-right text-xs font-semibold flex-shrink-0"
+                                  style={{
+                                    color:
+                                      or.profit >= 0 ? "#22C55E" : "#EF4444",
+                                    fontFamily: "var(--font-geist-mono)",
+                                  }}
+                                >
+                                  {or.profit >= 0 ? "+" : "-"}$
+                                  {Math.abs(or.profit).toFixed(0)}
+                                </div>
+                                <div
+                                  className="w-14 text-right text-sm font-bold flex-shrink-0"
+                                  style={{
+                                    color:
+                                      or.winRate >= 50 ? "#22c55e" : "#ef4444",
+                                    fontFamily: "var(--font-geist-mono)",
+                                  }}
+                                >
+                                  {or.winRate.toFixed(0)}%
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
