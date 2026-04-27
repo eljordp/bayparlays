@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
   for (const combo of combos) {
     const dbg: Record<string, unknown> = { sort: combo.sort, legs: combo.legs, count: combo.count };
     try {
-      const u = `${baseUrl}/api/parlays?sports=nba,mlb,nhl,ncaab,ncaaf&legs=${combo.legs}&count=${combo.count}&sort=${combo.sort}&tier=admin`;
+      const u = `${baseUrl}/api/parlays?sports=nba,mlb,nhl,ncaab,ncaaf,mls,ufc&legs=${combo.legs}&count=${combo.count}&sort=${combo.sort}&tier=admin`;
       dbg.url = u;
       const res = await fetch(u, { cache: "no-store" });
       dbg.status = res.status;

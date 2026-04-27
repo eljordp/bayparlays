@@ -337,11 +337,28 @@ export default function ParlaysPage() {
   const isVipAccess = isAdmin || isAuthAdmin || tier === "vip" || tier === "admin";
   const isSharpAccess = isPro || isVipAccess; // includes sharp + vip + admin
 
-  // Pipeline: sort-floor → odds range → top-N tier. Order matters —
-  // the floor decides which "lane" a parlay belongs to (Best EV vs
-  // Longshot), then odds + tier whittle within that lane.
+  // Pipeline: sport → sort-floor → odds range. Order is independent —
+  // each filter is additive — but sport runs first so the empty-state
+  // can read "no MLS picks today" instead of "no picks match all your
+  // filters."
   const visibleParlays = (() => {
     let pool = parlays;
+
+    // Sport filter — slate mode is one fixed slate per window, sport
+    // selection is client-side. A parlay matches the sport if any of
+    // its legs is in that sport (multi-sport parlays show in any).
+    if (selectedSport !== "All") {
+      const target = selectedSport.toUpperCase();
+      pool = pool.filter((p) =>
+        p.legs.some((l) => (l.sport || "").toUpperCase() === target),
+      );
+    }
+
+    // Legs filter — also client-side in slate mode. Match by exact leg
+    // count so a "3" filter doesn't silently include 4-leg parlays.
+    if (selectedLegs !== null) {
+      pool = pool.filter((p) => p.legs.length === selectedLegs);
+    }
 
     // Sort-specific floor on AI hit rate. Keeps lottery tickets out of
     // Best EV (where 0.1%→1% picks would dominate the math) and keeps
@@ -766,36 +783,69 @@ export default function ParlaysPage() {
               </motion.div>
             )}
 
-            {/* Error / Empty */}
-            {!loading && (error || visibleParlays.length === 0) && (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="flex flex-col items-center justify-center py-32"
-              >
-                <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
-                  style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
+            {/* Error / Empty.
+                When the underlying slate has parlays but the user's filters
+                exclude all of them, distinguish "no slate" (real problem)
+                from "your filter killed it" (one click away from fixed). */}
+            {!loading && (error || visibleParlays.length === 0) && (() => {
+              const filtersActive =
+                !error &&
+                parlays.length > 0 &&
+                (selectedSport !== "All" ||
+                  selectedLegs !== null ||
+                  oddsRange !== "all" ||
+                  sortBy === "longshot");
+              return (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="flex flex-col items-center justify-center py-32"
                 >
-                  <Shield size={32} style={{ color: "rgba(0,0,0,0.3)" }} />
-                </div>
-                <p className="text-xl font-medium mb-2" style={{ color: "rgba(0,0,0,0.6)" }}>
-                  {error || "No parlays available right now."}
-                </p>
-                <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
-                  Check back soon. Our AI is scanning every line.
-                </p>
-                <button
-                  onClick={fetchParlays}
-                  className="mt-8 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200"
-                  style={{ background: "rgba(0,0,0,0.06)", color: "#0a0a0a", border: "1px solid rgba(0,0,0,0.18)" }}
-                >
-                  Retry
-                </button>
-              </motion.div>
-            )}
+                  <div
+                    className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
+                    style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
+                  >
+                    <Shield size={32} style={{ color: "rgba(0,0,0,0.3)" }} />
+                  </div>
+                  <p className="text-xl font-medium mb-2" style={{ color: "rgba(0,0,0,0.6)" }}>
+                    {error
+                      ? error
+                      : filtersActive
+                        ? `No ${selectedSport !== "All" ? selectedSport + " " : ""}picks match these filters today.`
+                        : "No parlays available right now."}
+                  </p>
+                  <p className="text-sm" style={{ color: "rgba(0,0,0,0.4)" }}>
+                    {filtersActive
+                      ? "Try All sports, or change Legs / Odds. Some sports are out of season or had no games today."
+                      : "Check back soon. Our AI is scanning every line."}
+                  </p>
+                  {filtersActive ? (
+                    <button
+                      onClick={() => {
+                        setSelectedSport("All");
+                        setSelectedLegs(null);
+                        setOddsRange("all");
+                        setSortBy("confidence");
+                      }}
+                      className="mt-8 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200"
+                      style={{ background: "rgba(0,0,0,0.06)", color: "#0a0a0a", border: "1px solid rgba(0,0,0,0.18)" }}
+                    >
+                      Clear filters
+                    </button>
+                  ) : (
+                    <button
+                      onClick={fetchParlays}
+                      className="mt-8 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-200"
+                      style={{ background: "rgba(0,0,0,0.06)", color: "#0a0a0a", border: "1px solid rgba(0,0,0,0.18)" }}
+                    >
+                      Retry
+                    </button>
+                  )}
+                </motion.div>
+              );
+            })()}
 
             {/* Parlay cards */}
             {!loading && !error && visibleParlays.length > 0 && (
