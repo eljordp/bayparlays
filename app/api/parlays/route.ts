@@ -1273,10 +1273,12 @@ function buildParlays(
   const usedCombinations = new Set<string>();
 
   // Greedy parlay construction: start from top legs, no same-game parlays.
-  // Build up to count*3 candidates so the diversity filter below has room
-  // to drop near-duplicates without leaving the response short.
-  const buildTarget = count * 3;
-  for (let attempt = 0; attempt < count * 30 && parlays.length < buildTarget; attempt++) {
+  // Build up to count*5 candidates so the diversity filter below has room
+  // to drop near-duplicates without leaving the response short. Bumped from
+  // 3x → 5x after the first slate run published only 9/14 — VIP (15) and
+  // Admin (30) tiers were starving.
+  const buildTarget = count * 5;
+  for (let attempt = 0; attempt < count * 50 && parlays.length < buildTarget; attempt++) {
     const selected: ScoredLeg[] = [];
     const usedGames = new Set<string>();
 

@@ -93,13 +93,19 @@ export async function GET(req: NextRequest) {
   const baseUrl = "https://bayparlays.vercel.app";
 
   type Combo = { sort: "confidence" | "ev" | "payout"; count: number; legs: number };
+  // Counts oversampled ~3x so the slate-level diversity filter has room to
+  // drop near-duplicates AND still leave 25-30+ surviving picks. The first
+  // run of the filter (2026-04-27 morning) collected 14 candidates and
+  // dropped 5 → only 9 published, starving VIP (15) and Admin (30) tiers.
+  // New targets: collect ~36 raw, expect ~36% drop, net ~22-25 published.
+  // If the drop rate trends differently after a few cycles, dial accordingly.
   const combos: Combo[] = [
-    { sort: "confidence", count: 3, legs: 2 },  // safe favorites, sweet-spot leg count
-    { sort: "confidence", count: 2, legs: 3 },
-    { sort: "ev",         count: 3, legs: 2 },  // best math
-    { sort: "ev",         count: 1, legs: 3 },
-    { sort: "payout",     count: 2, legs: 3 },  // longshots
-    { sort: "payout",     count: 1, legs: 4 },
+    { sort: "confidence", count: 8, legs: 2 },  // safe favorites, sweet-spot leg count
+    { sort: "confidence", count: 5, legs: 3 },
+    { sort: "ev",         count: 7, legs: 2 },  // best math
+    { sort: "ev",         count: 4, legs: 3 },
+    { sort: "payout",     count: 6, legs: 3 },  // longshots
+    { sort: "payout",     count: 4, legs: 4 },
     // 5/6 leg picks are inherently low-confidence (cumulative prob drops
     // hard each leg) so they live in the payout sort — degens-only lottery
     // tickets. Without these the /parlays "Legs: 5" / "Legs: 6" filters
