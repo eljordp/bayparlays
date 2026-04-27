@@ -77,6 +77,7 @@ interface Parlay {
   category?: "ev" | "payout" | "confidence";
   impliedHitRate?: number;
   aiEstimate?: number;
+  slateRank?: number | null;
 }
 
 interface Meta {
@@ -98,12 +99,31 @@ interface ParlayResponse {
 const SPORTS = ["All", "NBA", "NFL", "MLB", "NHL", "NCAAB", "NCAAF", "MLS", "UFC"];
 const LEG_COUNTS = [2, 3, 4, 5, 6];
 const SORT_OPTIONS = [
+  { value: "confidence", label: "Most Confident" },
   { value: "ev", label: "Best EV" },
   { value: "payout", label: "Highest Payout" },
-  { value: "confidence", label: "Most Confident" },
+  // "Longshots" is a separate lane, not a strict sort. It surfaces picks
+  // with AI hit rate < 5% — the lottery tickets the EV math says are
+  // theoretically valuable but lose 95+ of every 100 times. Keeping them
+  // out of the main sorts protects the tracked hit rate; keeping them
+  // accessible feeds the gambler audience honestly.
+  { value: "longshot", label: "Longshots" },
 ] as const;
 
 type SortOption = (typeof SORT_OPTIONS)[number]["value"];
+
+// Top-N tier filter. Lets users dial how aggressive the AI's recommendation
+// pool should be. The spread between Top 3 hit rate and All hit rate is the
+// truthful answer to "how good is this AI's confidence ranking?" — surfacing
+// that spread on /results is the whole point of having tiers.
+const TIER_LIMITS = [3, 10, 25, 50, 100, 250, 500, 1000] as const;
+type TierLimit = (typeof TIER_LIMITS)[number] | "all";
+
+// AI hit rate floor for Best EV — anything below this is treated as a
+// longshot regardless of how mathematically juicy the EV looks. Keeps the
+// 0% → 1% lottery picks out of the main "Best EV" view, where they'd
+// otherwise dominate purely because (tiny prob × huge payout) maxes EV.
+const BEST_EV_AI_FLOOR = 5;
 
 // Odds range filter — client-side bucketing by combined American odds.
 // "All" shows everything; the others let users dial in risk/reward directly.
@@ -232,6 +252,10 @@ export default function ParlaysPage() {
   // Default to "Most Confident" — users want "will this hit?" before
   // "is this +EV math." Lock picks lead; EV + Payout are optional tabs.
   const [sortBy, setSortBy] = useState<SortOption>("confidence");
+  // Default tier: "all" — show everything available. Power users dial
+  // down to Top 3/10/25 etc to see the AI's most-confident picks only.
+  // The spread between tiers is intentionally visible on /results.
+  const [tierLimit, setTierLimit] = useState<TierLimit>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingSimSigs, setPendingSimSigs] = useState<Set<string>>(new Set());
@@ -324,17 +348,41 @@ export default function ParlaysPage() {
   const isVipAccess = isAdmin || isAuthAdmin || tier === "vip" || tier === "admin";
   const isSharpAccess = isPro || isVipAccess; // includes sharp + vip + admin
 
-  // Apply client-side odds-range filter on top of the server-side fetched set.
-  // Lets users dial risk/reward without re-fetching.
+  // Pipeline: sort-floor → odds range → top-N tier. Order matters —
+  // the floor decides which "lane" a parlay belongs to (Best EV vs
+  // Longshot), then odds + tier whittle within that lane.
   const visibleParlays = (() => {
-    if (oddsRange === "all") return parlays;
-    const range = ODDS_RANGES.find((r) => r.value === oddsRange);
-    if (!range) return parlays;
-    return parlays.filter((p) => {
-      const o = combinedOddsToAmerican(p);
-      if (!Number.isFinite(o)) return true;
-      return o >= range.min && o <= range.max;
-    });
+    let pool = parlays;
+
+    // Sort-specific floor on AI hit rate. Keeps lottery tickets out of
+    // Best EV (where 0.1%→1% picks would dominate the math) and keeps
+    // honest +EV picks out of Longshots (so the lottery tab actually
+    // shows lottery, not low-EV favs).
+    if (sortBy === "ev") {
+      pool = pool.filter((p) => (p.aiEstimate ?? p.confidence ?? 0) >= BEST_EV_AI_FLOOR);
+    } else if (sortBy === "longshot") {
+      pool = pool.filter((p) => (p.aiEstimate ?? p.confidence ?? 0) < BEST_EV_AI_FLOOR);
+    }
+
+    if (oddsRange !== "all") {
+      const range = ODDS_RANGES.find((r) => r.value === oddsRange);
+      if (range) {
+        pool = pool.filter((p) => {
+          const o = combinedOddsToAmerican(p);
+          if (!Number.isFinite(o)) return true;
+          return o >= range.min && o <= range.max;
+        });
+      }
+    }
+
+    // Top-N tier: pool is already sorted by the active sort mode (see
+    // fetchParlays), so .slice(0, N) gives the top-N picks under that
+    // sort. "all" shows whatever paywall countForTier left us with.
+    if (tierLimit !== "all") {
+      pool = pool.slice(0, tierLimit);
+    }
+
+    return pool;
   })();
 
   const fetchParlays = useCallback(async () => {
@@ -373,7 +421,11 @@ export default function ParlaysPage() {
           .catch(() => null);
         responses = [r];
       } else {
-        // Live fan-out — preserved for free tier + ?live=1 admin override
+        // Live fan-out — preserved for free tier + ?live=1 admin override.
+        // "longshot" is a client-side filter on top of the EV pool, so we
+        // ask the API for "ev" sort and let the visibleParlays filter
+        // gate which side of the 5% floor renders.
+        const apiSort = sortBy === "longshot" ? "ev" : sortBy;
         const legCounts = selectedLegs ? [selectedLegs] : [2, 3, 4];
         const perCall = Math.max(2, Math.ceil(countForTier / legCounts.length));
         const buildUrl = (legs: number) => {
@@ -381,7 +433,7 @@ export default function ParlaysPage() {
             count: String(perCall),
             tier: effectiveTier,
             legs: String(legs),
-            sort: sortBy,
+            sort: apiSort,
           });
           if (selectedSport !== "All") p.set("sports", selectedSport);
           return `/api/parlays?${p.toString()}`;
@@ -406,6 +458,8 @@ export default function ParlaysPage() {
       }
 
       // Re-sort merged picks by whatever mode is active so the Lock stays #1.
+      // EV and Longshot both rank by evPercent — Longshot's <5% AI floor is
+      // applied later in visibleParlays, so the underlying sort key is the same.
       if (sortBy === "confidence") merged.sort((a, b) => b.confidence - a.confidence);
       else if (sortBy === "payout") merged.sort((a, b) => b.payout - a.payout);
       else merged.sort((a, b) => b.evPercent - a.evPercent);
@@ -707,6 +761,43 @@ export default function ParlaysPage() {
               </button>
             ))}
           </div>
+
+          {/* Top-N tier filter — limits view to the AI's top-ranked picks
+              within the active sort. Lets users dial how aggressive the
+              recommendation pool should be. /results breaks out hit rate
+              by tier so users can see whether tighter tiers actually win
+              more often (the truthful answer to "is this AI's ranking
+              real?"). */}
+          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mt-4">
+            <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
+              Top
+            </span>
+            <button
+              onClick={() => setTierLimit("all")}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
+              style={{
+                background: tierLimit === "all" ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
+                color: tierLimit === "all" ? "#0a0a0a" : "rgba(0,0,0,0.5)",
+                border: tierLimit === "all" ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
+              }}
+            >
+              All
+            </button>
+            {TIER_LIMITS.map((n) => (
+              <button
+                key={n}
+                onClick={() => setTierLimit(n)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
+                style={{
+                  background: tierLimit === n ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
+                  color: tierLimit === n ? "#0a0a0a" : "rgba(0,0,0,0.5)",
+                  border: tierLimit === n ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
+                }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -769,6 +860,36 @@ export default function ParlaysPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-6"
               >
+                {/* Longshot lane banner — fires when user explicitly opted
+                    into the lottery picks. Names the trade-off plainly:
+                    these are the highest-EV-on-paper picks, but the AI
+                    itself thinks they hit <5% of the time. We surface them
+                    so users can see what the math looks like at the tail;
+                    we label them so nobody mistakes "+1662% EV" for "this
+                    is going to cash." */}
+                {sortBy === "longshot" && (
+                  <div
+                    className="rounded-xl px-5 py-4 flex items-start gap-3"
+                    style={{
+                      background: "rgba(220,38,38,0.05)",
+                      border: "1px solid rgba(220,38,38,0.2)",
+                    }}
+                  >
+                    <span
+                      className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full"
+                      style={{ background: "#FF3B3B" }}
+                    />
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "#FF3B3B" }}>
+                        Longshot lane — lottery tickets only
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.6)", lineHeight: 1.5 }}>
+                        These are the picks the AI estimates hit less than 5% of the time. The EV math says they&apos;re theoretically valuable on a long enough sample; the reality is they lose 95+ times out of 100. Bet small, treat them as lottery, and don&apos;t mistake &ldquo;+1000% EV&rdquo; for &ldquo;this is going to cash.&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Honest market-state banner — when NO parlay has AI >
                     book, tell users the lines are tight instead of
                     pretending something is a Lock. */}

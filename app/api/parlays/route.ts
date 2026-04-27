@@ -24,6 +24,7 @@ import {
   totalProbability,
 } from "@/lib/game-model";
 import { detectSharpEdge } from "@/lib/fair-odds";
+import { applyDiversityFilter } from "@/lib/diversity";
 import { fetchGameWeather, type WeatherSignal } from "@/lib/weather";
 import {
   fetchProbablePitchers,
@@ -1272,7 +1273,10 @@ function buildParlays(
   const usedCombinations = new Set<string>();
 
   // Greedy parlay construction: start from top legs, no same-game parlays.
-  for (let attempt = 0; attempt < count * 20 && parlays.length < count; attempt++) {
+  // Build up to count*3 candidates so the diversity filter below has room
+  // to drop near-duplicates without leaving the response short.
+  const buildTarget = count * 3;
+  for (let attempt = 0; attempt < count * 30 && parlays.length < buildTarget; attempt++) {
     const selected: ScoredLeg[] = [];
     const usedGames = new Set<string>();
 
@@ -1442,7 +1446,13 @@ function buildParlays(
     parlays.sort((a, b) => b.ev - a.ev);
   }
 
-  return parlays.slice(0, count);
+  // Drop near-duplicates and cap how many picks share any single leg. The
+  // upstream caller asked for `count` parlays; the filter runs against the
+  // sorted-best-first list so we keep the top of the ranking and drop the
+  // correlated tail.
+  const diverse = applyDiversityFilter(parlays);
+
+  return diverse.slice(0, count);
 }
 
 // ─── API Data Fetching ───────────────────────────────────────────────────────
@@ -1729,10 +1739,14 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      // Order by slate_rank ASC (1 = top pick) so the Top N tier filter
+      // on the client can do a simple .slice(0, N). Falls back to
+      // created_at for legacy rows that pre-date migration 019.
       const { data: slateRows } = await supabase
         .from("parlays")
         .select("*")
         .eq("slate_id", activeSlateId)
+        .order("slate_rank", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false });
 
       const parlays = (slateRows || []).map((p) => ({
@@ -1746,6 +1760,7 @@ export async function GET(request: NextRequest) {
         payout: p.payout,
         timestamp: p.created_at,
         category: p.category,
+        slateRank: p.slate_rank ?? null,
         impliedHitRate: p.combined_decimal && p.combined_decimal > 1
           ? Math.round((1 / p.combined_decimal) * 10000) / 100
           : undefined,

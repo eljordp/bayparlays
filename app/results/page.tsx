@@ -67,6 +67,19 @@ interface MarketBreakdown {
   winRate: number;
 }
 
+// Tier breakdown — hit rate + ROI for cumulative top-N tiers across history.
+// The curve from Top 3 → All 1000 is the truthful answer to "is the AI's
+// confidence ranking real?" — if the gap is wide, the ranking has signal.
+interface TierBreakdown {
+  tier: number;
+  sample: number;
+  won: number;
+  lost: number;
+  winRate: number;
+  profit: number;
+  roi: number;
+}
+
 interface RecentParlay {
   id: string;
   created_at: string;
@@ -87,6 +100,7 @@ interface ResultsData {
   sportBreakdown: SportBreakdown[];
   categoryBreakdown: CategoryBreakdown[];
   marketBreakdown: MarketBreakdown[];
+  tierBreakdown?: TierBreakdown[];
   recentParlays: RecentParlay[];
 }
 
@@ -214,6 +228,7 @@ export default function ResultsPage() {
   const sportBreakdown = data?.sportBreakdown ?? [];
   const categoryBreakdown = data?.categoryBreakdown ?? [];
   const marketBreakdown = data?.marketBreakdown ?? [];
+  const tierBreakdown = data?.tierBreakdown ?? [];
   const maxCategoryWinRate = Math.max(...categoryBreakdown.map((c) => c.winRate), 1);
   const maxMarketWinRate = Math.max(...marketBreakdown.map((m) => m.winRate), 1);
   const recentParlays = data?.recentParlays ?? [];
@@ -612,6 +627,105 @@ export default function ResultsPage() {
                           </div>
                         </motion.div>
                       ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* ─── By Tier ─── */}
+                {/* The most important breakdown on this page. If the AI's
+                    Top 3 win at a higher rate than its All-tier picks,
+                    the confidence ranking is real. If the rates are flat,
+                    it isn't. We show the full curve so the answer is
+                    visible, not hidden behind a single headline number. */}
+                {tierBreakdown.length > 0 && tierBreakdown.some((t) => t.sample > 0) && (
+                  <motion.div
+                    className="mt-16 md:mt-20"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.42 }}
+                  >
+                    <h2
+                      className="text-2xl md:text-3xl mb-3"
+                      style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
+                    >
+                      By Tier
+                    </h2>
+                    <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}>
+                      Hit rate and ROI if you only bet the AI&apos;s Top N picks each slate. The wider the gap between Top 3 and All, the more real the AI&apos;s confidence ranking is. Flat curve means the ranking is noise.
+                    </p>
+                    <div
+                      className="rounded-xl overflow-hidden"
+                      style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+                    >
+                      <div
+                        className="grid text-xs uppercase tracking-wider px-5 py-3"
+                        style={{
+                          gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
+                          background: "rgba(0,0,0,0.04)",
+                          color: "rgba(0,0,0,0.5)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <div>Tier</div>
+                        <div className="text-right">Sample</div>
+                        <div className="text-right">Record</div>
+                        <div className="text-right">Win Rate</div>
+                        <div className="text-right">ROI</div>
+                      </div>
+                      {tierBreakdown.map((t, idx) => {
+                        const hasSample = t.sample > 0;
+                        return (
+                          <motion.div
+                            key={t.tier}
+                            className="grid items-center px-5 py-4 text-sm"
+                            style={{
+                              gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr",
+                              borderTop: idx === 0 ? "none" : "1px solid rgba(0,0,0,0.06)",
+                              fontFamily: "var(--font-geist-mono)",
+                              opacity: hasSample ? 1 : 0.4,
+                            }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: hasSample ? 1 : 0.4 }}
+                            transition={{ duration: 0.3, delay: 0.45 + idx * 0.04 }}
+                          >
+                            <div style={{ fontWeight: 600, color: "#0a0a0a", fontFamily: "inherit" }}>
+                              Top {t.tier}
+                            </div>
+                            <div className="text-right" style={{ color: "rgba(0,0,0,0.55)" }}>
+                              {t.sample}
+                            </div>
+                            <div className="text-right" style={{ color: "rgba(0,0,0,0.55)" }}>
+                              {hasSample ? `${t.won}-${t.lost}` : "—"}
+                            </div>
+                            <div
+                              className="text-right"
+                              style={{
+                                color: hasSample
+                                  ? t.winRate >= 50
+                                    ? "#22c55e"
+                                    : "#ef4444"
+                                  : "rgba(0,0,0,0.4)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {hasSample ? `${t.winRate.toFixed(0)}%` : "—"}
+                            </div>
+                            <div
+                              className="text-right"
+                              style={{
+                                color: hasSample
+                                  ? t.roi >= 0
+                                    ? "#22c55e"
+                                    : "#ef4444"
+                                  : "rgba(0,0,0,0.4)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {hasSample ? `${t.roi >= 0 ? "+" : ""}${t.roi.toFixed(1)}%` : "—"}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   </motion.div>
                 )}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { applyDiversityFilter } from "@/lib/diversity";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
@@ -101,8 +102,18 @@ export async function GET(req: NextRequest) {
     { sort: "payout",     count: 1, legs: 4 },
   ];
 
-  const persisted: string[] = [];
+  // Phase 1: collect candidate parlays across all combos. We don't insert
+  // yet — same parlay can rank highly in two sort modes (e.g. confidence and
+  // EV both surface the same low-juice favorite stack), and we want a slate
+  // diversity pass to dedupe across modes before any DB write happens.
+  type Candidate = {
+    parlayId: string;
+    legs: Array<{ gameId?: string; pick: string; sport?: string }>;
+    row: Record<string, unknown>;
+  };
+  const candidates: Candidate[] = [];
   const debug: Array<Record<string, unknown>> = [];
+
   for (const combo of combos) {
     const dbg: Record<string, unknown> = { sort: combo.sort, legs: combo.legs, count: combo.count };
     try {
@@ -118,41 +129,30 @@ export async function GET(req: NextRequest) {
       const parlays = data.parlays || [];
       dbg.parlaysReturned = parlays.length;
 
-      // /api/parlays does its own write to the parlays table via /api/track,
-      // but those rows land WITHOUT a slate_id. We tag them retroactively
-      // by matching combined_odds + most recent insert. Faster: re-insert
-      // here as a slate-stamped row.
       for (const p of parlays) {
-        // Derive sports from legs since /api/parlays returns sports nested
-        // inside each leg, not at the top level. parlays.sports is NOT NULL.
+        const legs = p.legs as Array<{ gameId?: string; pick: string; sport?: string }>;
         const legSports = Array.from(
-          new Set(
-            (p.legs as Array<{ sport?: string }>)
-              .map((l) => l?.sport)
-              .filter((s): s is string => !!s),
-          ),
+          new Set(legs.map((l) => l?.sport).filter((s): s is string => !!s)),
         );
-        const row = {
-          legs: p.legs,
-          combined_odds: p.combinedOdds,
-          combined_decimal: p.combinedDecimal,
-          ev: p.ev,
-          ev_percent: p.evPercent,
-          confidence: p.confidence,
-          payout: p.payout,
-          stake: 100,
-          legs_total: p.legs.length,
-          sports: legSports.length > 0 ? legSports : ["MLB"],
-          status: "pending",
-          category: p.category || combo.sort,
-          slate_id: slateId,
-        };
-        const { error } = await supabase.from("parlays").insert(row).select("id").single();
-        if (error) {
-          dbg.lastInsertError = error.message;
-        } else {
-          persisted.push(p.id);
-        }
+        candidates.push({
+          parlayId: p.id,
+          legs,
+          row: {
+            legs: p.legs,
+            combined_odds: p.combinedOdds,
+            combined_decimal: p.combinedDecimal,
+            ev: p.ev,
+            ev_percent: p.evPercent,
+            confidence: p.confidence,
+            payout: p.payout,
+            stake: 100,
+            legs_total: p.legs.length,
+            sports: legSports.length > 0 ? legSports : ["MLB"],
+            status: "pending",
+            category: p.category || combo.sort,
+            slate_id: slateId,
+          },
+        });
       }
       debug.push(dbg);
     } catch (e) {
@@ -161,10 +161,65 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Phase 2: slate-level diversity filter. /api/parlays already filters
+  // within a single sort mode, but each combo above is an independent call
+  // — duplicates and near-duplicates can sneak in across modes. Order
+  // matters: combos[] is listed confidence-first, so confidence picks win
+  // ties against EV/payout picks. That mirrors the existing slate mix
+  // (5 confidence / 4 EV / 3 payout).
+  const beforeFilter = candidates.length;
+  const diverse = applyDiversityFilter(candidates);
+  const droppedToDiversity = beforeFilter - diverse.length;
+
+  // Phase 3: rank the diverse candidates by confidence DESC and stamp
+  // slate_rank (1 = highest confidence) before insert. This is the spine
+  // of the new "Top N" filter on /parlays and the tier breakout on
+  // /results — without persisted rank, historical hit rate by tier
+  // can't be computed retroactively.
+  //
+  // Confidence is the right ranking signal because that's the default
+  // user sort and the metric subscribers care about ("will this hit?").
+  // EV is intentionally NOT the rank signal — high-EV / low-confidence
+  // longshots would crowd Top 3 and tank apparent hit rate.
+  diverse.sort((a, b) => {
+    const ac = (a.row.confidence as number) ?? 0;
+    const bc = (b.row.confidence as number) ?? 0;
+    return bc - ac;
+  });
+
+  const persisted: string[] = [];
+  let lastInsertError: string | undefined;
+  for (let i = 0; i < diverse.length; i++) {
+    const c = diverse[i];
+    const rowWithRank = { ...c.row, slate_rank: i + 1 };
+    const { error } = await supabase.from("parlays").insert(rowWithRank).select("id").single();
+    if (error) {
+      lastInsertError = error.message;
+    } else {
+      persisted.push(c.parlayId);
+    }
+  }
+
+  // Phase 4: log this run to slate_runs so the diversity filter's behavior
+  // is queryable over time. Best-effort — if the table doesn't exist yet
+  // (migration 018 not applied) or insert fails, we just continue. The
+  // slate itself is the source of truth, this is observability.
+  await supabase.from("slate_runs").insert({
+    slate_id: slateId,
+    label,
+    candidates_before_filter: beforeFilter,
+    dropped_to_diversity: droppedToDiversity,
+    persisted: persisted.length,
+    last_insert_error: lastInsertError,
+  });
+
   return NextResponse.json({
     slateId,
     label,
     persisted: persisted.length,
+    candidatesBeforeFilter: beforeFilter,
+    droppedToDiversity,
+    lastInsertError,
     debug,
     timestamp: now.toISOString(),
   });

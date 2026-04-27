@@ -25,7 +25,15 @@ interface ParlayRow {
   profit: number | null;
   category: ParlayCategory | null;
   clv_percent: number | null;
+  slate_rank: number | null;
 }
+
+// Cumulative tier buckets — "Top N" means slate_rank <= N. Showing the
+// curve (Top 3 hit rate vs Top 1000 hit rate) is the single most honest
+// answer to "is the AI's ranking real?" — if the curve slopes up, the
+// confidence ranking has signal. If it's flat, the AI is just generating
+// noise sorted by a dimension that doesn't correlate with hits.
+const TIER_BUCKETS = [3, 10, 25, 50, 100, 250, 500, 1000] as const;
 
 // Public track record counts every parlay the AI has surfaced. The earlier
 // confidence>=60 cutoff filtered out everything (model never scores that high),
@@ -256,6 +264,49 @@ export async function GET() {
       }),
     );
 
+    // --- Tier breakdown: hit rate + ROI for top-N picks across history ---
+    // Only counts rows that have slate_rank set (post-migration 019). Rows
+    // pre-migration return [] tier breakdown until enough history accrues.
+    const tierEligible = rows.filter(
+      (p) =>
+        typeof p.slate_rank === "number" &&
+        p.status !== "pending" &&
+        p.slate_rank > 0,
+    );
+    const tierBreakdown = TIER_BUCKETS.map((tier) => {
+      const inTier = tierEligible.filter((p) => (p.slate_rank ?? 0) <= tier);
+      const tierWon = inTier.filter((p) => p.status === "won").length;
+      const tierLost = inTier.filter((p) => p.status === "lost").length;
+      const tierResolved = tierWon + tierLost;
+      const tierWinRate =
+        tierResolved > 0
+          ? Math.round((tierWon / tierResolved) * 10000) / 100
+          : 0;
+      // ROI uses the unit-stake framing so the dollar story matches
+      // /results's "$10 per pick" headline. Same record either way; just
+      // sized to what users actually do in the simulator.
+      const tierProfit = inTier.reduce((sum, p) => {
+        if (p.status === "won")
+          return sum + UNIT_STAKE * ((p.combined_decimal ?? 1) - 1);
+        if (p.status === "lost") return sum - UNIT_STAKE;
+        return sum;
+      }, 0);
+      const tierStaked = tierResolved * UNIT_STAKE;
+      const tierRoi =
+        tierStaked > 0
+          ? Math.round((tierProfit / tierStaked) * 10000) / 100
+          : 0;
+      return {
+        tier,
+        sample: tierResolved,
+        won: tierWon,
+        lost: tierLost,
+        winRate: tierWinRate,
+        profit: Math.round(tierProfit * 100) / 100,
+        roi: tierRoi,
+      };
+    });
+
     // --- Recent parlays ---
     const recentParlays = rows.slice(0, 20).map((p) => ({
       id: p.id,
@@ -299,6 +350,7 @@ export async function GET() {
         sportBreakdown,
         categoryBreakdown,
         marketBreakdown,
+        tierBreakdown,
         recentParlays,
       },
       {
