@@ -13,6 +13,12 @@ interface ResearchTile {
 
 const TILES: ResearchTile[] = [
   {
+    href: "/admin/research/backtest",
+    title: "Backtest",
+    question: "What filters would have made the most money? Drag sliders to find the golden zone.",
+    status: "live",
+  },
+  {
     href: "/admin/research/edge-accuracy",
     title: "Edge Accuracy",
     question: "When the AI claims +8% edge, does the parlay actually win 8% more than book?",
