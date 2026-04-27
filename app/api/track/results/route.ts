@@ -26,6 +26,7 @@ interface ParlayRow {
   category: ParlayCategory | null;
   clv_percent: number | null;
   slate_rank: number | null;
+  archived_at: string | null;
 }
 
 // Cumulative tier buckets — "Top N" means slate_rank <= N. Showing the
@@ -68,11 +69,17 @@ export async function GET() {
       if (data.length < PAGE_SIZE) break;
     }
 
-    // Retroactive confidence filter — only count AI-endorsed picks in the public
-    // track record. Garbage pre-filter parlays still live in the DB (we don't
-    // delete history) but they don't pollute the displayed stats.
+    // Retroactive filters — only count AI-endorsed picks in the public
+    // track record. Garbage pre-filter parlays still live in the DB (we
+    // don't delete history) but they don't pollute the displayed stats.
+    //   - confidence floor: drops uncategorized junk
+    //   - archived_at IS NOT NULL: cleanup script
+    //     (scripts/archive-duplicate-parlays.ts) marks literal-duplicate
+    //     rows so they stop double-counting wins/losses
     const rows = allRows.filter(
-      (p) => (p.confidence ?? 0) >= MIN_CONFIDENCE_FOR_TRACK_RECORD,
+      (p) =>
+        (p.confidence ?? 0) >= MIN_CONFIDENCE_FOR_TRACK_RECORD &&
+        !p.archived_at,
     );
 
     // --- Aggregate stats ---
