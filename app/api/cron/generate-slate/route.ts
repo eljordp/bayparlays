@@ -85,9 +85,11 @@ export async function GET(req: NextRequest) {
 
   // Generate parlays via internal call to /api/parlays. Three sort modes,
   // small counts each — total 12 picks per slate.
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://bayparlays.vercel.app");
+  // Hardcoded to the production alias — Vercel's per-deployment URLs
+  // (process.env.VERCEL_URL) are protected by deployment-level auth on the
+  // Hobby tier, so internal fetches against them get 401d. The production
+  // alias is always public.
+  const baseUrl = "https://bayparlays.vercel.app";
 
   type Combo = { sort: "confidence" | "ev" | "payout"; count: number; legs: number };
   const combos: Combo[] = [
