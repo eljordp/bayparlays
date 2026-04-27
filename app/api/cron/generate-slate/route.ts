@@ -100,13 +100,21 @@ export async function GET(req: NextRequest) {
   ];
 
   const persisted: string[] = [];
+  const debug: Array<Record<string, unknown>> = [];
   for (const combo of combos) {
+    const dbg: Record<string, unknown> = { sort: combo.sort, legs: combo.legs, count: combo.count };
     try {
       const u = `${baseUrl}/api/parlays?sports=nba,mlb,nhl,ncaab,ncaaf&legs=${combo.legs}&count=${combo.count}&sort=${combo.sort}&tier=admin`;
+      dbg.url = u;
       const res = await fetch(u, { cache: "no-store" });
-      if (!res.ok) continue;
+      dbg.status = res.status;
+      if (!res.ok) {
+        debug.push(dbg);
+        continue;
+      }
       const data = (await res.json()) as InternalParlayResp;
       const parlays = data.parlays || [];
+      dbg.parlaysReturned = parlays.length;
 
       // /api/parlays does its own write to the parlays table via /api/track,
       // but those rows land WITHOUT a slate_id. We tag them retroactively
@@ -139,13 +147,15 @@ export async function GET(req: NextRequest) {
         };
         const { error } = await supabase.from("parlays").insert(row).select("id").single();
         if (error) {
-          console.error(`slate insert failed (${combo.sort}/${combo.legs}):`, error.message);
+          dbg.lastInsertError = error.message;
         } else {
           persisted.push(p.id);
         }
       }
+      debug.push(dbg);
     } catch (e) {
-      console.error(`Combo ${combo.sort}/${combo.legs}:`, e);
+      dbg.exception = String(e);
+      debug.push(dbg);
     }
   }
 
@@ -153,6 +163,7 @@ export async function GET(req: NextRequest) {
     slateId,
     label,
     persisted: persisted.length,
+    debug,
     timestamp: now.toISOString(),
   });
 }
