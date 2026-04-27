@@ -100,6 +100,12 @@ export async function GET(req: NextRequest) {
     { sort: "ev",         count: 1, legs: 3 },
     { sort: "payout",     count: 2, legs: 3 },  // longshots
     { sort: "payout",     count: 1, legs: 4 },
+    // 5/6 leg picks are inherently low-confidence (cumulative prob drops
+    // hard each leg) so they live in the payout sort — degens-only lottery
+    // tickets. Without these the /parlays "Legs: 5" / "Legs: 6" filters
+    // return empty, which reads as broken.
+    { sort: "payout",     count: 1, legs: 5 },
+    { sort: "payout",     count: 1, legs: 6 },
   ];
 
   // Phase 1: collect candidate parlays across all combos. We don't insert

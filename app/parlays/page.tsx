@@ -112,13 +112,6 @@ const SORT_OPTIONS = [
 
 type SortOption = (typeof SORT_OPTIONS)[number]["value"];
 
-// Top-N tier filter. Lets users dial how aggressive the AI's recommendation
-// pool should be. The spread between Top 3 hit rate and All hit rate is the
-// truthful answer to "how good is this AI's confidence ranking?" — surfacing
-// that spread on /results is the whole point of having tiers.
-const TIER_LIMITS = [3, 10, 25, 50, 100, 250, 500, 1000] as const;
-type TierLimit = (typeof TIER_LIMITS)[number] | "all";
-
 // AI hit rate floor for Best EV — anything below this is treated as a
 // longshot regardless of how mathematically juicy the EV looks. Keeps the
 // 0% → 1% lottery picks out of the main "Best EV" view, where they'd
@@ -252,10 +245,6 @@ export default function ParlaysPage() {
   // Default to "Most Confident" — users want "will this hit?" before
   // "is this +EV math." Lock picks lead; EV + Payout are optional tabs.
   const [sortBy, setSortBy] = useState<SortOption>("confidence");
-  // Default tier: "all" — show everything available. Power users dial
-  // down to Top 3/10/25 etc to see the AI's most-confident picks only.
-  // The spread between tiers is intentionally visible on /results.
-  const [tierLimit, setTierLimit] = useState<TierLimit>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [pendingSimSigs, setPendingSimSigs] = useState<Set<string>>(new Set());
@@ -373,13 +362,6 @@ export default function ParlaysPage() {
           return o >= range.min && o <= range.max;
         });
       }
-    }
-
-    // Top-N tier: pool is already sorted by the active sort mode (see
-    // fetchParlays), so .slice(0, N) gives the top-N picks under that
-    // sort. "all" shows whatever paywall countForTier left us with.
-    if (tierLimit !== "all") {
-      pool = pool.slice(0, tierLimit);
     }
 
     return pool;
@@ -762,42 +744,6 @@ export default function ParlaysPage() {
             ))}
           </div>
 
-          {/* Top-N tier filter — limits view to the AI's top-ranked picks
-              within the active sort. Lets users dial how aggressive the
-              recommendation pool should be. /results breaks out hit rate
-              by tier so users can see whether tighter tiers actually win
-              more often (the truthful answer to "is this AI's ranking
-              real?"). */}
-          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mt-4">
-            <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
-              Top
-            </span>
-            <button
-              onClick={() => setTierLimit("all")}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
-              style={{
-                background: tierLimit === "all" ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
-                color: tierLimit === "all" ? "#0a0a0a" : "rgba(0,0,0,0.5)",
-                border: tierLimit === "all" ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
-              }}
-            >
-              All
-            </button>
-            {TIER_LIMITS.map((n) => (
-              <button
-                key={n}
-                onClick={() => setTierLimit(n)}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
-                style={{
-                  background: tierLimit === n ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
-                  color: tierLimit === n ? "#0a0a0a" : "rgba(0,0,0,0.5)",
-                  border: tierLimit === n ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
-                }}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
