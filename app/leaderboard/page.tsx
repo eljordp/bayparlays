@@ -13,8 +13,6 @@ import { Lock, Trophy, Crown, Medal } from "lucide-react";
 interface LeaderboardEntry {
   userId: string;
   displayName: string;
-  balance: number;
-  startingBalance: number;
   profit: number;
   roi: number;
   winRate: number;
