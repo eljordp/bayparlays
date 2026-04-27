@@ -113,6 +113,15 @@ export async function GET(req: NextRequest) {
       // by matching combined_odds + most recent insert. Faster: re-insert
       // here as a slate-stamped row.
       for (const p of parlays) {
+        // Derive sports from legs since /api/parlays returns sports nested
+        // inside each leg, not at the top level. parlays.sports is NOT NULL.
+        const legSports = Array.from(
+          new Set(
+            (p.legs as Array<{ sport?: string }>)
+              .map((l) => l?.sport)
+              .filter((s): s is string => !!s),
+          ),
+        );
         const row = {
           legs: p.legs,
           combined_odds: p.combinedOdds,
@@ -123,13 +132,17 @@ export async function GET(req: NextRequest) {
           payout: p.payout,
           stake: 100,
           legs_total: p.legs.length,
-          sports: p.sports || [],
+          sports: legSports.length > 0 ? legSports : ["MLB"],
           status: "pending",
           category: p.category || combo.sort,
           slate_id: slateId,
         };
         const { error } = await supabase.from("parlays").insert(row).select("id").single();
-        if (!error) persisted.push(p.id);
+        if (error) {
+          console.error(`slate insert failed (${combo.sort}/${combo.legs}):`, error.message);
+        } else {
+          persisted.push(p.id);
+        }
       }
     } catch (e) {
       console.error(`Combo ${combo.sort}/${combo.legs}:`, e);
