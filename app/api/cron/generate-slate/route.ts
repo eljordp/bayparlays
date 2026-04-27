@@ -168,7 +168,20 @@ export async function GET(req: NextRequest) {
   // ties against EV/payout picks. That mirrors the existing slate mix
   // (5 confidence / 4 EV / 3 payout).
   const beforeFilter = candidates.length;
-  const diverse = applyDiversityFilter(candidates);
+  // Tighter than the lib defaults (which are tuned for in-call dedup on the
+  // live /api/parlays endpoint). For the slate, every pick needs to be a
+  // distinct idea so that "Top 3" actually means three different bets:
+  //   - maxPerLeg=1 → no leg appears in more than one parlay. If Wisconsin
+  //     ML is in pick #1, it can't show up again in pick #2.
+  //   - maxPerGame=2 → same game can appear in up to two parlays (e.g. a
+  //     moneyline parlay and a spread parlay), but never three-deep. Stops
+  //     the "if Lakers loses, half the slate dies" correlation problem.
+  // Slate may end up smaller than the 12-pick target if variety is thin.
+  // That's fine — fewer truly different picks beats more correlated ones.
+  const diverse = applyDiversityFilter(candidates, {
+    maxPerLeg: 1,
+    maxPerGame: 2,
+  });
   const droppedToDiversity = beforeFilter - diverse.length;
 
   // Phase 3: rank the diverse candidates by confidence DESC and stamp
