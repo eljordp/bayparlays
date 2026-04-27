@@ -27,15 +27,19 @@ interface Bucket {
   actual: number[];
 }
 
-const BUCKETS: Bucket[] = [
-  { label: "Negative EV (-Inf to 0%)", min: -Infinity, max: 0, predicted: [], actual: [] },
-  { label: "Low (0-2%)", min: 0, max: 2, predicted: [], actual: [] },
-  { label: "Modest (2-5%)", min: 2, max: 5, predicted: [], actual: [] },
-  { label: "Solid (5-10%)", min: 5, max: 10, predicted: [], actual: [] },
-  { label: "Strong (10-20%)", min: 10, max: 20, predicted: [], actual: [] },
-  { label: "Big (20-50%)", min: 20, max: 50, predicted: [], actual: [] },
-  { label: "Insane (50%+)", min: 50, max: Infinity, predicted: [], actual: [] },
-];
+// Defined inside GET (not module-level) so each request gets fresh arrays.
+// Module-level mutable state in serverless = arrays grow forever across calls.
+function freshBuckets(): Bucket[] {
+  return [
+    { label: "Negative EV (-Inf to 0%)", min: -Infinity, max: 0, predicted: [], actual: [] },
+    { label: "Low (0-2%)", min: 0, max: 2, predicted: [], actual: [] },
+    { label: "Modest (2-5%)", min: 2, max: 5, predicted: [], actual: [] },
+    { label: "Solid (5-10%)", min: 5, max: 10, predicted: [], actual: [] },
+    { label: "Strong (10-20%)", min: 10, max: 20, predicted: [], actual: [] },
+    { label: "Big (20-50%)", min: 20, max: 50, predicted: [], actual: [] },
+    { label: "Insane (50%+)", min: 50, max: Infinity, predicted: [], actual: [] },
+  ];
+}
 
 export async function GET() {
   // Pull all resolved parlays from the parlays table (the AI's daily picks
@@ -63,23 +67,23 @@ export async function GET() {
     return NextResponse.json({ rows: [], buckets: [], totalSampled: 0 });
   }
 
+  const buckets = freshBuckets();
+
   // Bucket each parlay by its claimed EV percent
   for (const p of rows) {
     if (!p.combined_decimal || p.combined_decimal <= 1) continue;
     const ev = p.ev_percent ?? 0;
     const bookImpliedProb = 1 / p.combined_decimal;
-    // AI's predicted probability = book-implied × (1 + EV/100). If AI claims
-    // +8% edge, AI thinks the parlay wins 8% more than book's price says.
     const aiPredictedProb = bookImpliedProb * (1 + ev / 100);
     const actual = p.status === "won" ? 1 : 0;
 
-    const bucket = BUCKETS.find((b) => ev >= b.min && ev < b.max);
+    const bucket = buckets.find((b) => ev >= b.min && ev < b.max);
     if (!bucket) continue;
     bucket.predicted.push(aiPredictedProb);
     bucket.actual.push(actual);
   }
 
-  const out = BUCKETS.map((b) => {
+  const out = buckets.map((b) => {
     const n = b.predicted.length;
     if (n === 0) {
       return {
