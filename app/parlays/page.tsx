@@ -1343,16 +1343,18 @@ function ParlayCard({
 
   const conf = confidenceLabel(parlay.confidence);
   const evPositive = parlay.ev > 0;
-  const formattedOdds =
-    parlay.combinedOdds.startsWith("+") || parlay.combinedOdds.startsWith("-")
-      ? parlay.combinedOdds
-      : `+${parlay.combinedOdds}`;
   const accent = getParlayAccent(parlay.legs);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{
+        y: -3,
+        boxShadow: isLockOfDay
+          ? "0 14px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.05)"
+          : "0 8px 28px rgba(0,0,0,0.08)",
+      }}
       transition={{ duration: 0.4, delay: index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="rounded-2xl overflow-hidden relative"
       style={{
@@ -1456,7 +1458,13 @@ function ParlayCard({
               className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums"
               style={{ color: "#0a0a0a", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
             >
-              {formattedOdds}
+              <AnimatedNumber
+                value={combinedOddsToAmerican(parlay)}
+                format={(n) => {
+                  const r = Math.round(n);
+                  return r >= 0 ? `+${r}` : `${r}`;
+                }}
+              />
             </div>
           </div>
 
@@ -1472,7 +1480,10 @@ function ParlayCard({
               className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums"
               style={{ color: "#0a0a0a", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
             >
-              ${parlay.payout.toLocaleString()}
+              <AnimatedNumber
+                value={parlay.payout}
+                format={(n) => `$${Math.round(n).toLocaleString()}`}
+              />
             </div>
           </div>
 
@@ -1488,7 +1499,10 @@ function ParlayCard({
               className="text-2xl sm:text-3xl font-bold tabular-nums"
               style={{ color: evPositive ? "#34D399" : "#FF4D4D" }}
             >
-              {evPositive ? "+" : ""}{parlay.evPercent.toFixed(1)}%
+              <AnimatedNumber
+                value={parlay.evPercent}
+                format={(n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`}
+              />
             </div>
           </div>
         </div>
@@ -1937,6 +1951,109 @@ function shortTeam(name: string): string {
   return parts[parts.length - 1];
 }
 
+// Sport ball icon — adds visual identity to legs without team logos (totals,
+// unknown teams). Inline SVG so we don't pull in another icon dependency.
+// Replaces the boring "NBA" / "MLB" text pill in the LegLogo fallback.
+function SportBallIcon({ sport, size = 32 }: { sport: string; size?: number }) {
+  const s = sport?.toUpperCase();
+  switch (s) {
+    case "NBA":
+    case "NCAAB":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14" fill="#E07020" />
+          <circle cx="16" cy="16" r="14" fill="none" stroke="#5C2A0E" strokeWidth="1" opacity="0.5" />
+          <path d="M2 16 H30 M16 2 V30" stroke="#5C2A0E" strokeWidth="1.2" opacity="0.6" />
+          <path d="M5 6 Q16 16 27 6" stroke="#5C2A0E" strokeWidth="1.2" fill="none" opacity="0.6" />
+          <path d="M5 26 Q16 16 27 26" stroke="#5C2A0E" strokeWidth="1.2" fill="none" opacity="0.6" />
+        </svg>
+      );
+    case "NFL":
+    case "NCAAF":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+          <g transform="rotate(-20 16 16)">
+            <ellipse cx="16" cy="16" rx="13" ry="8" fill="#7B3F1A" />
+            <path d="M11 16 H21 M12 14 V18 M14 13 V19 M16 13 V19 M18 13 V19 M20 14 V18" stroke="white" strokeWidth="1" opacity="0.85" />
+          </g>
+        </svg>
+      );
+    case "MLB":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14" fill="#FAFAFA" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+          <path d="M5 9 Q16 16 27 9" stroke="#C8102E" strokeWidth="1.4" fill="none" />
+          <path d="M5 23 Q16 16 27 23" stroke="#C8102E" strokeWidth="1.4" fill="none" />
+        </svg>
+      );
+    case "NHL":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+          <ellipse cx="16" cy="20" rx="13" ry="4" fill="#1a1a1a" />
+          <ellipse cx="16" cy="14" rx="13" ry="4" fill="#0a0a0a" stroke="#333" strokeWidth="0.5" />
+          <path d="M3 14 V20 M29 14 V20" stroke="#1a1a1a" strokeWidth="1" />
+        </svg>
+      );
+    case "MLS":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14" fill="white" stroke="#0a0a0a" strokeWidth="1" />
+          <polygon points="16,9 20,12 18.5,17 13.5,17 12,12" fill="#0a0a0a" />
+          <path d="M16 4 L18.5 9 M16 4 L13.5 9 M3 14 L9.5 13 M29 14 L22.5 13 M9 26 L13 18 M23 26 L19 18" stroke="#0a0a0a" strokeWidth="1" />
+        </svg>
+      );
+    case "UFC":
+      return (
+        <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+          <path d="M8 10 Q8 6 12 6 H22 Q26 6 26 10 V20 Q26 24 22 24 H12 Q8 24 8 20 Z" fill="#D20A0A" />
+          <rect x="8" y="18" width="18" height="6" rx="2" fill="rgba(0,0,0,0.25)" />
+          <path d="M11 11 V14 M15 11 V14 M19 11 V14 M23 11 V14" stroke="rgba(0,0,0,0.3)" strokeWidth="1" />
+        </svg>
+      );
+    default:
+      return (
+        <div
+          style={{
+            width: size,
+            height: size,
+            borderRadius: "50%",
+            background: SPORT_COLORS[s] ?? "#666",
+          }}
+        />
+      );
+  }
+}
+
+// Animated count-up. Eases the displayed number from 0 to target over
+// ~600ms on mount. Used on the big stats (combined odds, payout, EV%) to
+// give the card a "scoreboard tickering up" feel instead of a flat render.
+// Cancels cleanly on unmount or value change.
+function AnimatedNumber({
+  value,
+  format,
+  duration = 700,
+}: {
+  value: number;
+  format: (n: number) => string;
+  duration?: number;
+}) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (!Number.isFinite(value)) return;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(value * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  return <>{format(display)}</>;
+}
+
 // Resolve which team this leg belongs to from `pick` + `game`. For ML/spread
 // picks, the team name appears in the pick string; for totals it doesn't,
 // and we fall back to the home team's brand for color but skip the logo.
@@ -1983,16 +2100,17 @@ function LegLogo({ leg }: { leg: Leg }) {
       </div>
     );
   }
-  // No team logo — use the sport pill as fallback (totals, unknown teams).
+  // No team logo — show the sport ball icon. Replaces the previous text
+  // pill ("NBA", "MLB"). Drops the text entirely; the ball is the signal.
   return (
     <div
-      className="flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0 text-xs font-bold uppercase"
+      className="flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0"
       style={{
-        background: `${SPORT_COLORS[leg.sport] || "#333"}1f`,
-        color: SPORT_COLORS[leg.sport] || "#666",
+        background: `${SPORT_COLORS[leg.sport] || "#333"}14`,
+        border: "1px solid rgba(0,0,0,0.04)",
       }}
     >
-      {leg.sport}
+      <SportBallIcon sport={leg.sport} size={28} />
     </div>
   );
 }
