@@ -1320,15 +1320,29 @@ function buildParlays(
     // they hit 65% of the time. Confidence mode needs real upside; payout
     // mode needs actual longshots; EV mode is math-driven and can flex.
     //
-    //   confidence: min +200 (decimal 3.0) — $10 pays at least $30 profit
-    //   payout:     min +600 (decimal 7.0) — real swings, not mid-odds
-    //   ev:         min +100 (decimal 2.0) — basic "actually worth stacking"
+    //   confidence: min +200 (decimal 3.0)  — $10 pays at least $30 profit
+    //   payout:     min +600 (decimal 7.0)  — real swings, not mid-odds
+    //   ev:         range +200 to +1200     — math edge AT REALISTIC ODDS
+    //
+    // The ev range is bounded on BOTH sides. Without an upper cap, EV math
+    // hijacks longshots (a +176156 parlay with 0.05% hit rate has higher
+    // claimed EV than a +400 parlay with 30% hit rate, because tiny
+    // probability × massive payout still beats reasonable probability ×
+    // moderate payout). That made "Best EV" indistinguishable from
+    // "Highest Payout" for users. Capping at +1200 forces Best EV to mean
+    // "best math at picks that actually have a real shot to hit."
     const minDecimalByMode: Record<typeof sortMode, number> = {
       confidence: 3.0,
       payout: 7.0,
-      ev: 2.0,
+      ev: 3.0, // +200 floor — same as confidence, so EV picks aren't juiced favorites either
+    };
+    const maxDecimalByMode: Record<typeof sortMode, number> = {
+      confidence: Infinity,
+      payout: Infinity,
+      ev: 13.0, // +1200 ceiling — anything bigger is a longshot, belongs in payout
     };
     if (combinedDecimal < minDecimalByMode[sortMode]) continue;
+    if (combinedDecimal > maxDecimalByMode[sortMode]) continue;
 
     // Parlay probability = product of each leg's TRUE probability estimate.
     // No more inflating by arbitrary edge boosts — ourProb is already the
@@ -2119,12 +2133,12 @@ export async function GET(request: NextRequest) {
       insertDiag.existingTodayCount = existingSigs.size;
 
       {
-        // Only track parlays that have real positive expected value.
-        // evPercent > 5 means our model projects >5% EV over many bets —
-        // enough buffer to absorb model error while still showing +EV.
-        // Legs were already gated at trueEdge >= 3% per leg upstream, so this
-        // is a belt-and-suspenders check at the parlay level.
-        const MIN_EV_TO_TRACK = 5;
+        // Only track parlays with meaningful claimed edge. Was 5; raised to
+        // 15 because edge accuracy analysis (admin/research/edge-accuracy)
+        // showed zero parlays were actually being generated below 20% — the
+        // 5 floor was decorative. Setting the real floor where the actual
+        // floor is so the data we keep is consistently mid-edge or above.
+        const MIN_EV_TO_TRACK = 15;
         const sigOf = (legs: Array<{ gameId?: string; pick?: string }>) =>
           legs
             .map((l) => `${l.gameId ?? ""}::${l.pick ?? ""}`)
