@@ -493,77 +493,61 @@ export default function AdminPage() {
                               ).toLocaleDateString()}
                             </td>
                             <td className="px-5 py-4">
-                              <div className="flex items-center gap-2">
-                                <ActionButton
-                                  label="Admin"
-                                  loading={
-                                    actionLoading === u.id
-                                  }
-                                  active={
-                                    u.subscription_tier ===
-                                    "admin"
-                                  }
-                                  onClick={() =>
-                                    updateUser(u.id, {
-                                      subscription_tier:
-                                        "admin",
-                                      subscription_status:
-                                        "active",
-                                    })
-                                  }
-                                />
-                                <ActionButton
-                                  label="Sharp"
-                                  loading={
-                                    actionLoading === u.id
-                                  }
-                                  active={
-                                    u.subscription_tier ===
-                                    "sharp"
-                                  }
-                                  onClick={() =>
-                                    updateUser(u.id, {
-                                      subscription_tier:
-                                        "sharp",
-                                      subscription_status:
-                                        "active",
-                                    })
-                                  }
-                                />
-                                <ActionButton
-                                  label="VIP"
-                                  loading={
-                                    actionLoading === u.id
-                                  }
-                                  active={
-                                    u.subscription_tier ===
-                                    "vip"
-                                  }
-                                  onClick={() =>
-                                    updateUser(u.id, {
-                                      subscription_tier:
-                                        "vip",
-                                      subscription_status:
-                                        "active",
-                                    })
-                                  }
-                                />
-                                <ActionButton
-                                  label="Revoke"
-                                  loading={
-                                    actionLoading === u.id
-                                  }
-                                  destructive
-                                  onClick={() =>
-                                    updateUser(u.id, {
-                                      subscription_tier:
-                                        "free",
-                                      subscription_status:
-                                        "none",
-                                    })
-                                  }
-                                />
-                              </div>
+                              {u.subscription_tier === "owner" ? (
+                                <span
+                                  className="text-[11px] uppercase tracking-wider"
+                                  style={{ color: "rgba(234,179,8,0.7)" }}
+                                >
+                                  Locked — owner
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <ActionButton
+                                    label="Admin"
+                                    loading={actionLoading === u.id}
+                                    active={u.subscription_tier === "admin"}
+                                    onClick={() =>
+                                      updateUser(u.id, {
+                                        subscription_tier: "admin",
+                                        subscription_status: "active",
+                                      })
+                                    }
+                                  />
+                                  <ActionButton
+                                    label="Sharp"
+                                    loading={actionLoading === u.id}
+                                    active={u.subscription_tier === "sharp"}
+                                    onClick={() =>
+                                      updateUser(u.id, {
+                                        subscription_tier: "sharp",
+                                        subscription_status: "active",
+                                      })
+                                    }
+                                  />
+                                  <ActionButton
+                                    label="VIP"
+                                    loading={actionLoading === u.id}
+                                    active={u.subscription_tier === "vip"}
+                                    onClick={() =>
+                                      updateUser(u.id, {
+                                        subscription_tier: "vip",
+                                        subscription_status: "active",
+                                      })
+                                    }
+                                  />
+                                  <ActionButton
+                                    label="Revoke"
+                                    loading={actionLoading === u.id}
+                                    destructive
+                                    onClick={() =>
+                                      updateUser(u.id, {
+                                        subscription_tier: "free",
+                                        subscription_status: "none",
+                                      })
+                                    }
+                                  />
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -925,6 +909,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, { bg: string; color: string }> = {
+    owner: { bg: "rgba(234,179,8,0.18)", color: "#eab308" },
     admin: { bg: "rgba(255,59,59,0.15)", color: "#FF3B3B" },
     vip: { bg: "rgba(168,85,247,0.12)", color: "#a855f7" },
     sharp: { bg: "rgba(59,130,246,0.12)", color: "#3b82f6" },

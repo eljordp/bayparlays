@@ -8,6 +8,7 @@ interface AuthContext {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
+  isOwner: boolean;
   isPro: boolean;
   tier: string;
   signOut: () => Promise<void>;
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContext>({
   user: null,
   loading: true,
   isAdmin: false,
+  isOwner: false,
   isPro: false,
   tier: "free",
   signOut: async () => {},
@@ -25,9 +27,6 @@ const AuthContext = createContext<AuthContext>({
 export function useAuth() {
   return useContext(AuthContext);
 }
-
-// Admin emails — these get full access always
-const ADMIN_EMAILS = ["eljordp@gmail.com"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -57,13 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function checkProStatus(email: string | undefined) {
     if (!email) return;
-    // Check if admin
-    if (ADMIN_EMAILS.includes(email)) {
-      setIsPro(true);
-      setTier("admin");
-      return;
-    }
-    // Check users table for subscription status
     const { data } = await supabase
       .from("users")
       .select("subscription_status, subscription_tier, trial_ends_at")
@@ -89,10 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setTier(currentTier);
-    setIsPro(status === "active" || status === "trialing");
+    // Owner and admin always have pro access regardless of subscription_status.
+    const privileged = currentTier === "owner" || currentTier === "admin";
+    setIsPro(privileged || status === "active" || status === "trialing");
   }
 
-  const isAdmin = ADMIN_EMAILS.includes(user?.email ?? "");
+  const isOwner = tier === "owner";
+  const isAdmin = tier === "admin" || tier === "owner";
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -101,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, isPro, tier, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isOwner, isPro, tier, signOut }}>
       {children}
     </AuthContext.Provider>
   );

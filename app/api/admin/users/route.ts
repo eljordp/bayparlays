@@ -22,6 +22,28 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "userId required" }, { status: 400 });
   }
 
+  // Owner is set once via SQL migration and never via API. This stops
+  // anyone — including an admin — from promoting themselves to owner.
+  if (subscription_tier === "owner") {
+    return NextResponse.json(
+      { error: "Owner tier can only be set via direct DB access" },
+      { status: 403 },
+    );
+  }
+
+  // And the owner can't be demoted via this endpoint either.
+  const { data: existing } = await supabase
+    .from("users")
+    .select("subscription_tier")
+    .eq("id", userId)
+    .single();
+  if (existing?.subscription_tier === "owner") {
+    return NextResponse.json(
+      { error: "Cannot modify owner via API" },
+      { status: 403 },
+    );
+  }
+
   const updates: Record<string, string> = {};
   if (subscription_status) updates.subscription_status = subscription_status;
   if (subscription_tier) updates.subscription_tier = subscription_tier;

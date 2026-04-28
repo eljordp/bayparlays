@@ -1496,185 +1496,6 @@ async function fetchOddsForSport(sportKey: string): Promise<OddsGame[]> {
   return data;
 }
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-
-function generateMockParlays(
-  sports: string[],
-  numLegs: number,
-  count: number,
-  sortMode: ParlayCategory = "ev"
-): ParlayResponse {
-  const mockGames: Record<
-    string,
-    { away: string; home: string; sport: string }[]
-  > = {
-    nba: [
-      { away: "Lakers", home: "Warriors", sport: "NBA" },
-      { away: "Celtics", home: "76ers", sport: "NBA" },
-      { away: "Nuggets", home: "Suns", sport: "NBA" },
-      { away: "Bucks", home: "Heat", sport: "NBA" },
-      { away: "Mavericks", home: "Thunder", sport: "NBA" },
-    ],
-    nfl: [
-      { away: "Chiefs", home: "Bills", sport: "NFL" },
-      { away: "49ers", home: "Eagles", sport: "NFL" },
-      { away: "Cowboys", home: "Lions", sport: "NFL" },
-      { away: "Ravens", home: "Bengals", sport: "NFL" },
-    ],
-    mlb: [
-      { away: "Yankees", home: "Red Sox", sport: "MLB" },
-      { away: "Dodgers", home: "Padres", sport: "MLB" },
-      { away: "Braves", home: "Phillies", sport: "MLB" },
-      { away: "Astros", home: "Rangers", sport: "MLB" },
-    ],
-    nhl: [
-      { away: "Oilers", home: "Maple Leafs", sport: "NHL" },
-      { away: "Panthers", home: "Rangers", sport: "NHL" },
-      { away: "Avalanche", home: "Stars", sport: "NHL" },
-    ],
-    ufc: [
-      { away: "Fighter A", home: "Fighter B", sport: "UFC" },
-      { away: "Fighter C", home: "Fighter D", sport: "UFC" },
-    ],
-    ncaaf: [
-      { away: "Alabama", home: "Georgia", sport: "NCAAF" },
-      { away: "Ohio State", home: "Michigan", sport: "NCAAF" },
-    ],
-    ncaab: [
-      { away: "Duke", home: "UNC", sport: "NCAAB" },
-      { away: "Kansas", home: "Kentucky", sport: "NCAAB" },
-    ],
-    soccer: [
-      { away: "Arsenal", home: "Liverpool", sport: "EPL" },
-      { away: "Man City", home: "Chelsea", sport: "EPL" },
-    ],
-  };
-
-  const mockMarkets = [
-    { market: "moneyline", suffix: "ML" },
-    { market: "spread", suffix: "" },
-    { market: "total", suffix: "" },
-  ];
-
-  const books = [
-    "DraftKings",
-    "FanDuel",
-    "BetMGM",
-    "Caesars",
-    "PointsBet",
-  ];
-
-  // Build a pool of mock legs from requested sports
-  const allGames: { away: string; home: string; sport: string }[] = [];
-  for (const sport of sports) {
-    const games = mockGames[sport] || mockGames["nba"];
-    allGames.push(...games);
-  }
-
-  const parlays: Parlay[] = [];
-
-  for (let p = 0; p < count; p++) {
-    const shuffled = [...allGames].sort(() => Math.random() - 0.5);
-    const legs: ParlayLeg[] = [];
-
-    for (let l = 0; l < numLegs && l < shuffled.length; l++) {
-      const game = shuffled[l];
-      const marketChoice =
-        mockMarkets[Math.floor(Math.random() * mockMarkets.length)];
-      const isHome = Math.random() > 0.5;
-      const team = isHome ? game.home : game.away;
-
-      let pick: string;
-      let odds: number;
-
-      if (marketChoice.market === "moneyline") {
-        odds = isHome
-          ? [-150, -130, -110, +120, +140][
-              Math.floor(Math.random() * 5)
-            ]
-          : [+150, +130, +110, -120, -140][
-              Math.floor(Math.random() * 5)
-            ];
-        pick = `${team} ML`;
-      } else if (marketChoice.market === "spread") {
-        const spread =
-          (isHome ? -1 : 1) *
-          [1.5, 2.5, 3.5, 4.5, 6.5][Math.floor(Math.random() * 5)];
-        odds = [-110, -105, -115, +100, -120][
-          Math.floor(Math.random() * 5)
-        ];
-        pick = `${team} ${spread > 0 ? "+" : ""}${spread}`;
-      } else {
-        const total = [200.5, 210.5, 215.5, 220.5, 225.5][
-          Math.floor(Math.random() * 5)
-        ];
-        const overUnder = Math.random() > 0.5 ? "Over" : "Under";
-        odds = [-110, -105, -115, +100, -108][
-          Math.floor(Math.random() * 5)
-        ];
-        pick = `${overUnder} ${total}`;
-      }
-
-      const impliedProb = americanToImpliedProb(odds);
-
-      legs.push({
-        sport: game.sport,
-        game: `${game.away} vs ${game.home}`,
-        pick,
-        market: marketChoice.market,
-        odds,
-        book: books[Math.floor(Math.random() * books.length)],
-        impliedProb: Math.round(impliedProb * 10000) / 10000,
-        edgeScore: Math.round((5 + Math.random() * 25) * 100) / 100,
-      });
-    }
-
-    const combinedDecimal = legs.reduce(
-      (acc, leg) => acc * americanToDecimal(leg.odds),
-      1
-    );
-    const combinedProb = legs.reduce(
-      (acc, leg) => acc * leg.impliedProb,
-      1
-    );
-    const stake = 100;
-    const ev = calculateEV(combinedDecimal, combinedProb, stake);
-    const payout = Math.round(combinedDecimal * stake * 100) / 100;
-    const combinedAmerican = decimalToAmerican(combinedDecimal);
-    const avgEdge =
-      legs.reduce((sum, l) => sum + l.edgeScore, 0) / legs.length;
-
-    parlays.push({
-      id: `parlay_mock_${Date.now()}_${p}`,
-      legs,
-      combinedOdds: formatAmericanOdds(combinedAmerican),
-      combinedDecimal: Math.round(combinedDecimal * 100) / 100,
-      ev: Math.round(ev * 100) / 100,
-      evPercent: Math.round((ev / stake) * 10000) / 100,
-      confidence: Math.min(100, Math.round(avgEdge * 3)),
-      payout,
-      timestamp: new Date().toISOString(),
-      category: sortMode,
-      impliedHitRate: Math.round((1 / combinedDecimal) * 10000) / 100,
-      aiEstimate: Math.round(combinedProb * 10000) / 100,
-    });
-  }
-
-  parlays.sort((a, b) => b.ev - a.ev);
-
-  return {
-    parlays,
-    meta: {
-      sportsScanned: sports,
-      gamesAnalyzed: allGames.length,
-      legsEvaluated: allGames.length * 6,
-      legsScored: 0,
-      poolSize: 0,
-      tier: "mock",
-      generatedAt: new Date().toISOString(),
-    },
-  };
-}
 
 // ─── GET Handler ─────────────────────────────────────────────────────────────
 
@@ -1796,16 +1617,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // If no API key, return mock data
     if (!ODDS_API_KEY) {
-      console.warn("ODDS_API_KEY not set — returning mock parlay data");
-      const mockData = generateMockParlays(sports, numLegs, count, sortMode);
-      return NextResponse.json(mockData, {
-        headers: {
-          "X-Data-Source": "mock",
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
-        },
-      });
+      console.error("ODDS_API_KEY not set — refusing to generate parlays");
+      return NextResponse.json(
+        { error: "Odds API key not configured", parlays: [] },
+        { status: 503 },
+      );
     }
 
     // Fetch odds, team records, AND raw scores (for Elo/situational) in parallel
@@ -1950,18 +1767,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // If no live data came back, fall back to mock
     if (allLegs.length === 0) {
-      console.warn(
-        "No odds data returned from API — falling back to mock data"
+      console.error(
+        `No odds data returned from API — sports=${sports.join(",")} returned 0 legs. ` +
+        `Likely cause: out-of-season sport, quota exhaustion, or upstream outage.`,
       );
-      const mockData = generateMockParlays(sports, numLegs, count, sortMode);
-      return NextResponse.json(mockData, {
-        headers: {
-          "X-Data-Source": "mock-fallback",
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
-        },
-      });
+      return NextResponse.json(
+        { error: "No live odds available right now", parlays: [], sports },
+        { status: 503 },
+      );
     }
 
     // format=legs branch — return scored legs (not parlays) for the /edges
@@ -2282,14 +2096,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Parlay engine error:", error);
-
-    // On any error, return mock data so the frontend never breaks
-    const mockData = generateMockParlays(["nba", "nfl", "mlb"], 3, 5);
-    return NextResponse.json(mockData, {
-      status: 200,
-      headers: {
-        "X-Data-Source": "mock-error-fallback",
-      },
-    });
+    return NextResponse.json(
+      { error: "Parlay engine failed", parlays: [] },
+      { status: 500 },
+    );
   }
 }
