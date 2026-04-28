@@ -8,6 +8,7 @@ export function NavUser() {
   const { user, isPro, tier, signOut } = useAuth();
 
   const tierLabel: Record<string, string> = {
+    owner: "OWNER",
     admin: "ADMIN",
     vip: "VIP",
     sharp: "SHARP",
@@ -32,6 +33,7 @@ export function NavUser() {
         </Link>
         {isPro && (
           <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+            tier === "owner" ? "bg-[#FF3B3B]/15 text-[#FF3B3B] ring-1 ring-[#FF3B3B]/30" :
             tier === "admin" ? "bg-black/[0.10] text-[#0a0a0a]" :
             tier === "vip" ? "bg-yellow-500/15 text-yellow-400" :
             "bg-black/[0.08] text-[#0a0a0a]"

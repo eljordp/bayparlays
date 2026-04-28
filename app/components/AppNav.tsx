@@ -25,6 +25,8 @@ const PARENT_MAP: Record<string, string> = {
   "/props": "/parlays",
   "/leaderboard": "/results",
   "/my-stats": "/results",
+  "/strategies": "/results",
+  "/wins": "/results",
   "/refer": "/settings",
   "/achievements": "/settings",
 };
