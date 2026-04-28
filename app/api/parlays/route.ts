@@ -1542,6 +1542,17 @@ export async function GET(request: NextRequest) {
     // the wider slate. Free users get the tightest-quality pool.
     const tier = (searchParams.get("tier") || "sharp").toLowerCase();
 
+    // Restrict the leg pool to games starting within `maxHours` from now.
+    // Default is no cap (Infinity) for backward-compat with existing callers
+    // and the /api/edges single-leg feed. The slate cron passes 36 so its
+    // multi-leg parlays only contain games ending tonight or tomorrow,
+    // never stretching to 3 days out.
+    const maxHoursParam = searchParams.get("maxHours");
+    const maxHours = maxHoursParam ? Math.max(1, parseFloat(maxHoursParam)) : Infinity;
+    const maxCommenceMs = isFinite(maxHours)
+      ? Date.now() + maxHours * 60 * 60 * 1000
+      : Infinity;
+
     // mode=slate returns the active Daily Slate (12 fixed picks rotated 4x/day)
     // instead of generating fresh combos per request. Fixes the "I refreshed and
     // my parlay disappeared" UX problem and gives users a stable set to bet on.
@@ -1708,6 +1719,13 @@ export async function GET(request: NextRequest) {
       totalGames += games.length;
 
       for (const game of games) {
+        // Skip games starting after the maxHours window. Default is Infinity
+        // so /api/edges and other no-window callers still see everything;
+        // slate cron passes 36 so picks don't include legs from games
+        // multiple days out (which makes parlays stay pending for days).
+        if (new Date(game.commence_time).getTime() > maxCommenceMs) {
+          continue;
+        }
         // Build per-game context. MLB gets weather + pitcher lineup; all
         // supported sports get the ESPN injury map for their sport; NBA/NHL
         // also get the last-games map for rest-day computation.

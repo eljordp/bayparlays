@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/components/AuthProvider";
 import { AppNav } from "@/app/components/AppNav";
 import { PicksTabs } from "@/app/components/PicksTabs";
+import { formatGameTime } from "@/lib/format-game-time";
 import {
   Copy,
   Check,
@@ -1799,6 +1800,14 @@ function LegRow({
             style={{ color: "rgba(0,0,0,0.5)" }}
           >
             {leg.game}
+            {leg.commenceTime && (
+              <>
+                {" · "}
+                <span style={{ color: "rgba(0,0,0,0.7)", fontWeight: 600 }}>
+                  {formatGameTime(leg.commenceTime)}
+                </span>
+              </>
+            )}
           </span>
         </div>
 

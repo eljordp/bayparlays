@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { AppNav } from "@/app/components/AppNav";
 import { ResultsTabs } from "@/app/components/ResultsTabs";
+import { formatGameTime } from "@/lib/format-game-time";
 
 interface WinLeg {
   sport?: string;
@@ -12,6 +13,7 @@ interface WinLeg {
   market?: string;
   odds?: number;
   book?: string;
+  commenceTime?: string;
 }
 
 interface Win {
@@ -234,6 +236,14 @@ export default function WinsPage() {
                                   style={{ color: "rgba(0,0,0,0.4)" }}
                                 >
                                   · {leg.game}
+                                </span>
+                              )}
+                              {leg.commenceTime && (
+                                <span
+                                  className="text-[10px] uppercase tracking-widest font-mono px-1.5 py-0.5 rounded"
+                                  style={{ background: "rgba(0,0,0,0.05)", color: "rgba(0,0,0,0.55)" }}
+                                >
+                                  {formatGameTime(leg.commenceTime)}
                                 </span>
                               )}
                             </div>

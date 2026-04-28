@@ -129,7 +129,10 @@ export async function GET(req: NextRequest) {
   for (const combo of combos) {
     const dbg: Record<string, unknown> = { sort: combo.sort, legs: combo.legs, count: combo.count };
     try {
-      const u = `${baseUrl}/api/parlays?sports=nba,mlb,nhl,ncaab,ncaaf,mls,ufc&legs=${combo.legs}&count=${combo.count}&sort=${combo.sort}&tier=admin`;
+      // maxHours=36 keeps every leg in tonight's-or-tomorrow's games. Without
+      // it, multi-leg parlays could chain a leg from 3 days out, leaving the
+      // whole parlay pending until that distant game finishes.
+      const u = `${baseUrl}/api/parlays?sports=nba,mlb,nhl,ncaab,ncaaf,mls,ufc&legs=${combo.legs}&count=${combo.count}&sort=${combo.sort}&tier=admin&maxHours=36`;
       dbg.url = u;
       const res = await fetch(u, { cache: "no-store" });
       dbg.status = res.status;

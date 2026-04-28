@@ -5,12 +5,14 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { AppNav } from "@/app/components/AppNav";
+import { formatGameTime } from "@/lib/format-game-time";
 
 interface PickLeg {
   pick?: string;
   game?: string;
   odds?: number;
   market?: string;
+  commenceTime?: string;
 }
 
 interface Pick {
@@ -437,6 +439,14 @@ export default function StrategyDetailPage({
                               {(leg as PickLeg).game && (
                                 <span className="text-xs" style={{ color: "rgba(0,0,0,0.4)" }}>
                                   · {(leg as PickLeg).game}
+                                </span>
+                              )}
+                              {(leg as PickLeg).commenceTime && (
+                                <span
+                                  className="text-[10px] uppercase tracking-widest font-mono px-1.5 py-0.5 rounded"
+                                  style={{ background: "rgba(0,0,0,0.05)", color: "rgba(0,0,0,0.55)" }}
+                                >
+                                  {formatGameTime((leg as PickLeg).commenceTime)}
                                 </span>
                               )}
                             </div>
