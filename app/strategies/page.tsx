@@ -138,12 +138,10 @@ export default function StrategiesPage() {
                   <div />
                 </div>
                 {rows.map((s, i) => (
-                  <Link key={s.id} href={`/strategies/${s.id}`} className="block group">
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.9fr_30px] px-6 py-5 items-center transition-colors group-hover:bg-black/[0.02]"
+                  <Link
+                    key={s.id}
+                    href={`/strategies/${s.id}`}
+                    className="grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.9fr_30px] px-6 py-5 items-center transition-colors hover:bg-black/[0.02]"
                     style={{
                       borderBottom: i < rows.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none",
                       background: s.isSweetSpot ? "rgba(255,59,59,0.03)" : "transparent",
@@ -217,20 +215,17 @@ export default function StrategiesPage() {
                     <div className="flex justify-end" style={{ color: "rgba(0,0,0,0.35)" }}>
                       <ChevronRight size={16} />
                     </div>
-                  </motion.div>
                   </Link>
                 ))}
               </div>
 
               {/* Mobile cards */}
               <div className="md:hidden space-y-3">
-                {rows.map((s, i) => (
-                  <Link key={s.id} href={`/strategies/${s.id}`} className="block">
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="rounded-xl p-5 border transition-colors hover:bg-black/[0.02]"
+                {rows.map((s) => (
+                  <Link
+                    key={s.id}
+                    href={`/strategies/${s.id}`}
+                    className="block rounded-xl p-5 border transition-colors hover:bg-black/[0.02]"
                     style={{
                       borderColor: s.isSweetSpot ? "rgba(255,59,59,0.4)" : "rgba(0,0,0,0.08)",
                       background: s.isSweetSpot ? "rgba(255,59,59,0.03)" : "#fff",
@@ -296,7 +291,6 @@ export default function StrategiesPage() {
                         </div>
                       </div>
                     </div>
-                  </motion.div>
                   </Link>
                 ))}
               </div>
