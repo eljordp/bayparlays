@@ -88,6 +88,25 @@ export async function POST(req: NextRequest) {
 
     invalidateOddsKeyCache();
 
+    // Reset the quota tracker row to reflect the NEW key's state. Without
+    // this, canFetch() in lib/odds-quota.ts keeps reading the old key's
+    // exhausted-remaining=0 row and blocks every fetch — even though the
+    // freshly rotated key has hundreds of credits available. Caused the
+    // 2026-04-28 silent-deadlock where slates kept publishing 0 candidates
+    // for hours after the key rotation that should have unblocked them.
+    try {
+      await supabase
+        .from("odds_api_quota")
+        .update({
+          used,
+          remaining,
+          last_request_at: new Date().toISOString(),
+        })
+        .eq("id", 1);
+    } catch (e) {
+      console.error("rotate-key: failed resetting odds_api_quota:", e);
+    }
+
     return NextResponse.json({
       ok: true,
       remaining,
