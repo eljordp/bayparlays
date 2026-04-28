@@ -149,12 +149,14 @@ export function coverProbability(
 // avg and the opponent's points-allowed avg, blended 50/50. Fall back to
 // league-average approximation if we have <3 recent games for either team.
 
+// Playoff status is no longer a parameter — the recent-scores window passed
+// in already includes ongoing playoff games, so the playoff slowdown shows up
+// in the averages without an explicit multiplier on top.
 export function expectedTotal(
   sport: string,
   home: string,
   away: string,
   recentGames: NormalizedGame[],
-  isPlayoff: boolean,
 ): number | null {
   const model = SPORT_MODEL[sport] ?? DEFAULT_MODEL;
 

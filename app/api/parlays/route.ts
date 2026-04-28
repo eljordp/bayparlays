@@ -867,7 +867,6 @@ function extractLegsFromGame(
           game.home_team,
           game.away_team,
           recentGames,
-          inPlayoffs,
         );
         if (expTotal !== null) {
           // MLB-only: apply weather + probable-pitcher biases to the expected
