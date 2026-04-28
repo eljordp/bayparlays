@@ -162,15 +162,17 @@ async function main() {
 
     for (const leg of p.legs) {
       const sport = leg.sport ?? null;
-      const market = leg.market ?? null;
       if (sport) {
         ensure({ sport, market: null }).predicted.push(legPredicted);
         ensure({ sport, market: null }).actual.push(actual);
       }
-      if (sport && market) {
-        ensure({ sport, market }).predicted.push(legPredicted);
-        ensure({ sport, market }).actual.push(actual);
-      }
+      // Per-(sport, market) rows are intentionally NOT written here. Parlay-
+      // level outcome attribution to a single leg's market is unreliable when
+      // multi-leg parlays mix markets — a great NBA spread leg gets attributed
+      // "lost" because some other leg in the parlay missed. Per-market factors
+      // belong in a leg-level grader (final scores) and are seeded manually
+      // from that source. Leaving the (sport, null) fallback as the auto-loop's
+      // contribution.
     }
   }
 
