@@ -182,7 +182,45 @@ export async function GET(req: NextRequest) {
   // matters: combos[] is listed confidence-first, so confidence picks win
   // ties against EV/payout picks. That mirrors the existing slate mix
   // (5 confidence / 4 EV / 3 payout).
-  const beforeFilter = candidates.length;
+  // Health check: if the upstream API is exhausted (Odds API quota burned)
+  // or ESPN scoring failed, candidates come back either empty OR with stripped
+  // legs (no gameId, ev_percent ≈ 0, ourProb missing). Publishing those rows
+  // pollutes /parlays with junk cards. Skip the insert entirely — slate_runs
+  // gets a row showing why so the dashboard reflects the outage instead of
+  // pretending the slate ran fine.
+  const goodCandidates = candidates.filter((c) => {
+    const ev = c.row.ev_percent as number | undefined;
+    if (ev === undefined || Math.abs(ev) < 1) return false;
+    const firstLeg = c.legs?.[0] as { gameId?: string } | undefined;
+    if (!firstLeg?.gameId) return false;
+    return true;
+  });
+
+  if (goodCandidates.length === 0) {
+    await supabase.from("slate_runs").insert({
+      slate_id: slateId,
+      label,
+      candidates_before_filter: candidates.length,
+      dropped_to_diversity: 0,
+      persisted: 0,
+      last_insert_error:
+        candidates.length === 0
+          ? "upstream returned 0 candidates (likely Odds API quota exhausted)"
+          : "all " + candidates.length + " candidates failed health check (ev≈0 or unscored legs)",
+    });
+    return NextResponse.json({
+      slateId,
+      label,
+      persisted: 0,
+      candidatesBeforeFilter: candidates.length,
+      candidatesAfterHealthCheck: 0,
+      message: "Aborted — upstream data unhealthy. Check Odds API quota.",
+      debug,
+      timestamp: now.toISOString(),
+    });
+  }
+
+  const beforeFilter = goodCandidates.length;
   // Tighter than the lib defaults (which are tuned for in-call dedup on the
   // live /api/parlays endpoint). For the slate, every pick needs to be a
   // distinct idea so that "Top 3" actually means three different bets:
@@ -193,7 +231,7 @@ export async function GET(req: NextRequest) {
   //     the "if Lakers loses, half the slate dies" correlation problem.
   // Slate may end up smaller than the 12-pick target if variety is thin.
   // That's fine — fewer truly different picks beats more correlated ones.
-  const diverse = applyDiversityFilter(candidates, {
+  const diverse = applyDiversityFilter(goodCandidates, {
     maxPerLeg: 1,
     maxPerGame: 2,
   });
