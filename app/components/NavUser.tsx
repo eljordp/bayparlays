@@ -33,14 +33,23 @@ export function NavUser() {
           {truncatedEmail}
         </Link>
         {isPro && (
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
-            tier === "owner" ? "bg-[#FF3B3B]/15 text-[#FF3B3B] ring-1 ring-[#FF3B3B]/30" :
-            tier === "admin" ? "bg-black/[0.10] text-[#0a0a0a]" :
-            tier === "vip" ? "bg-yellow-500/15 text-yellow-400" :
-            "bg-black/[0.08] text-[#0a0a0a]"
-          }`}>
-            {tierLabel[tier] || "PRO"}
-          </span>
+          tier === "owner" ? (
+            <Link
+              href="/admin"
+              title="Open owner controls"
+              className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-[#FF3B3B]/15 text-[#FF3B3B] ring-1 ring-[#FF3B3B]/30 hover:bg-[#FF3B3B]/25 transition-colors"
+            >
+              {tierLabel[tier] || "OWNER"}
+            </Link>
+          ) : (
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+              tier === "admin" ? "bg-black/[0.10] text-[#0a0a0a]" :
+              tier === "vip" ? "bg-yellow-500/15 text-yellow-400" :
+              "bg-black/[0.08] text-[#0a0a0a]"
+            }`}>
+              {tierLabel[tier] || "PRO"}
+            </span>
+          )
         )}
         <QuotaBadge />
         <NotificationBell />

@@ -52,7 +52,7 @@ interface ParlayStats {
 /* ─── Admin Page ─── */
 
 export default function AdminPage() {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isOwner, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [emailCaptures, setEmailCaptures] = useState<EmailCaptureRow[]>([]);
@@ -264,6 +264,65 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="space-y-16">
+              {/* ─── Owner-only Tools (hidden from admin mods) ─── */}
+              {isOwner && (
+                <section>
+                  <div className="flex items-center gap-3 mb-6">
+                    <Shield size={18} style={{ color: "#FF3B3B" }} />
+                    <h2
+                      className="text-xl font-semibold"
+                      style={{ color: "#ededed" }}
+                    >
+                      Owner Tools
+                    </h2>
+                    <span
+                      className="text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded-full"
+                      style={{
+                        background: "rgba(255,59,59,0.15)",
+                        color: "#FF3B3B",
+                        boxShadow: "inset 0 0 0 1px rgba(255,59,59,0.35)",
+                      }}
+                    >
+                      Owner Only
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Link
+                      href="/admin/keys"
+                      className="block p-5 rounded-xl transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <div className="text-base font-semibold mb-1" style={{ color: "#ededed" }}>
+                        Rotate Odds API Key →
+                      </div>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        Paste a fresh key when the daily quota burns. Validates + activates without a redeploy. Use this every morning when you grab a new key.
+                      </p>
+                    </Link>
+                    <a
+                      href="/api/admin/quota"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block p-5 rounded-xl transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <div className="text-base font-semibold mb-1" style={{ color: "#ededed" }}>
+                        Quota Status (raw) →
+                      </div>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        Live JSON of Odds API quota. Same data as the nav badge.
+                      </p>
+                    </a>
+                  </div>
+                </section>
+              )}
+
               {/* ─── Revenue Summary ─── */}
               <section>
                 <div className="flex items-center gap-3 mb-8">

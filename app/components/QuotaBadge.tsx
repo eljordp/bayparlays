@@ -16,7 +16,7 @@ interface Quota {
 // hitting that endpoint costs 0 credits since it probes /sports.
 
 export function QuotaBadge() {
-  const { isAdmin, isOwner } = useAuth();
+  const { isOwner } = useAuth();
   const [quota, setQuota] = useState<Quota | null>(null);
 
   const fetchQuota = useCallback(async () => {
@@ -29,13 +29,13 @@ export function QuotaBadge() {
   }, []);
 
   useEffect(() => {
-    if (!(isAdmin || isOwner)) return;
+    if (!(isOwner)) return;
     fetchQuota();
     const id = setInterval(fetchQuota, 5 * 60 * 1000);
     return () => clearInterval(id);
-  }, [isAdmin, isOwner, fetchQuota]);
+  }, [isOwner, fetchQuota]);
 
-  if (!(isAdmin || isOwner) || !quota) return null;
+  if (!(isOwner) || !quota) return null;
 
   const colorByStatus: Record<Quota["status"], { bg: string; fg: string; ring: string }> = {
     healthy: { bg: "rgba(34,197,94,0.12)", fg: "#16a34a", ring: "rgba(34,197,94,0.35)" },
