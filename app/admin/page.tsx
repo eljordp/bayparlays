@@ -93,7 +93,11 @@ export default function AdminPage() {
       setReferrals(referralsRes.value.data);
     }
     if (statsRes.status === "fulfilled" && statsRes.value) {
-      setParlayStats(statsRes.value);
+      // The /api/track/results endpoint nests under `stats` —
+      // admin page used to read it flat which is why win rate / profit / ROI
+      // had been showing "undefined".
+      const payload = statsRes.value.stats ?? statsRes.value;
+      setParlayStats(payload);
     }
     if (emailRes.status === "fulfilled" && emailRes.value.data) {
       setEmailCaptures(emailRes.value.data);
