@@ -203,10 +203,13 @@ export function expectedTotal(
       ? (awayScoredAvg + homeAllowedAvg) / 2
       : awayScoredAvg ?? homeAllowedAvg ?? model.scoringFloor;
 
-  let total = homeExpected + awayExpected;
+  const total = homeExpected + awayExpected;
 
-  // Playoff games are often lower-scoring (tighter defense, slower pace).
-  if (isPlayoff) total *= 0.95;
+  // No separate playoff dampener: the 21-day recent-scores window already
+  // includes the in-progress playoff games, so multiplying by 0.95 here was
+  // double-counting the playoff slowdown. Result: expectedTotal was always
+  // below book lines and the model picked UNDER 100% of the time on NBA.
+  // The window itself is the playoff adjustment.
 
   return total;
 }
