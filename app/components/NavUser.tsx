@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 import { NotificationBell } from "./NotificationBell";
+import { QuotaBadge } from "./QuotaBadge";
 
 export function NavUser() {
   const { user, isPro, tier, signOut } = useAuth();
@@ -41,6 +42,7 @@ export function NavUser() {
             {tierLabel[tier] || "PRO"}
           </span>
         )}
+        <QuotaBadge />
         <NotificationBell />
         <button
           onClick={signOut}

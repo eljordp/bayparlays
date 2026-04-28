@@ -1,26 +1,21 @@
 import { NextResponse } from "next/server";
+import { getOddsApiKey } from "@/lib/odds-key";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Live Odds API quota check.
-//
-// The-odds-api.com returns x-requests-used / x-requests-remaining in the
-// headers of every response, including cheap endpoints like /sports.
-// Hitting /sports costs 0 credits, so this is a free probe.
-//
-// Use this to spot quota burn before it tanks the slate. Eyeball it in a
-// browser tab; or wire a daily cron to ping it and flag low remaining.
-
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
+// Live Odds API quota check. Probes /sports (0-credit endpoint) and reads
+// x-requests-* headers. Resolves the active key from Supabase via lib/odds-key
+// so freshly rotated keys reflect immediately in the badge.
 
 export async function GET() {
-  if (!ODDS_API_KEY) {
-    return NextResponse.json({ error: "ODDS_API_KEY not set" }, { status: 500 });
+  const apiKey = await getOddsApiKey();
+  if (!apiKey) {
+    return NextResponse.json({ error: "No Odds API key available" }, { status: 500 });
   }
   try {
     const res = await fetch(
-      `https://api.the-odds-api.com/v4/sports?apiKey=${ODDS_API_KEY}`,
+      `https://api.the-odds-api.com/v4/sports?apiKey=${apiKey}`,
       { cache: "no-store" },
     );
     const used = parseInt(res.headers.get("x-requests-used") || "0", 10);
@@ -51,7 +46,7 @@ export async function GET() {
               : status === "warning"
                 ? "Less than 150 credits left. Plan to rotate within 1-2 days."
                 : "Healthy.",
-        keyTail: ODDS_API_KEY.slice(-4),
+        keyTail: apiKey.slice(-4),
         checkedAt: new Date().toISOString(),
       },
       {

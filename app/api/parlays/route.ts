@@ -33,6 +33,7 @@ import {
   type GameLineup,
 } from "@/lib/mlb-lineups";
 import { readQuotaHeaders, persistQuota, canFetch } from "@/lib/odds-quota";
+import { getOddsApiKey } from "@/lib/odds-key";
 import {
   fetchInjuries,
   lookupTeam as lookupInjuredTeam,
@@ -114,7 +115,8 @@ function calibrationFactorFor(
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
+// Resolved at request-time via getOddsApiKey() so Supabase-stored
+// rotations take effect without a redeploy.
 const BASE_URL = "https://api.the-odds-api.com/v4";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -1485,7 +1487,12 @@ async function fetchOddsForSport(sportKey: string): Promise<OddsGame[]> {
   // still works across 5 books; the marginal +EV from book #6-12 is dwarfed
   // by the credits we save not querying them.
   const BOOKMAKERS = "draftkings,fanduel,betmgm,caesars,bovada";
-  const url = `${BASE_URL}/sports/${sportKey}/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,spreads,totals&oddsFormat=american&bookmakers=${BOOKMAKERS}`;
+  const apiKey = await getOddsApiKey();
+  if (!apiKey) {
+    console.error("No Odds API key available (Supabase + env both empty)");
+    return [];
+  }
+  const url = `${BASE_URL}/sports/${sportKey}/odds/?apiKey=${apiKey}&regions=us&markets=h2h,spreads,totals&oddsFormat=american&bookmakers=${BOOKMAKERS}`;
 
   const res = await fetch(url, { next: { revalidate: 1800 } });
 
@@ -1638,8 +1645,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (!ODDS_API_KEY) {
-      console.error("ODDS_API_KEY not set — refusing to generate parlays");
+    const resolvedKey = await getOddsApiKey();
+    if (!resolvedKey) {
+      console.error("No Odds API key available — refusing to generate parlays");
       return NextResponse.json(
         { error: "Odds API key not configured", parlays: [] },
         { status: 503 },

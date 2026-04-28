@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getOddsApiKey } from "@/lib/odds-key";
 
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const SCORES_BASE = "https://api.the-odds-api.com/v4/sports";
 
 const SPORT_MAP: Record<string, string> = {
@@ -71,7 +71,13 @@ async function fetchScores(sportKey: string): Promise<ScoreGame[]> {
     return scoresCache.get(sportKey)!;
   }
 
-  const url = `${SCORES_BASE}/${sportKey}/scores/?apiKey=${ODDS_API_KEY}&daysFrom=2`;
+  const apiKey = await getOddsApiKey();
+  if (!apiKey) {
+    console.error("No Odds API key for check-scores");
+    scoresCache.set(sportKey, []);
+    return [];
+  }
+  const url = `${SCORES_BASE}/${sportKey}/scores/?apiKey=${apiKey}&daysFrom=2`;
   const res = await fetch(url);
 
   if (!res.ok) {
@@ -208,7 +214,8 @@ export async function POST() {
 
 async function checkScores() {
   try {
-    if (!ODDS_API_KEY) {
+    const resolvedKey = await getOddsApiKey();
+    if (!resolvedKey) {
       return NextResponse.json(
         { error: "ODDS_API_KEY not configured" },
         { status: 500 }

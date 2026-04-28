@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getOddsApiKey } from "@/lib/odds-key";
 
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const BASE_URL = "https://api.the-odds-api.com/v4";
 
 const SPORT_MAP: Record<string, string> = {
@@ -184,7 +184,8 @@ function parseApiResponse(rawGames: any[]): GameOdds[] {
 }
 
 export async function GET(request: NextRequest) {
-  if (!ODDS_API_KEY) {
+  const apiKey = await getOddsApiKey();
+  if (!apiKey) {
     return NextResponse.json(
       { error: "ODDS_API_KEY is not configured" },
       { status: 500 }
@@ -210,7 +211,7 @@ export async function GET(request: NextRequest) {
     // BetMGM, Caesars, Bovada) — narrower request, same edge-detection
     // quality on the books that matter.
     const url = new URL(`${BASE_URL}/sports/${sportKey}/odds`);
-    url.searchParams.set("apiKey", ODDS_API_KEY!);
+    url.searchParams.set("apiKey", apiKey);
     url.searchParams.set("regions", "us");
     url.searchParams.set("markets", "h2h,spreads,totals");
     url.searchParams.set("oddsFormat", "american");

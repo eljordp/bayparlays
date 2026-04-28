@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getOddsApiKey } from "@/lib/odds-key";
 
 export const dynamic = "force-dynamic";
 
-const ODDS_API_KEY = process.env.ODDS_API_KEY;
 const BASE = "https://api.the-odds-api.com/v4/sports";
 
 const SPORT_MAP: Record<string, string> = {
@@ -28,13 +28,14 @@ export async function GET(request: NextRequest) {
   const sport = request.nextUrl.searchParams.get("sport") || "nba";
   const sportKey = SPORT_MAP[sport.toLowerCase()];
 
-  if (!sportKey || !ODDS_API_KEY) {
+  const apiKey = await getOddsApiKey();
+  if (!sportKey || !apiKey) {
     return NextResponse.json({ games: [] });
   }
 
   try {
     const res = await fetch(
-      `${BASE}/${sportKey}/scores/?apiKey=${ODDS_API_KEY}&daysFrom=1`,
+      `${BASE}/${sportKey}/scores/?apiKey=${apiKey}&daysFrom=1`,
       { next: { revalidate: 3600 } } // Cache 1 hour
     );
 
