@@ -38,7 +38,6 @@ interface WinRow {
   category: string | null;
 }
 
-const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;
 const UNIT_STAKE = 10;
 
