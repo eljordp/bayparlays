@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
+import { ChevronRight } from "lucide-react";
 import { AppNav } from "@/app/components/AppNav";
 import { ResultsTabs } from "@/app/components/ResultsTabs";
 
@@ -120,7 +122,7 @@ export default function StrategiesPage() {
                 style={{ borderColor: "rgba(0,0,0,0.08)", background: "#fff" }}
               >
                 <div
-                  className="grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.9fr] px-6 py-4 text-xs uppercase tracking-widest"
+                  className="grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.9fr_30px] px-6 py-4 text-xs uppercase tracking-widest"
                   style={{
                     background: "rgba(0,0,0,0.03)",
                     color: "rgba(0,0,0,0.5)",
@@ -133,14 +135,15 @@ export default function StrategiesPage() {
                   <div className="text-right">ROI</div>
                   <div className="text-right">Profit @ ${unitStake}</div>
                   <div className="text-right">Avg Win</div>
+                  <div />
                 </div>
                 {rows.map((s, i) => (
+                  <Link key={s.id} href={`/strategies/${s.id}`} className="block group">
                   <motion.div
-                    key={s.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
-                    className="grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.9fr] px-6 py-5 items-center"
+                    className="grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr_1fr_0.9fr_30px] px-6 py-5 items-center transition-colors group-hover:bg-black/[0.02]"
                     style={{
                       borderBottom: i < rows.length - 1 ? "1px solid rgba(0,0,0,0.05)" : "none",
                       background: s.isSweetSpot ? "rgba(255,59,59,0.03)" : "transparent",
@@ -211,19 +214,23 @@ export default function StrategiesPage() {
                     >
                       ${s.avgPayoutWhenWin.toFixed(0)}
                     </div>
+                    <div className="flex justify-end" style={{ color: "rgba(0,0,0,0.35)" }}>
+                      <ChevronRight size={16} />
+                    </div>
                   </motion.div>
+                  </Link>
                 ))}
               </div>
 
               {/* Mobile cards */}
               <div className="md:hidden space-y-3">
                 {rows.map((s, i) => (
+                  <Link key={s.id} href={`/strategies/${s.id}`} className="block">
                   <motion.div
-                    key={s.id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
-                    className="rounded-xl p-5 border"
+                    className="rounded-xl p-5 border transition-colors hover:bg-black/[0.02]"
                     style={{
                       borderColor: s.isSweetSpot ? "rgba(255,59,59,0.4)" : "rgba(0,0,0,0.08)",
                       background: s.isSweetSpot ? "rgba(255,59,59,0.03)" : "#fff",
@@ -290,6 +297,7 @@ export default function StrategiesPage() {
                       </div>
                     </div>
                   </motion.div>
+                  </Link>
                 ))}
               </div>
 
@@ -297,7 +305,7 @@ export default function StrategiesPage() {
                 className="mt-6 text-xs"
                 style={{ color: "rgba(0,0,0,0.4)", lineHeight: 1.6 }}
               >
-                {data?.sampleNote}
+                Tap any strategy to see its recent picks, sport breakdown, and 14-day chart. {data?.sampleNote}
               </p>
             </>
           )}
