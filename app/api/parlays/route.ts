@@ -70,16 +70,21 @@ async function getCalibrationFactors(): Promise<Map<string, number>> {
   const factors = new Map<string, number>();
   try {
     const { supabase } = await import("@/lib/supabase");
-    // Pull the most recent calibration row per sport. We grab the last 50
-    // rows and dedupe in JS (faster than a window function on a small table).
+    // Pull the most recent calibration row per (sport, market) combination.
+    // Keys: "SPORT|MARKET" for per-market, "SPORT" for per-sport, "_GLOBAL" for the global row.
+    // Lookup falls back from most-specific to most-general so brand-new market
+    // splits don't break callers that only have a sport-level row.
     const { data } = await supabase
       .from("model_calibration")
-      .select("sport, calibration_factor, computed_at")
+      .select("sport, market, calibration_factor, computed_at")
       .order("computed_at", { ascending: false })
-      .limit(50);
+      .limit(200);
     if (data) {
       for (const row of data) {
-        const key = row.sport ?? "_GLOBAL";
+        let key: string;
+        if (row.sport && row.market) key = `${row.sport}|${row.market}`;
+        else if (row.sport) key = row.sport;
+        else key = "_GLOBAL";
         if (!factors.has(key)) {
           factors.set(key, row.calibration_factor);
         }
@@ -95,7 +100,13 @@ async function getCalibrationFactors(): Promise<Map<string, number>> {
 function calibrationFactorFor(
   factors: Map<string, number>,
   sport: string | undefined,
+  market?: string | undefined,
 ): number {
+  // Most-specific wins: sport+market > sport > global.
+  if (sport && market) {
+    const k = `${sport}|${market}`;
+    if (factors.has(k)) return factors.get(k)!;
+  }
   if (sport && factors.has(sport)) return factors.get(sport)!;
   if (factors.has("_GLOBAL")) return factors.get("_GLOBAL")!;
   return 1.0;
@@ -1354,16 +1365,16 @@ function buildParlays(
     // No more inflating by arbitrary edge boosts — ourProb is already the
     // probability after de-vig + Elo + form adjustments. Compounding it across
     // legs gives the real parlay hit rate the model is projecting.
-    const rawCombinedProb = selected.reduce((acc, leg) => acc * leg.ourProb, 1);
-
-    // Apply learned calibration. After every resolved parlay, the calibration
-    // job updates a per-sport scaling factor (actual hit rate / predicted hit
-    // rate). Multiplying combinedProb by it pulls the model's estimate toward
-    // observed reality. New sports with thin samples shrink toward 1.0 (no
-    // adjustment) so flukes don't yank the picks generator around.
-    const primarySport = selected[0]?.sport;
-    const calFactor = calibrationFactorFor(calibrationFactors, primarySport);
-    const combinedProb = Math.max(0.01, Math.min(0.99, rawCombinedProb * calFactor));
+    // Apply learned calibration at the LEG level (sport+market specific). The
+    // calibration job writes per-(sport, market) factors so e.g. NBA spreads
+    // (which historically hit ~68%) get boosted while NBA moneylines (~22%)
+    // get penalized — instead of one blanket NBA factor that averages them
+    // and punishes the good picks. Falls back to per-sport, then global.
+    const calibratedProbs = selected.map((leg) =>
+      leg.ourProb * calibrationFactorFor(calibrationFactors, leg.sport, leg.market),
+    );
+    const rawCombinedProb = calibratedProbs.reduce((acc, p) => acc * p, 1);
+    const combinedProb = Math.max(0.01, Math.min(0.99, rawCombinedProb));
 
     const stake = 100;
     const ev = calculateEV(combinedDecimal, combinedProb, stake);
