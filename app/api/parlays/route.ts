@@ -2006,6 +2006,13 @@ export async function GET(request: NextRequest) {
         // 5 floor was decorative. Setting the real floor where the actual
         // floor is so the data we keep is consistently mid-edge or above.
         const MIN_EV_TO_TRACK = 15;
+        // Hit-rate floor (added 2026-04-29). The EV gate alone passes
+        // longshots: a 5%-confidence parlay at +9000 has EV +250%, which
+        // looks great on paper and disastrously on the scoreboard. Past 3
+        // days, picks below confidence 15% went 3W/87L (3.3% hit rate).
+        // Pair the EV claim with a real-shot threshold so what we track
+        // is at least plausible to actually land.
+        const MIN_CONFIDENCE_TO_TRACK = 15;
         const sigOf = (legs: Array<{ gameId?: string; pick?: string }>) =>
           legs
             .map((l) => `${l.gameId ?? ""}::${l.pick ?? ""}`)
@@ -2013,6 +2020,7 @@ export async function GET(request: NextRequest) {
             .join("|");
         const trackable = parlays.filter((p) => {
           if (p.evPercent < MIN_EV_TO_TRACK) return false;
+          if (p.confidence < MIN_CONFIDENCE_TO_TRACK) return false;
           const sig = sigOf(p.legs);
           if (existingSigs.has(sig)) return false;
           existingSigs.add(sig); // dedupe within this batch too

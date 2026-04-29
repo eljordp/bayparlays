@@ -58,7 +58,6 @@ export async function GET(req: NextRequest) {
   const inSeason = ["nba", "nhl", "mlb", "nfl", "ncaab", "ncaaf"].filter(isInSeason);
   const corePool = inSeason.filter((s) => ["nba", "mlb", "nhl"].includes(s)).join(",")
     || inSeason.join(","); // fallback if NBA/MLB/NHL all out
-  const longshotPool = inSeason.join(",");
 
   const sportCombos: { sports: string; legs: number; sort: "ev" | "payout" | "confidence" }[] = [
     { sports: corePool, legs: 2, sort: "ev" },
@@ -66,24 +65,21 @@ export async function GET(req: NextRequest) {
     { sports: corePool, legs: 2, sort: "payout" },
     { sports: corePool, legs: 3, sort: "ev" },
     { sports: corePool, legs: 3, sort: "confidence" },
-    // "Craziest Parlay of the Day" — 3-leg longshot generator. Tier=admin
-    // relaxes edge/quality filters so legs with high odds (underdogs) can
-    // make it into the pool. Sport pool widens to include all in-season.
-    { sports: longshotPool, legs: 3, sort: "payout" },
+    // 3-leg longshot generator removed 2026-04-29 — past 3 days that combo
+    // brought in ~60 picks at avg combined +9,600, hit at 7.5%, and
+    // contributed -$1,265 of the daily-cron drawdown. Re-enable once
+    // longshot calibration is reliable (sport-specific factors needed).
   ];
 
   const generated: { sports: string; legs: number; sort: string; count: number }[] = [];
 
   for (const combo of sportCombos) {
     try {
-      // Tracked record uses "sharp" tier for regular picks. The crazy
-      // 3-leg longshot combo uses "admin" tier to widen the pool enough
-      // for heavy-underdog legs to survive filtering — otherwise the
-      // standard edge floor keeps them all out.
-      const tier =
-        combo.legs === 3 && combo.sort === "payout" ? "admin" : "sharp";
+      // All five remaining combos use the sharp tier. Admin-tier was only
+      // needed for the longshot combo (now removed) — sharp's stricter
+      // edge floor protects the public track record from junk picks.
       const res = await fetch(
-        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=20&tier=${tier}`
+        `${baseUrl}/api/parlays?sports=${combo.sports}&legs=${combo.legs}&sort=${combo.sort}&count=20&tier=sharp`
       );
       if (res.ok) {
         const data = await res.json();
