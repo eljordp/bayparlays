@@ -1,60 +1,236 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getLiveGameStatuses, gameStringKey } from "@/lib/live-game-status";
+import { legState, type LegLite, type LegState } from "@/lib/leg-result";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
-  const { parlay_id, user_id } = await request.json();
+// Cash-out math, rebuilt to use real game state instead of time elapsed.
+//
+// Old logic was guessing how many legs had won by hours-since-placement.
+// That's how a $10 bet could "cash out for $586" with no games started.
+// New logic:
+//   - Pull live ESPN scoreboard for each leg's sport
+//   - Determine per-leg state: pending / live / won / lost
+//   - Refuse cash-out when:
+//       * any leg has lost (parlay's headed to "lost", no value)
+//       * no leg has finished or gone live (nothing to bank yet)
+//       * all legs already won (full payout will resolve naturally)
+//   - Otherwise: value = stake × product(decimal of confirmed-won legs)
+//                       × discount (0.85)
+//     i.e. you're locking in the legs that won; the discount reflects
+//     the book's vig + the live legs still in flight.
 
-  if (!parlay_id || !user_id) {
-    return NextResponse.json({ error: "parlay_id and user_id required" }, { status: 400 });
+interface ParlayRow {
+  id: string;
+  user_id: string;
+  legs: LegLite[];
+  combined_decimal: number;
+  stake: number;
+  payout: number;
+  status: string;
+  created_at: string;
+}
+
+const DISCOUNT = 0.85;
+const MIN_CASHOUT = 0.01;
+
+interface CashoutCalc {
+  available: boolean;
+  reason?: string;
+  value: number;
+  legBreakdown: Array<{ pick: string; state: LegState }>;
+  wonLegs: number;
+  lostLegs: number;
+  pendingLegs: number;
+  liveLegs: number;
+}
+
+async function computeCashout(parlay: ParlayRow): Promise<CashoutCalc> {
+  const legs = parlay.legs ?? [];
+  if (legs.length === 0) {
+    return {
+      available: false,
+      reason: "Parlay has no legs",
+      value: 0,
+      legBreakdown: [],
+      wonLegs: 0,
+      lostLegs: 0,
+      pendingLegs: 0,
+      liveLegs: 0,
+    };
   }
 
-  // Get the parlay
-  const { data: parlay } = await supabase
+  // Collect sports involved so we only fetch those scoreboards.
+  const sportsSet = new Set<string>();
+  for (const l of legs) {
+    const sport = (l as { sport?: string }).sport;
+    if (sport) sportsSet.add(sport.toUpperCase());
+  }
+  const statusMap = await getLiveGameStatuses(Array.from(sportsSet));
+
+  const breakdown: Array<{ pick: string; state: LegState; decimal: number }> = [];
+  for (const leg of legs) {
+    const key = leg.game ? gameStringKey(leg.game) : null;
+    const status = key ? statusMap.get(key) : undefined;
+    const state = legState(leg, status);
+    const odds = (leg as { odds?: number }).odds ?? 0;
+    const decimal = odds > 0 ? odds / 100 + 1 : odds < 0 ? 100 / Math.abs(odds) + 1 : 1;
+    breakdown.push({ pick: leg.pick ?? "", state, decimal });
+  }
+
+  const wonLegs = breakdown.filter((b) => b.state === "won").length;
+  const lostLegs = breakdown.filter((b) => b.state === "lost").length;
+  const pendingLegs = breakdown.filter((b) => b.state === "pending").length;
+  const liveLegs = breakdown.filter((b) => b.state === "live").length;
+  const wentBeyondPre = breakdown.some(
+    (b) => b.state === "live" || b.state === "won" || b.state === "lost",
+  );
+
+  if (lostLegs > 0) {
+    return {
+      available: false,
+      reason: "A leg has lost — parlay is no longer winnable",
+      value: 0,
+      legBreakdown: breakdown.map(({ pick, state }) => ({ pick, state })),
+      wonLegs,
+      lostLegs,
+      pendingLegs,
+      liveLegs,
+    };
+  }
+
+  if (!wentBeyondPre) {
+    return {
+      available: false,
+      reason: "No games have started yet",
+      value: 0,
+      legBreakdown: breakdown.map(({ pick, state }) => ({ pick, state })),
+      wonLegs,
+      lostLegs,
+      pendingLegs,
+      liveLegs,
+    };
+  }
+
+  if (wonLegs === legs.length) {
+    return {
+      available: false,
+      reason: "All legs already won — full payout will settle automatically",
+      value: 0,
+      legBreakdown: breakdown.map(({ pick, state }) => ({ pick, state })),
+      wonLegs,
+      lostLegs,
+      pendingLegs,
+      liveLegs,
+    };
+  }
+
+  // At this point: at least one game has begun, no leg has lost, and not
+  // every leg has won. Compute the locked-in winnings from confirmed-won
+  // legs and apply the cash-out discount.
+  const wonProduct = breakdown
+    .filter((b) => b.state === "won")
+    .reduce((acc, b) => acc * b.decimal, 1);
+
+  // If the only "movement" is a live leg (no leg has finished yet), give a
+  // small early-cashout value: 60% of stake. That mirrors a sportsbook
+  // floor for in-play parlays where nothing has closed.
+  let value: number;
+  if (wonLegs === 0 && liveLegs > 0) {
+    value = parlay.stake * 0.6;
+  } else {
+    value = parlay.stake * wonProduct * DISCOUNT;
+    // Hard cap: cannot exceed the full payout (no free money beyond what
+    // the parlay could ever pay).
+    value = Math.min(value, parlay.payout);
+  }
+
+  value = Math.max(MIN_CASHOUT, Math.round(value * 100) / 100);
+
+  return {
+    available: true,
+    value,
+    legBreakdown: breakdown.map(({ pick, state }) => ({ pick, state })),
+    wonLegs,
+    lostLegs,
+    pendingLegs,
+    liveLegs,
+  };
+}
+
+async function loadParlay(parlayId: string, userId: string): Promise<ParlayRow | null> {
+  const { data } = await supabase
     .from("sim_parlays")
     .select("*")
-    .eq("id", parlay_id)
-    .eq("user_id", user_id)
+    .eq("id", parlayId)
+    .eq("user_id", userId)
     .eq("status", "pending")
     .single();
+  return (data as ParlayRow | null) ?? null;
+}
 
+export async function GET(req: NextRequest) {
+  const parlayId = req.nextUrl.searchParams.get("parlay_id");
+  const userId = req.nextUrl.searchParams.get("user_id");
+  if (!parlayId || !userId) {
+    return NextResponse.json(
+      { error: "parlay_id and user_id required" },
+      { status: 400 },
+    );
+  }
+  const parlay = await loadParlay(parlayId, userId);
   if (!parlay) {
-    return NextResponse.json({ error: "Parlay not found or already resolved" }, { status: 404 });
+    return NextResponse.json({ cashoutAvailable: false });
+  }
+  const calc = await computeCashout(parlay);
+  return NextResponse.json({
+    cashoutAvailable: calc.available,
+    cashoutValue: calc.value,
+    stake: parlay.stake,
+    payout: parlay.payout,
+    reason: calc.reason ?? null,
+    legBreakdown: calc.legBreakdown,
+    summary: {
+      won: calc.wonLegs,
+      lost: calc.lostLegs,
+      pending: calc.pendingLegs,
+      live: calc.liveLegs,
+    },
+  });
+}
+
+export async function POST(req: NextRequest) {
+  const { parlay_id, user_id } = await req.json();
+  if (!parlay_id || !user_id) {
+    return NextResponse.json(
+      { error: "parlay_id and user_id required" },
+      { status: 400 },
+    );
   }
 
-  // Calculate cash out value
-  const legs = parlay.legs || [];
-  const totalLegs = legs.length;
-  const hoursPlaced = (Date.now() - new Date(parlay.created_at).getTime()) / (1000 * 60 * 60);
-
-  let cashoutMultiplier: number;
-
-  if (hoursPlaced < 1) {
-    // Just placed — small penalty to cash out (90% of stake)
-    cashoutMultiplier = 0.9;
-  } else if (hoursPlaced < 6) {
-    // Some games may be in progress — moderate value
-    const estimatedLegsWon = Math.min(totalLegs - 1, Math.floor(hoursPlaced / 3));
-    const wonMultiplier = legs.slice(0, estimatedLegsWon).reduce((acc: number, leg: { odds: number }) => {
-      const decimal = leg.odds > 0 ? leg.odds / 100 + 1 : 100 / Math.abs(leg.odds) + 1;
-      return acc * decimal;
-    }, 1);
-    cashoutMultiplier = Math.max(0.85, Math.min(wonMultiplier * 0.85, parlay.combined_decimal * 0.7));
-  } else {
-    // Games likely in late stages or done — higher value
-    const estimatedLegsWon = Math.min(totalLegs - 1, Math.floor(hoursPlaced / 4));
-    const wonMultiplier = legs.slice(0, estimatedLegsWon).reduce((acc: number, leg: { odds: number }) => {
-      const decimal = leg.odds > 0 ? leg.odds / 100 + 1 : 100 / Math.abs(leg.odds) + 1;
-      return acc * decimal;
-    }, 1);
-    cashoutMultiplier = Math.max(0.9, Math.min(wonMultiplier * 0.85, parlay.combined_decimal * 0.75));
+  const parlay = await loadParlay(parlay_id, user_id);
+  if (!parlay) {
+    return NextResponse.json(
+      { error: "Parlay not found or already resolved" },
+      { status: 404 },
+    );
   }
 
-  const cashoutValue = Math.round(parlay.stake * cashoutMultiplier * 100) / 100;
-  const profit = cashoutValue - parlay.stake;
+  const calc = await computeCashout(parlay);
+  if (!calc.available) {
+    return NextResponse.json(
+      {
+        error: calc.reason ?? "Cash-out not available",
+        legBreakdown: calc.legBreakdown,
+      },
+      { status: 400 },
+    );
+  }
 
-  // Update parlay as cashed out
+  const profit = calc.value - parlay.stake;
+
+  // Mark parlay resolved and credit bankroll.
   await supabase
     .from("sim_parlays")
     .update({
@@ -62,9 +238,9 @@ export async function POST(request: NextRequest) {
       profit,
       resolved_at: new Date().toISOString(),
     })
-    .eq("id", parlay_id);
+    .eq("id", parlay_id)
+    .eq("status", "pending"); // race-safe
 
-  // Update bankroll — add cashout value back
   const { data: bankroll } = await supabase
     .from("sim_bankroll")
     .select("*")
@@ -75,8 +251,8 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("sim_bankroll")
       .update({
-        balance: bankroll.balance + cashoutValue,
-        total_won: bankroll.total_won + (profit > 0 ? cashoutValue : 0),
+        balance: (bankroll.balance ?? 0) + calc.value,
+        total_won: (bankroll.total_won ?? 0) + (profit > 0 ? calc.value : 0),
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", user_id);
@@ -84,59 +260,8 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    cashoutValue,
+    cashoutValue: calc.value,
     profit,
-  });
-}
-
-// GET endpoint to check cash out value without executing
-export async function GET(request: NextRequest) {
-  const parlayId = request.nextUrl.searchParams.get("parlay_id");
-  const userId = request.nextUrl.searchParams.get("user_id");
-
-  if (!parlayId || !userId) {
-    return NextResponse.json({ error: "parlay_id and user_id required" }, { status: 400 });
-  }
-
-  const { data: parlay } = await supabase
-    .from("sim_parlays")
-    .select("*")
-    .eq("id", parlayId)
-    .eq("user_id", userId)
-    .eq("status", "pending")
-    .single();
-
-  if (!parlay) {
-    return NextResponse.json({ cashoutAvailable: false });
-  }
-
-  const legs = parlay.legs || [];
-  const totalLegs = legs.length;
-  const hoursPlaced = (Date.now() - new Date(parlay.created_at).getTime()) / (1000 * 60 * 60);
-
-  let cashoutMultiplier: number;
-  if (hoursPlaced < 1) {
-    cashoutMultiplier = 0.9;
-  } else if (hoursPlaced < 6) {
-    const estimatedLegsWon = Math.min(totalLegs - 1, Math.floor(hoursPlaced / 3));
-    const wonMultiplier = legs.slice(0, estimatedLegsWon).reduce((acc: number, leg: { odds: number }) => {
-      const decimal = leg.odds > 0 ? leg.odds / 100 + 1 : 100 / Math.abs(leg.odds) + 1;
-      return acc * decimal;
-    }, 1);
-    cashoutMultiplier = Math.max(0.85, Math.min(wonMultiplier * 0.85, parlay.combined_decimal * 0.7));
-  } else {
-    const estimatedLegsWon = Math.min(totalLegs - 1, Math.floor(hoursPlaced / 4));
-    const wonMultiplier = legs.slice(0, estimatedLegsWon).reduce((acc: number, leg: { odds: number }) => {
-      const decimal = leg.odds > 0 ? leg.odds / 100 + 1 : 100 / Math.abs(leg.odds) + 1;
-      return acc * decimal;
-    }, 1);
-    cashoutMultiplier = Math.max(0.9, Math.min(wonMultiplier * 0.85, parlay.combined_decimal * 0.75));
-  }
-
-  return NextResponse.json({
-    cashoutAvailable: true,
-    cashoutValue: Math.round(parlay.stake * cashoutMultiplier * 100) / 100,
-    stake: parlay.stake,
-    payout: parlay.payout,
+    legBreakdown: calc.legBreakdown,
   });
 }
