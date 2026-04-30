@@ -5,14 +5,13 @@ name: BayParlays Resolve Research Parlays
 # rows/scan that research-scan persists just sit at status='pending'
 # forever and never contribute to learning.
 #
-# Runs every 6 hours — most games end within 3-4 hours of tipoff so this
-# cadence catches them within one cycle. Each call hits The Odds API once
-# per sport with pending parlays (cached in-process), so total credit
-# burn is ~3-5/run.
+# 2026-04-30: re-anchored to game-end windows (3am/8am UTC = 8pm/1am PT).
+# That's when MLB/NBA/NHL games are wrapping up. The other 4 daily runs
+# at random clock times were no-ops because no games had finished yet.
 
 on:
   schedule:
-    - cron: "0 */6 * * *"  # every 6 hours
+    - cron: "0 3,8 * * *"   # 8pm PT and 1am PT — game-end windows
   workflow_dispatch: {}
 
 jobs:

@@ -34,11 +34,12 @@ interface InternalParlayResp {
 
 function currentSlateLabel(now: Date): string {
   const h = now.getUTCHours();
-  // Bucket by which window we're CURRENTLY in (latest slate that has dropped)
-  if (h >= 12 && h < 18) return "morning";
-  if (h >= 18 && h < 24) return "midday";
-  if (h >= 0 && h < 4)   return "evening";
-  return "late"; // 4-12 UTC
+  // Bucket by which window we're CURRENTLY in (latest slate that has dropped).
+  // Aligned to the new 15/19/23/02 UTC cron schedule (8am/12pm/4pm/7pm PT).
+  if (h >= 15 && h < 19) return "morning";   // 8am-noon PT
+  if (h >= 19 && h < 23) return "midday";    // noon-4pm PT
+  if (h >= 23 || h < 2)  return "primetime"; // 4pm-7pm PT
+  return "late";                              // 7pm PT through next morning's cron
 }
 
 function todaySlateId(label: string, now: Date): string {

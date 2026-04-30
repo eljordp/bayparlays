@@ -1,23 +1,18 @@
 name: BayParlays Daily Slate
 
-# Generates the canonical slate of 12 parlays four times a day. Users see
-# the SAME parlays in the active window — fixes the "I refreshed and my
-# pick disappeared" UX problem and gives the data analyst (you, me)
-# clean per-slate buckets to compare hit rates across windows.
+# Generates the canonical slate of parlays at the four moments bettors
+# actually look at picks. Killed the 5am and 9pm PT slots (2026-04-30) —
+# both were dead zones with no games to publish for.
 #
-# Slate windows (UTC):
-#   12:00 → "morning" slate (5am PT) — drops over breakfast
-#   18:00 → "midday" slate (11am PT) — most users browse here
-#   00:00 → "evening" slate (5pm PT) — primetime drop, IG content moment
-#   04:00 → "late" slate (9pm PT) — west coast late games
-#
-# Each run hits /api/parlays internally to generate combos, so credit cost
-# is ~6-9 Odds API credits per slate (3 sort modes × 3 sport mix). Total:
-# ~25-35 credits/day for slate generation, on top of pre-tip-capture.
+# Slate windows (UTC → PT):
+#   15:00 → "morning"   slate (8am PT)  — early MLB starts (noon ET)
+#   19:00 → "midday"    slate (12pm PT) — lunch primary slate
+#   23:00 → "primetime" slate (4pm PT)  — NBA/NHL/late MLB lock-in
+#   02:00 → "late"      slate (7pm PT)  — west coast nightcaps
 
 on:
   schedule:
-    - cron: "0 12,18,0,4 * * *"
+    - cron: "0 15,19,23,2 * * *"
   workflow_dispatch: {}
 
 jobs:

@@ -1,17 +1,19 @@
 name: BayParlays Periodic Refresh
 
 # Hits /api/daily which resolves pending parlays against real scores,
-# generates fresh AI picks, and checks sim bets. Each invocation pulls
-# odds for ~3 sports across multiple combos = ~12-20 Odds API credits.
+# generates fresh AI picks, and checks sim bets.
 #
-# Bumped from every 3 hours → every 6 hours on 2026-04-26 to extend Odds
-# API runway. Picks still generate 4x/day at 0/6/12/18 UTC, which lines
-# up with morning slate, midday refresh, evening slate, and overnight
-# resolution. Revert to */3 once on a 20K+ credits plan.
+# 2026-04-30: re-anchored to game-hours instead of every 6h. With JP
+# rotating to a fresh API key daily, credit budget is no longer the
+# constraint — usefulness is. Now fires at 16/20/00/04 UTC = 9am/1pm/
+# 5pm/9pm PT — the four moments where score-checking + auto-resolution
+# actually matters. The 9pm PT pass catches all evening games as they
+# end. Skipping the 5am-2pm UTC window since basically nothing has
+# resolved overnight.
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 16,20,0,4 * * *"
   workflow_dispatch: {} # lets you trigger manually from the Actions tab
 
 jobs:
