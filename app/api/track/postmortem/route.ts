@@ -5,19 +5,17 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-// Postmortem endpoint.
+// Postmortem v2 — owner-first.
 //
-// Cross-cutting "what's actually working vs what's broken" analysis over
-// the resolved parlays table. Surfaces patterns that the strategy
-// comparison can't:
-//   - WIN vs LOSS averages (confidence, EV, odds, leg count)
-//   - Per-team win/loss leaderboard (which picks keep landing/missing)
-//   - Per-market hit rates with expected-vs-actual gap (calibration health)
-//   - Per-sport hit rates same
-//   - Recent winning legs grouped by team to spot hot players/teams
-//
-// Used by /postmortem page so JP (and future analysts) can spot bias and
-// concrete tweaks before the calibration job converges on them.
+// Every section here is meant to answer "what should I DO about this?"
+// rather than just "here's some numbers." The page that consumes it
+// surfaces:
+//   - Headline scorecard with 7d-vs-prior-7d trend deltas
+//   - Actionable tweak list with concrete dollar impact
+//   - Profit attribution (where the actual dollars are going)
+//   - Hot / cold streaks (temporal, not all-time)
+//   - Wins-vs-Losses pick profile (the structural-bias detector)
+//   - Per-sport calibration gauges (model accuracy)
 
 interface ParlayLeg {
   pick?: string;
@@ -27,8 +25,6 @@ interface ParlayLeg {
   homeTeam?: string;
   awayTeam?: string;
   odds?: number;
-  trueEdge?: number;
-  ourProb?: number;
 }
 
 interface ParlayRow {
@@ -40,22 +36,59 @@ interface ParlayRow {
   ev_percent: number | null;
   legs_total: number | null;
   sports: string[] | null;
+  clv_percent: number | null;
   archived_at: string | null;
   created_at: string;
 }
 
 const UNIT = 10;
 
-function avg(rows: ParlayRow[], pluck: (p: ParlayRow) => number | null | undefined): number {
-  const values = rows.map(pluck).filter((v): v is number => typeof v === "number");
-  if (values.length === 0) return 0;
-  return values.reduce((s, v) => s + v, 0) / values.length;
+function profitOf(p: ParlayRow): number {
+  if (p.status === "won") return UNIT * ((p.combined_decimal ?? 1) - 1);
+  if (p.status === "lost") return -UNIT;
+  return 0;
 }
 
-// Extract a "pick subject" from a leg for team-level rollup.
+function avg(arr: number[]): number {
+  if (arr.length === 0) return 0;
+  return arr.reduce((s, v) => s + v, 0) / arr.length;
+}
+
+interface Window {
+  hitRate: number;
+  roi: number;
+  profit: number;
+  clv: number;
+  resolved: number;
+}
+
+function summarizeWindow(rows: ParlayRow[]): Window {
+  const won = rows.filter((p) => p.status === "won").length;
+  const lost = rows.filter((p) => p.status === "lost").length;
+  const resolved = won + lost;
+  const profit = rows.reduce((s, p) => s + profitOf(p), 0);
+  const wagered = resolved * UNIT;
+  const roi = wagered > 0 ? (profit / wagered) * 100 : 0;
+  const hitRate = resolved > 0 ? (won / resolved) * 100 : 0;
+  const clvSamples = rows.filter(
+    (p) => p.status !== "pending" && typeof p.clv_percent === "number",
+  );
+  const clv = clvSamples.length > 0
+    ? avg(clvSamples.map((p) => p.clv_percent!))
+    : 0;
+  return {
+    hitRate: Math.round(hitRate * 10) / 10,
+    roi: Math.round(roi * 10) / 10,
+    profit: Math.round(profit * 100) / 100,
+    clv: Math.round(clv * 100) / 100,
+    resolved,
+  };
+}
+
+// Pick subject for team-level rollup.
 // "Lakers ML" → "Lakers"
 // "Yankees -1.5" → "Yankees"
-// "Over 8.5" → "Over (Yankees vs Astros)" — keeps totals identifiable
+// "Over 8.5" → "Over (Yankees vs Astros)"
 function pickSubject(leg: ParlayLeg): string {
   const pick = leg.pick ?? "";
   const ml = pick.match(/^(.+?)\s+ML\s*$/i);
@@ -78,7 +111,7 @@ export async function GET() {
       const { data, error } = await supabase
         .from("parlays")
         .select(
-          "id, status, legs, combined_decimal, confidence, ev_percent, legs_total, sports, archived_at, created_at",
+          "id, status, legs, combined_decimal, confidence, ev_percent, legs_total, sports, clv_percent, archived_at, created_at",
         )
         .neq("status", "pending")
         .order("created_at", { ascending: false })
@@ -95,206 +128,223 @@ export async function GET() {
     const wins = rows.filter((p) => p.status === "won");
     const losses = rows.filter((p) => p.status === "lost");
 
-    // ── WIN vs LOSS averages ───────────────────────────────────────────
+    // ── Trend: 7d window vs prior 7d ────────────────────────────────
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const cur = rows.filter((p) => now - new Date(p.created_at).getTime() <= 7 * day);
+    const prev = rows.filter((p) => {
+      const t = now - new Date(p.created_at).getTime();
+      return t > 7 * day && t <= 14 * day;
+    });
+    const trend = {
+      current: summarizeWindow(cur),
+      previous: summarizeWindow(prev),
+    };
+
+    // ── WIN vs LOSS pick profile ────────────────────────────────────
     const winAvg = {
-      confidence: Math.round(avg(wins, (p) => p.confidence) * 10) / 10,
-      evPercent: Math.round(avg(wins, (p) => p.ev_percent) * 10) / 10,
-      combinedDecimal: Math.round(avg(wins, (p) => p.combined_decimal) * 100) / 100,
-      legCount: Math.round(avg(wins, (p) => p.legs_total) * 10) / 10,
+      confidence: Math.round(avg(wins.map((p) => p.confidence ?? 0)) * 10) / 10,
+      evPercent: Math.round(avg(wins.map((p) => p.ev_percent ?? 0)) * 10) / 10,
+      combinedDecimal: Math.round(avg(wins.map((p) => p.combined_decimal ?? 0)) * 100) / 100,
+      legCount: Math.round(avg(wins.map((p) => p.legs_total ?? 0)) * 10) / 10,
     };
     const lossAvg = {
-      confidence: Math.round(avg(losses, (p) => p.confidence) * 10) / 10,
-      evPercent: Math.round(avg(losses, (p) => p.ev_percent) * 10) / 10,
-      combinedDecimal: Math.round(avg(losses, (p) => p.combined_decimal) * 100) / 100,
-      legCount: Math.round(avg(losses, (p) => p.legs_total) * 10) / 10,
+      confidence: Math.round(avg(losses.map((p) => p.confidence ?? 0)) * 10) / 10,
+      evPercent: Math.round(avg(losses.map((p) => p.ev_percent ?? 0)) * 10) / 10,
+      combinedDecimal: Math.round(avg(losses.map((p) => p.combined_decimal ?? 0)) * 100) / 100,
+      legCount: Math.round(avg(losses.map((p) => p.legs_total ?? 0)) * 10) / 10,
     };
 
-    // ── Per-market hit rate (using leg-level aggregation) ──────────────
-    // For each leg in a parlay, we know what market it was. Determining
-    // whether THE LEG won (vs. the parlay) requires real game-result
-    // data we don't have here for old rows; instead, attribute the
-    // parlay's outcome to each of its legs as a proxy. Imperfect but
-    // surfaces the dominant patterns.
-    const marketStats = new Map<string, { wins: number; losses: number }>();
-    for (const p of rows) {
-      const status = p.status;
-      for (const l of p.legs ?? []) {
-        const m = (l.market ?? "unknown").toLowerCase();
-        const entry = marketStats.get(m) ?? { wins: 0, losses: 0 };
-        if (status === "won") entry.wins++;
-        else if (status === "lost") entry.losses++;
-        marketStats.set(m, entry);
+    // ── Profit attribution ──────────────────────────────────────────
+    function aggregate<K extends string>(
+      rs: ParlayRow[],
+      keyFn: (p: ParlayRow) => K | null,
+    ): Array<{ key: K; wins: number; losses: number; total: number; hitRate: number; roi: number; profit: number }> {
+      const map = new Map<K, { wins: number; losses: number; profit: number }>();
+      for (const p of rs) {
+        const k = keyFn(p);
+        if (k === null) continue;
+        const e = map.get(k) ?? { wins: 0, losses: 0, profit: 0 };
+        if (p.status === "won") e.wins++;
+        if (p.status === "lost") e.losses++;
+        e.profit += profitOf(p);
+        map.set(k, e);
       }
+      return Array.from(map.entries())
+        .map(([key, v]) => {
+          const total = v.wins + v.losses;
+          const hitRate = total > 0 ? Math.round((v.wins / total) * 1000) / 10 : 0;
+          const roi = total > 0 ? Math.round((v.profit / (total * UNIT)) * 1000) / 10 : 0;
+          return {
+            key,
+            wins: v.wins,
+            losses: v.losses,
+            total,
+            hitRate,
+            roi,
+            profit: Math.round(v.profit * 100) / 100,
+          };
+        })
+        .sort((a, b) => b.profit - a.profit);
     }
-    const byMarket = Array.from(marketStats.entries())
-      .map(([market, v]) => {
-        const total = v.wins + v.losses;
-        const hitRate = total > 0 ? Math.round((v.wins / total) * 1000) / 10 : 0;
-        return { market, wins: v.wins, losses: v.losses, total, hitRate };
-      })
-      .sort((a, b) => b.total - a.total);
 
-    // ── Per-sport hit rate (parlay-level, using primary sport tag) ─────
-    const sportStats = new Map<string, { wins: number; losses: number; profit: number }>();
-    for (const p of rows) {
-      const sports = p.sports ?? [];
-      const primary = (sports[0] ?? "—").toUpperCase();
-      const entry = sportStats.get(primary) ?? { wins: 0, losses: 0, profit: 0 };
-      if (p.status === "won") {
-        entry.wins++;
-        entry.profit += UNIT * ((p.combined_decimal ?? 1) - 1);
-      } else if (p.status === "lost") {
-        entry.losses++;
-        entry.profit -= UNIT;
-      }
-      sportStats.set(primary, entry);
-    }
-    const bySport = Array.from(sportStats.entries())
-      .map(([sport, v]) => {
-        const total = v.wins + v.losses;
-        const hitRate = total > 0 ? Math.round((v.wins / total) * 1000) / 10 : 0;
-        const roi = total > 0 ? Math.round((v.profit / (total * UNIT)) * 1000) / 10 : 0;
-        return {
-          sport,
-          wins: v.wins,
-          losses: v.losses,
-          total,
-          hitRate,
-          roi,
-          profit: Math.round(v.profit * 100) / 100,
-        };
-      })
-      .sort((a, b) => b.total - a.total);
+    const bySport = aggregate(rows, (p) =>
+      Array.isArray(p.sports) && p.sports[0] ? (p.sports[0] as string).toUpperCase() : null,
+    );
+    const byLegCount = aggregate(rows, (p) =>
+      typeof p.legs_total === "number" ? `${p.legs_total}-leg` : null,
+    );
+    const byConfidenceBand = aggregate(rows, (p) => {
+      const c = p.confidence ?? 0;
+      if (c >= 50) return "50%+ (high conf)";
+      if (c >= 35) return "35-50% (sweet spot)";
+      if (c >= 20) return "20-35% (mid)";
+      if (c > 0) return "<20% (longshot)";
+      return null;
+    });
 
-    // ── Team leaderboard ──────────────────────────────────────────────
-    // Aggregate every leg's pick subject across resolved parlays.
-    const teamStats = new Map<string, { wins: number; losses: number }>();
-    for (const p of rows) {
-      const status = p.status;
+    // ── Hot / Cold streaks (last 14 days, ordered by created_at) ───
+    const last14d = rows
+      .filter((p) => now - new Date(p.created_at).getTime() <= 14 * day)
+      .sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+
+    // For each team subject, build a chronological win/loss list and find
+    // the longest current run (most recent consecutive same-status streak).
+    const teamLog = new Map<string, Array<{ status: string; at: string }>>();
+    for (const p of last14d) {
       for (const l of p.legs ?? []) {
         const subject = pickSubject(l);
         if (!subject) continue;
-        const entry = teamStats.get(subject) ?? { wins: 0, losses: 0 };
-        if (status === "won") entry.wins++;
-        else if (status === "lost") entry.losses++;
-        teamStats.set(subject, entry);
+        const arr = teamLog.get(subject) ?? [];
+        arr.push({ status: p.status, at: p.created_at });
+        teamLog.set(subject, arr);
       }
     }
-    const teamRows = Array.from(teamStats.entries())
-      .map(([subject, v]) => {
-        const total = v.wins + v.losses;
-        const hitRate = total > 0 ? Math.round((v.wins / total) * 1000) / 10 : 0;
-        return { subject, wins: v.wins, losses: v.losses, total, hitRate };
+
+    const streaks = Array.from(teamLog.entries())
+      .map(([subject, log]) => {
+        if (log.length < 2) return null;
+        // Trailing streak — count back from the end while status matches
+        let streakLen = 1;
+        const lastStatus = log[log.length - 1].status;
+        for (let i = log.length - 2; i >= 0; i--) {
+          if (log[i].status === lastStatus) streakLen++;
+          else break;
+        }
+        return {
+          subject,
+          status: lastStatus,
+          streakLen,
+          totalAppearances: log.length,
+          lastSeen: log[log.length - 1].at,
+        };
       })
-      .filter((r) => r.total >= 5);
+      .filter((s): s is NonNullable<typeof s> => s !== null);
 
-    const topWinners = [...teamRows].sort((a, b) => b.hitRate - a.hitRate || b.wins - a.wins).slice(0, 15);
-    const topLosers = [...teamRows].sort((a, b) => a.hitRate - b.hitRate || b.losses - a.losses).slice(0, 15);
-    const mostFrequent = [...teamRows].sort((a, b) => b.total - a.total).slice(0, 15);
+    const hotStreaks = streaks
+      .filter((s) => s.status === "won" && s.streakLen >= 3)
+      .sort((a, b) => b.streakLen - a.streakLen)
+      .slice(0, 10);
+    const coldStreaks = streaks
+      .filter((s) => s.status === "lost" && s.streakLen >= 4)
+      .sort((a, b) => b.streakLen - a.streakLen)
+      .slice(0, 10);
 
-    // ── Recent winning legs (top examples, last 14 days) ──────────────
-    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-    const recentWins = wins
-      .filter((p) => p.created_at >= fourteenDaysAgo)
-      .slice(0, 8)
-      .map((p) => ({
-        id: p.id,
-        createdAt: p.created_at,
-        legs: p.legs,
-        combinedDecimal: p.combined_decimal,
-        confidence: p.confidence,
-        evPercent: p.ev_percent,
-        profitAtUnit: Math.round(UNIT * ((p.combined_decimal ?? 1) - 1) * 100) / 100,
-      }));
-    const recentLosses = losses
-      .filter((p) => p.created_at >= fourteenDaysAgo)
-      .slice(0, 8)
-      .map((p) => ({
-        id: p.id,
-        createdAt: p.created_at,
-        legs: p.legs,
-        combinedDecimal: p.combined_decimal,
-        confidence: p.confidence,
-        evPercent: p.ev_percent,
-        profitAtUnit: -UNIT,
-      }));
-
-    // ── Tweak recommendations (rule-based, simple) ─────────────────────
-    const recommendations: string[] = [];
-
-    // 1. Confidence calibration health: if model is dramatically over/under
-    //    confident (claimed avg conf >> actual hit rate), flag it.
-    const overallHitRate =
-      wins.length + losses.length > 0
-        ? (wins.length / (wins.length + losses.length)) * 100
-        : 0;
-    const claimedConf = avg(rows, (p) => p.confidence);
-    const calibrationGap = claimedConf - overallHitRate;
-    if (Math.abs(calibrationGap) >= 5 && rows.length >= 100) {
-      recommendations.push(
-        calibrationGap > 0
-          ? `Model is ~${calibrationGap.toFixed(0)}pp OVERCONFIDENT (claims ${claimedConf.toFixed(0)}% avg, hits ${overallHitRate.toFixed(0)}%). Consider tightening confidence floor or adding a calibration scaler.`
-          : `Model is ~${Math.abs(calibrationGap).toFixed(0)}pp UNDER-confident (claims ${claimedConf.toFixed(0)}% avg, hits ${overallHitRate.toFixed(0)}%). Picks are getting through that should rank higher.`,
+    // ── Calibration gauges per sport ───────────────────────────────
+    const calibration = bySport.map((s) => {
+      const filteredRows = rows.filter(
+        (p) =>
+          Array.isArray(p.sports) &&
+          p.sports[0] &&
+          (p.sports[0] as string).toUpperCase() === s.key,
       );
-    }
+      const claimedConf = avg(filteredRows.map((p) => p.confidence ?? 0));
+      const actualHit = s.hitRate;
+      const gap = Math.round((claimedConf - actualHit) * 10) / 10;
+      return {
+        sport: s.key,
+        samples: s.total,
+        claimedConfidence: Math.round(claimedConf * 10) / 10,
+        actualHitRate: actualHit,
+        gap,
+        verdict:
+          gap >= 5
+            ? "overconfident"
+            : gap <= -5
+              ? "under-confident"
+              : "calibrated",
+      };
+    });
 
-    // 2. Sport-level: any sport hitting <15% with 50+ samples = liability
+    // ── Recommendations with concrete $ impact ─────────────────────
+    const recommendations: Array<{ kind: string; text: string; impact?: string }> = [];
+
+    // 1. Cautionary sport: if a sport has -10%+ ROI on 50+ samples, calc
+    //    what removing it would have done.
+    const totalProfit = rows.reduce((s, p) => s + profitOf(p), 0);
     for (const s of bySport) {
-      if (s.total >= 50 && s.hitRate < 15 && s.roi < -30) {
-        recommendations.push(
-          `${s.sport} is hitting ${s.hitRate}% on ${s.total} resolved (ROI ${s.roi}%). Consider excluding from active slates until model improves on this sport.`,
-        );
+      if (s.total >= 50 && s.profit < -50 && s.roi <= -10) {
+        const counterfactualProfit = totalProfit - s.profit;
+        const delta = counterfactualProfit - totalProfit;
+        recommendations.push({
+          kind: "exclude-sport",
+          text: `${s.key} is hitting ${s.hitRate.toFixed(1)}% on ${s.total} resolved (ROI ${s.roi.toFixed(1)}%). It bled $${Math.abs(s.profit).toFixed(0)}. Excluding ${s.key} from active slates would have improved overall profit by $${Math.abs(delta).toFixed(0)}.`,
+          impact: `+$${Math.abs(delta).toFixed(0)}`,
+        });
       }
     }
 
-    // 3. Most-frequent losers: teams appearing 8+ times with hit rate <20%
-    const persistentLosers = topLosers.filter((t) => t.total >= 8 && t.hitRate < 20);
-    if (persistentLosers.length > 0) {
-      const examples = persistentLosers.slice(0, 3).map((t) => `"${t.subject}" (${t.wins}W/${t.losses}L)`).join(", ");
-      recommendations.push(
-        `Persistent loser picks the model keeps generating: ${examples}. Worth adding a manual block until the team's situation changes.`,
-      );
+    // 2. Calibration: if any sport is dramatically overconfident
+    for (const c of calibration) {
+      if (c.samples >= 50 && c.gap >= 8) {
+        recommendations.push({
+          kind: "recalibrate-sport",
+          text: `${c.sport}: model claims ${c.claimedConfidence.toFixed(0)}% avg confidence but hits ${c.actualHitRate.toFixed(0)}% — ${c.gap.toFixed(0)}pp overconfident. Tighten the per-sport scaling factor.`,
+        });
+      }
     }
 
-    // 4. Leg-count: pick the bucket with worst ROI
-    const legCountStats = new Map<number, { wins: number; losses: number; profit: number }>();
-    for (const p of rows) {
-      const n = p.legs_total ?? 0;
-      const entry = legCountStats.get(n) ?? { wins: 0, losses: 0, profit: 0 };
-      if (p.status === "won") {
-        entry.wins++;
-        entry.profit += UNIT * ((p.combined_decimal ?? 1) - 1);
-      } else if (p.status === "lost") {
-        entry.losses++;
-        entry.profit -= UNIT;
-      }
-      legCountStats.set(n, entry);
+    // 3. Cold streak: persistent losers that keep getting picked
+    if (coldStreaks.length > 0) {
+      const top = coldStreaks.slice(0, 3).map((s) => `${s.subject} (${s.streakLen}L in a row)`).join(", ");
+      recommendations.push({
+        kind: "cold-streak",
+        text: `Active cold streaks worth blocking manually: ${top}. The model keeps generating these picks faster than the calibration loop can correct.`,
+      });
     }
-    const byLegCount = Array.from(legCountStats.entries())
-      .map(([legs, v]) => {
-        const total = v.wins + v.losses;
-        const hitRate = total > 0 ? Math.round((v.wins / total) * 1000) / 10 : 0;
-        const roi = total > 0 ? Math.round((v.profit / (total * UNIT)) * 1000) / 10 : 0;
-        return { legs, wins: v.wins, losses: v.losses, total, hitRate, roi, profit: Math.round(v.profit * 100) / 100 };
-      })
-      .sort((a, b) => a.legs - b.legs);
+
+    // 4. Big-leg structure flag
+    const bigLegRow = byLegCount.find((b) => b.key.startsWith("4")) || byLegCount.find((b) => b.key.startsWith("5")) || byLegCount.find((b) => b.key.startsWith("6"));
+    const lostBigLegProfit = byLegCount
+      .filter((b) => parseInt(b.key) >= 4)
+      .reduce((s, b) => s + b.profit, 0);
+    if (bigLegRow && lostBigLegProfit < -100) {
+      recommendations.push({
+        kind: "trim-bigleg",
+        text: `4+ leg parlays bled $${Math.abs(lostBigLegProfit).toFixed(0)} cumulatively. Consider capping the slate to 3-leg max until the longshot calibration improves.`,
+        impact: `+$${Math.abs(lostBigLegProfit).toFixed(0)}`,
+      });
+    }
 
     return NextResponse.json(
       {
-        totalResolved: wins.length + losses.length,
+        totalResolved: rows.length,
         totalWins: wins.length,
         totalLosses: losses.length,
-        overallHitRate: Math.round(overallHitRate * 10) / 10,
+        trend,
         winAvg,
         lossAvg,
-        byMarket,
-        bySport,
-        byLegCount,
-        topWinners,
-        topLosers,
-        mostFrequent,
-        recentWins,
-        recentLosses,
+        attribution: {
+          bySport,
+          byLegCount,
+          byConfidenceBand,
+        },
+        hotStreaks,
+        coldStreaks,
+        calibration,
         recommendations,
         unitStake: UNIT,
       },
