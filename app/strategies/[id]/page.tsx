@@ -35,7 +35,7 @@ interface Detail {
     id: string;
     name: string;
     description: string;
-    isSweetSpot: boolean;
+    dimension: "sport" | "confidence" | "structure";
   };
   summary: {
     picks: number;
@@ -173,14 +173,12 @@ export default function StrategyDetailPage({
               >
                 {data.strategy.name}
               </h1>
-              {data.strategy.isSweetSpot && (
-                <span
-                  className="text-[11px] uppercase tracking-widest font-bold px-3 py-1 rounded-full"
-                  style={{ background: "#FF3B3B", color: "#fff" }}
-                >
-                  Recommended
-                </span>
-              )}
+              <span
+                className="text-[11px] uppercase tracking-widest font-bold px-3 py-1 rounded-full"
+                style={{ background: "rgba(0,0,0,0.08)", color: "rgba(0,0,0,0.55)" }}
+              >
+                {data.strategy.dimension}
+              </span>
             </div>
             <p className="text-base md:text-lg max-w-2xl" style={{ color: "rgba(0,0,0,0.5)" }}>
               {data.strategy.description}

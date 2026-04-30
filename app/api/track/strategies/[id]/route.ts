@@ -220,7 +220,7 @@ export async function GET(
           id: def.id,
           name: def.name,
           description: def.description,
-          isSweetSpot: def.isSweetSpot ?? false,
+          dimension: def.dimension,
         },
         summary: {
           picks: matched.length,
