@@ -101,16 +101,15 @@ export async function GET(req: NextRequest) {
   // New targets: collect ~36 raw, expect ~36% drop, net ~22-25 published.
   // If the drop rate trends differently after a few cycles, dial accordingly.
   const combos: Combo[] = [
-    { sort: "confidence", count: 8, legs: 2 },  // safe favorites, sweet-spot leg count
-    { sort: "confidence", count: 5, legs: 3 },
-    { sort: "ev",         count: 7, legs: 2 },  // best math
-    { sort: "ev",         count: 4, legs: 3 },
-    { sort: "payout",     count: 6, legs: 3 },  // longshots
-    // 4-leg payout restored 2026-04-30 — JP's call. The Longshots/Highest
-    // Payout filters were going empty without it and that's "one of the
-    // funnest parts" of the product. Track-record bleed from the 4-leg
-    // bucket is acceptable cost for the wow-factor when one cashes.
-    { sort: "payout",     count: 4, legs: 4 },
+    // Counts bumped 2026-04-30 — JP wants more picks per slate. Total
+    // candidate ask is now ~52 across modes; with the loosened diversity
+    // filter (maxPerLeg=2, maxPerGame=3), expected published is ~25-30.
+    { sort: "confidence", count: 12, legs: 2 }, // safe favorites
+    { sort: "confidence", count: 8,  legs: 3 },
+    { sort: "ev",         count: 10, legs: 2 }, // best math
+    { sort: "ev",         count: 6,  legs: 3 },
+    { sort: "payout",     count: 8,  legs: 3 }, // longshots
+    { sort: "payout",     count: 6,  legs: 4 },
     // 5/6 leg picks are inherently low-confidence (cumulative prob drops
     // hard each leg) so they live in the payout sort — degens-only lottery
     // tickets. Without these the /parlays "Legs: 5" / "Legs: 6" filters
@@ -226,19 +225,14 @@ export async function GET(req: NextRequest) {
   }
 
   const beforeFilter = goodCandidates.length;
-  // Tighter than the lib defaults (which are tuned for in-call dedup on the
-  // live /api/parlays endpoint). For the slate, every pick needs to be a
-  // distinct idea so that "Top 3" actually means three different bets:
-  //   - maxPerLeg=1 → no leg appears in more than one parlay. If Wisconsin
-  //     ML is in pick #1, it can't show up again in pick #2.
-  //   - maxPerGame=2 → same game can appear in up to two parlays (e.g. a
-  //     moneyline parlay and a spread parlay), but never three-deep. Stops
-  //     the "if Lakers loses, half the slate dies" correlation problem.
-  // Slate may end up smaller than the 12-pick target if variety is thin.
-  // That's fine — fewer truly different picks beats more correlated ones.
+  // Loosened 2026-04-30 — earlier maxPerLeg=1 / maxPerGame=2 was killing
+  // 80% of candidates and leaving slates with only 7 picks. The variety
+  // payoff wasn't worth that few options. Defaults (maxPerLeg=2,
+  // maxPerGame=3) keep the structurally-different-bet guarantee while
+  // letting ~25-30 picks through per slate.
   const diverse = applyDiversityFilter(goodCandidates, {
-    maxPerLeg: 1,
-    maxPerGame: 2,
+    maxPerLeg: 2,
+    maxPerGame: 3,
   });
   const droppedToDiversity = beforeFilter - diverse.length;
 

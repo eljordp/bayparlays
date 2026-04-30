@@ -1630,7 +1630,11 @@ export async function GET(request: NextRequest) {
             generatedAt: latest?.slate_id ?? new Date().toISOString(),
           },
         },
-        { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60" } },
+        // No cache. Slate flips on every cron fire and the previous 5-min
+        // CDN cache was making users see the prior slate for up to 5 min
+        // after a new one dropped. Real slate cron only fires 4x/day so
+        // CDN savings here are negligible vs the freshness cost.
+        { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } },
       );
     }
 
