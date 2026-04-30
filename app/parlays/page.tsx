@@ -559,7 +559,7 @@ export default function ParlaysPage() {
     const params = new URLSearchParams({
       legs: JSON.stringify(compactLegs),
       combined: parlay.combinedOdds,
-      payout: `$${Math.round(parlay.payout)}`,
+      payout: `$${Math.round(parlay.payout / 10)}`,
       ev: parlay.evPercent.toFixed(1),
       confidence: parlay.confidence.toFixed(0),
     });
@@ -1525,14 +1525,14 @@ function ParlayCard({
               className="text-[11px] uppercase tracking-wider mb-1"
               style={{ color: "rgba(0,0,0,0.4)" }}
             >
-              $100 pays
+              $10 pays
             </div>
             <div
               className="text-2xl sm:text-3xl font-black tracking-tight tabular-nums"
               style={{ color: "#0a0a0a", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}
             >
               <AnimatedNumber
-                value={parlay.payout}
+                value={parlay.payout / 10}
                 format={(n) => `$${Math.round(n).toLocaleString()}`}
               />
             </div>

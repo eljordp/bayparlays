@@ -106,10 +106,11 @@ export async function GET(req: NextRequest) {
     { sort: "ev",         count: 7, legs: 2 },  // best math
     { sort: "ev",         count: 4, legs: 3 },
     { sort: "payout",     count: 6, legs: 3 },  // longshots
-    // 4-leg combo removed 2026-04-29 — went 0W/29L over the prior 3 days.
-    // Replaced with another 3-leg payout to keep total candidate count
-    // similar without the longshot variance bomb.
-    { sort: "payout",     count: 4, legs: 3 },
+    // 4-leg payout restored 2026-04-30 — JP's call. The Longshots/Highest
+    // Payout filters were going empty without it and that's "one of the
+    // funnest parts" of the product. Track-record bleed from the 4-leg
+    // bucket is acceptable cost for the wow-factor when one cashes.
+    { sort: "payout",     count: 4, legs: 4 },
     // 5/6 leg picks are inherently low-confidence (cumulative prob drops
     // hard each leg) so they live in the payout sort — degens-only lottery
     // tickets. Without these the /parlays "Legs: 5" / "Legs: 6" filters
