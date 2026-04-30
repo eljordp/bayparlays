@@ -301,6 +301,18 @@ export default function StrategiesPage() {
               >
                 Tap any strategy to see its recent picks, sport breakdown, and 14-day chart. {data?.sampleNote}
               </p>
+              <div className="mt-6 flex justify-end">
+                <Link
+                  href="/postmortem"
+                  className="text-xs font-semibold px-4 py-2 rounded-full transition-all"
+                  style={{
+                    background: "rgba(0,0,0,0.05)",
+                    color: "rgba(0,0,0,0.65)",
+                  }}
+                >
+                  Postmortem — what hit, what didn&apos;t →
+                </Link>
+              </div>
             </>
           )}
         </div>
