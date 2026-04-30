@@ -590,7 +590,7 @@ export default function ParlaysPage() {
       </div>
 
       {/* ─── Header ─── */}
-      <header className="pt-24 pb-10 px-4 md:pt-32 md:pb-16 md:px-6">
+      <header className="pt-6 pb-4 px-4 md:pt-32 md:pb-16 md:px-6">
         <div className="max-w-[1400px] mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -620,20 +620,20 @@ export default function ParlaysPage() {
             </div>
 
             <h1
-              className="text-5xl md:text-7xl font-normal leading-[1.05] mb-5"
+              className="text-3xl sm:text-5xl md:text-7xl font-normal leading-[1.05] mb-2 sm:mb-5"
               style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
             >
               Today&apos;s AI Parlays
             </h1>
-            <p className="text-lg md:text-xl max-w-2xl" style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}>
+            <p className="text-sm sm:text-lg md:text-xl max-w-2xl" style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.5 }}>
               Mathematically optimized. Every line scanned. Every edge calculated.
             </p>
           </motion.div>
 
-          {/* Meta stats */}
-          {meta && (
+          {/* Meta stats — hidden when all zero (slate mode), and only on tablet+ */}
+          {meta && (meta.gamesAnalyzed > 0 || meta.legsEvaluated > 0) && (
             <motion.div
-              className="flex flex-wrap gap-4 md:gap-8 mt-12"
+              className="hidden md:flex flex-wrap gap-4 md:gap-8 mt-12"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -662,18 +662,18 @@ export default function ParlaysPage() {
       </header>
 
       {/* ─── Filters ─── */}
-      <section className="px-4 md:px-6 pb-6 sticky top-16 z-40" style={{ background: "rgba(250,250,247,0.92)", backdropFilter: "blur(12px)" }}>
-        <div className="max-w-[1400px] mx-auto py-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+      <section className="px-3 md:px-6 pb-3 md:pb-6 sticky top-16 z-40" style={{ background: "rgba(250,250,247,0.92)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-[1400px] mx-auto py-2 md:py-3" style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
           {/* Sport filters */}
-          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mb-5">
-            <span className="text-xs font-medium uppercase tracking-wider mr-2 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
+          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-2 md:gap-3 mb-2 md:mb-5">
+            <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-2 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
               Sport
             </span>
             {SPORTS.map((sport) => (
               <button
                 key={sport}
                 onClick={() => setSelectedSport(sport)}
-                className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
+                className="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
                 style={{
                   background: selectedSport === sport ? "#0a0a0a" : "rgba(0,0,0,0.04)",
                   color: selectedSport === sport ? "#FFFFFF" : "rgba(0,0,0,0.55)",
@@ -685,15 +685,38 @@ export default function ParlaysPage() {
             ))}
           </div>
 
-          {/* Leg count + Sort */}
-          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-6">
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
+          {/* Sort + Legs in one row on mobile */}
+          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 md:gap-6 mb-2 md:mb-0">
+            <div className="flex items-center gap-1.5 md:gap-3 flex-shrink-0">
+              <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
+                Sort
+              </span>
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSortBy(opt.value)}
+                  className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 whitespace-nowrap"
+                  style={{
+                    background: sortBy === opt.value ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
+                    color: sortBy === opt.value ? "#0a0a0a" : "rgba(0,0,0,0.45)",
+                    fontWeight: sortBy === opt.value ? 600 : 400,
+                    border: sortBy === opt.value ? "1px solid rgba(0,0,0,0.18)" : "1px solid transparent",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="h-5 w-px flex-shrink-0" style={{ background: "rgba(0,0,0,0.08)" }} />
+
+            <div className="flex items-center gap-1.5 md:gap-3 flex-shrink-0">
+              <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
                 Legs
               </span>
               <button
                 onClick={() => setSelectedLegs(null)}
-                className="px-4 h-10 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center"
+                className="px-3 h-8 md:h-10 md:px-4 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 flex items-center justify-center"
                 style={{
                   background: selectedLegs === null ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
                   color: selectedLegs === null ? "#0a0a0a" : "rgba(0,0,0,0.5)",
@@ -706,7 +729,7 @@ export default function ParlaysPage() {
                 <button
                   key={count}
                   onClick={() => setSelectedLegs(selectedLegs === count ? null : count)}
-                  className="w-10 h-10 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 flex items-center justify-center"
                   style={{
                     background: selectedLegs === count ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
                     color: selectedLegs === count ? "#0a0a0a" : "rgba(0,0,0,0.5)",
@@ -717,40 +740,18 @@ export default function ParlaysPage() {
                 </button>
               ))}
             </div>
-
-            <div className="h-6 w-px flex-shrink-0" style={{ background: "rgba(0,0,0,0.08)" }} />
-
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
-                Sort
-              </span>
-              {SORT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSortBy(opt.value)}
-                  className="px-4 py-2 rounded-lg text-sm transition-all duration-200"
-                  style={{
-                    background: sortBy === opt.value ? "rgba(0,0,0,0.06)" : "transparent",
-                    color: sortBy === opt.value ? "#0a0a0a" : "rgba(0,0,0,0.45)",
-                    fontWeight: sortBy === opt.value ? 600 : 400,
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Odds range — client-side payout bucket filter */}
-          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-3 mt-4">
-            <span className="text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
+          <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-2 md:gap-3 mt-2 md:mt-4">
+            <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
               Odds
             </span>
             {ODDS_RANGES.map((r) => (
               <button
                 key={r.value}
                 onClick={() => setOddsRange(r.value)}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex-shrink-0"
+                className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex-shrink-0 whitespace-nowrap"
                 style={{
                   background: oddsRange === r.value ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
                   color: oddsRange === r.value ? "#0a0a0a" : "rgba(0,0,0,0.5)",
