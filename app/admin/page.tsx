@@ -338,6 +338,21 @@ export default function AdminPage() {
                         What hit, what didn&apos;t. Per-team, per-sport, per-market breakdowns. Auto-generated tweak recommendations.
                       </p>
                     </Link>
+                    <Link
+                      href="/admin/verify-slate"
+                      className="block p-5 rounded-xl transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <div className="text-base font-semibold mb-1" style={{ color: "#ededed" }}>
+                        Verify Slate (Manual) →
+                      </div>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        Copy the active slate as a Claude prompt, get verdicts back, apply them. Picks marked &quot;skip&quot; archive instantly.
+                      </p>
+                    </Link>
                   </div>
                 </section>
               )}

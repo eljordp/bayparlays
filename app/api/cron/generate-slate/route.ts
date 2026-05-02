@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { applyDiversityFilter } from "@/lib/diversity";
+import { activeVerifier, type VerifierParlay, type VerifierLeg } from "@/lib/llm-verifier";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
@@ -252,30 +253,90 @@ export async function GET(req: NextRequest) {
     return bc - ac;
   });
 
+  // Phase 3.5: LLM verification (added 2026-05-02). Each candidate is
+  // scored by Gemini for sharp-eye reasoning on top of the statistical
+  // model. Returns "keep" / "soft" / "skip" verdicts. We drop "skip"
+  // entirely and keep the rest. Soft picks still publish but get a
+  // lower slate_rank.
+  const verifier = activeVerifier();
+  const verifierParlays: VerifierParlay[] = diverse.map((c, i) => {
+    const legs = (c.legs ?? []) as VerifierLeg[];
+    return {
+      id: c.parlayId ?? `idx_${i}`,
+      legs,
+      combinedOdds: (c.row.combined_odds as string) ?? "",
+      combinedDecimal: (c.row.combined_decimal as number) ?? 1,
+      confidence: (c.row.confidence as number) ?? 0,
+      evPercent: (c.row.ev_percent as number) ?? 0,
+    };
+  });
+
+  let verdicts: Awaited<ReturnType<typeof verifier.scoreSlate>> = [];
+  let verifierError: string | undefined;
+  try {
+    verdicts = await verifier.scoreSlate(verifierParlays);
+  } catch (e) {
+    verifierError = String(e);
+    console.error("LLM verifier failed (non-fatal):", e);
+  }
+  const verdictById = new Map(verdicts.map((v) => [v.parlayId, v]));
+
+  // Drop hard-skip picks. Keep "keep" + "soft". Soft picks publish but
+  // get pushed to the bottom of the rank.
+  const surviving = diverse.filter((c, i) => {
+    const v = verdictById.get(c.parlayId ?? `idx_${i}`);
+    return !v || v.verdict !== "skip";
+  });
+  const llmRejected = diverse.length - surviving.length;
+
+  // Sort: keep verdicts first (by confidence), then soft (by confidence).
+  surviving.sort((a, b) => {
+    const va = verdictById.get(a.parlayId ?? "");
+    const vb = verdictById.get(b.parlayId ?? "");
+    const aRank = va?.verdict === "keep" ? 0 : 1;
+    const bRank = vb?.verdict === "keep" ? 0 : 1;
+    if (aRank !== bRank) return aRank - bRank;
+    const ac = (a.row.confidence as number) ?? 0;
+    const bc = (b.row.confidence as number) ?? 0;
+    return bc - ac;
+  });
+
   const persisted: string[] = [];
   let lastInsertError: string | undefined;
-  for (let i = 0; i < diverse.length; i++) {
-    const c = diverse[i];
-    const rowWithRank = { ...c.row, slate_rank: i + 1 };
+  for (let i = 0; i < surviving.length; i++) {
+    const c = surviving[i];
+    const v = verdictById.get(c.parlayId ?? `idx_${i}`);
+    const rowWithRank = {
+      ...c.row,
+      slate_rank: i + 1,
+      llm_verdict: v?.verdict ?? null,
+      llm_confidence: v?.llmConfidence ?? null,
+      llm_reason: v?.reason ?? null,
+    };
     const { error } = await supabase.from("parlays").insert(rowWithRank).select("id").single();
     if (error) {
-      lastInsertError = error.message;
+      // Schema may not yet have the llm_* columns. Retry without them.
+      if (/llm_verdict|llm_confidence|llm_reason/.test(error.message)) {
+        const { llm_verdict: _v, llm_confidence: _c, llm_reason: _r, ...bareRow } = rowWithRank;
+        void _v; void _c; void _r;
+        const { error: retryErr } = await supabase.from("parlays").insert(bareRow).select("id").single();
+        if (retryErr) lastInsertError = retryErr.message;
+        else persisted.push(c.parlayId);
+      } else {
+        lastInsertError = error.message;
+      }
     } else {
       persisted.push(c.parlayId);
     }
   }
 
-  // Phase 4: log this run to slate_runs so the diversity filter's behavior
-  // is queryable over time. Best-effort — if the table doesn't exist yet
-  // (migration 018 not applied) or insert fails, we just continue. The
-  // slate itself is the source of truth, this is observability.
   await supabase.from("slate_runs").insert({
     slate_id: slateId,
     label,
     candidates_before_filter: beforeFilter,
     dropped_to_diversity: droppedToDiversity,
     persisted: persisted.length,
-    last_insert_error: lastInsertError,
+    last_insert_error: verifierError ?? lastInsertError,
   });
 
   return NextResponse.json({
@@ -284,6 +345,9 @@ export async function GET(req: NextRequest) {
     persisted: persisted.length,
     candidatesBeforeFilter: beforeFilter,
     droppedToDiversity,
+    llmRejected,
+    verifier: verifier.name,
+    verifierError,
     lastInsertError,
     debug,
     timestamp: now.toISOString(),

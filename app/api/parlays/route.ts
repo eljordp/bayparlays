@@ -32,6 +32,11 @@ import {
   pitcherMatchupBias,
   type GameLineup,
 } from "@/lib/mlb-lineups";
+import {
+  fetchNhlGoalieMatchups,
+  findNhlGoalieMatchup,
+  type GoalieMatchup,
+} from "@/lib/nhl-goalies";
 import { readQuotaHeaders, persistQuota, canFetch } from "@/lib/odds-quota";
 import { getOddsApiKey } from "@/lib/odds-key";
 import {
@@ -481,6 +486,7 @@ interface ExtractCtx {
   lineup?: GameLineup | null;
   injuries?: InjuryMap | null;
   lastGames?: LastGameMap | null;  // NBA/NHL only — teams' most recent completed game
+  nhlGoalie?: GoalieMatchup | null;  // NHL only — projected starting goalies
 }
 
 // ─── Confidence-bias pipeline ────────────────────────────────────────────────
@@ -884,6 +890,13 @@ function extractLegsFromGame(
               const { bias } = pitcherMatchupBias(ctx.lineup);
               adjustedTotal += bias;
             }
+          }
+          // NHL: apply projected-goalie bias (capped ±0.7 goals). Strong
+          // pair pulls Under, backup pair pushes Over. Without this, the
+          // model treated NHL totals as if every game had league-average
+          // goalies — which is exactly why Apr 29 went 0/48 on NHL.
+          if (sportLabel === "NHL" && ctx?.nhlGoalie?.totalBias) {
+            adjustedTotal += ctx.nhlGoalie.totalBias;
           }
 
           const pickIsOver = outcomeInfo.name.toLowerCase() === "over";
@@ -1691,11 +1704,20 @@ export async function GET(request: NextRequest) {
       restSports.map(async (s) => [s, await fetchLastGames(s)] as const),
     ).then((pairs) => new Map(pairs));
 
-    const [results, mlbLineups, injuryBySport, lastGamesBySport] = await Promise.all([
+    // NHL projected starting goalies (free NHL.com API). Pre-game GAA + Sv%
+    // for each game's #1 goalie. Used to bias NHL totals — a strong goalie
+    // pair pushes Under, a backup pair pushes Over. Only when NHL is in
+    // the requested sports.
+    const nhlGoaliesPromise: Promise<Map<string, GoalieMatchup>> = sports.includes("nhl")
+      ? fetchNhlGoalieMatchups()
+      : Promise.resolve(new Map());
+
+    const [results, mlbLineups, injuryBySport, lastGamesBySport, nhlGoalies] = await Promise.all([
       Promise.allSettled(sportFetches),
       mlbLineupsPromise,
       injuryPromise,
       restPromise,
+      nhlGoaliesPromise,
     ]);
 
     // Collect all games and extract scored legs
@@ -1765,6 +1787,10 @@ export async function GET(request: NextRequest) {
             weather = null;
           }
           ctx = { ...(ctx || {}), weather, lineup };
+        }
+        if (sport === "nhl") {
+          const nhlGoalie = findNhlGoalieMatchup(nhlGoalies, game.home_team, game.away_team);
+          ctx = { ...(ctx || {}), nhlGoalie };
         }
 
         const gameLegs = extractLegsFromGame(
