@@ -556,9 +556,24 @@ function extractLegsFromGame(
     return [];
   }
 
+  // Sport-level exclusions, applied 2026-05-02 based on 7-day P&L data:
+  //   NBA — bled -$2,944 across all markets. Model has no lineup/minutes
+  //         data so it can't price NBA accurately. Re-enable when NBA
+  //         lineups feature lands.
+  //   UFC — 0W/4L all-time. No fighter data feed; model is a coinflip+vig.
+  // NHL spreads (puck lines) get blocked further down in the per-market loop.
+  if (sportLabel === "NBA" || sportLabel === "UFC") {
+    return [];
+  }
+
   const legs: ScoredLeg[] = [];
   const gameLabel = `${game.away_team} vs ${game.home_team}`;
-  const markets = ["h2h", "spreads", "totals"];
+  // NHL spread (puck line) was -$948 at 2.9% hit over the last 7 days.
+  // Drop spreads from the market list specifically for NHL — keep moneyline
+  // (decent) and totals (the strongest NHL market at +$208 / 31% hit).
+  const markets = sportLabel === "NHL"
+    ? ["h2h", "totals"]
+    : ["h2h", "spreads", "totals"];
 
   for (const marketKey of markets) {
     // Collect all unique outcomes for this market across all bookmakers

@@ -137,7 +137,11 @@ export async function GET(req: NextRequest) {
       // maxHours=36 keeps every leg in tonight's-or-tomorrow's games. Without
       // it, multi-leg parlays could chain a leg from 3 days out, leaving the
       // whole parlay pending until that distant game finishes.
-      const u = `${baseUrl}/api/parlays?sports=nba,mlb,nhl,ncaab,ncaaf,mls,ufc&legs=${combo.legs}&count=${combo.count}&sort=${combo.sort}&tier=admin&maxHours=36`;
+      // Sport list trimmed 2026-05-02: NBA + UFC excluded (model can't
+      // price them — see /api/parlays sport-level block). NCAAB/NCAAF/MLS
+      // dropped because they're out of season; fetching them just burns
+      // Odds API credits for empty payloads. Re-add when in-season.
+      const u = `${baseUrl}/api/parlays?sports=mlb,nhl&legs=${combo.legs}&count=${combo.count}&sort=${combo.sort}&tier=admin&maxHours=36`;
       dbg.url = u;
       const res = await fetch(u, { cache: "no-store" });
       dbg.status = res.status;
