@@ -123,28 +123,78 @@ export default function LeaderboardPage() {
       {/* ─── VIP Gate ─── */}
       {!isVipOrAdmin ? (
         <div className="pt-10 px-4 md:pt-16 md:px-6">
-          <div className="max-w-[1400px] mx-auto flex flex-col items-center justify-center min-h-[60vh]">
+          <div className="max-w-[1100px] mx-auto">
             <motion.div
-              className="text-center"
+              className="text-center mb-12"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
               <div
-                className="w-24 h-24 rounded-2xl flex items-center justify-center mb-8 mx-auto"
-                style={{ background: "rgba(251,191,36,0.06)", border: "1px solid rgba(251,191,36,0.15)" }}
+                className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 mx-auto"
+                style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.18)" }}
               >
-                <Trophy size={40} style={{ color: "#fbbf24" }} />
+                <Trophy size={36} style={{ color: "#fbbf24" }} />
               </div>
               <h1
-                className="text-4xl md:text-5xl mb-4"
+                className="text-4xl md:text-6xl mb-4"
                 style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
               >
-                VIP Only
+                Leaderboard
               </h1>
-              <p className="text-base mb-8 max-w-md mx-auto" style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.7 }}>
-                The leaderboard is an exclusive feature for VIP members. See how you rank against the best sim players on the platform.
+              <p className="text-base md:text-lg mb-3 max-w-2xl mx-auto" style={{ color: "rgba(0,0,0,0.55)", lineHeight: 1.6 }}>
+                Where every VIP&apos;s sim record stacks against the rest. Rankings reset weekly and update as games settle.
               </p>
+              <p className="text-sm max-w-2xl mx-auto" style={{ color: "rgba(0,0,0,0.4)", lineHeight: 1.6 }}>
+                You see your sim record on{" "}
+                <Link href="/my-stats" className="underline" style={{ color: "rgba(0,0,0,0.6)" }}>My Stats</Link>.
+                The leaderboard is the same data — graded against everyone else.
+              </p>
+            </motion.div>
+
+            {/* Preview — what you see when you unlock */}
+            <motion.div
+              className="rounded-2xl p-6 md:p-8 mb-10"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid rgba(0,0,0,0.08)",
+              }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+            >
+              <div
+                className="text-[11px] uppercase tracking-widest mb-5 font-semibold"
+                style={{ color: "rgba(251,191,36,0.9)" }}
+              >
+                What you see when you unlock
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <RankCriteria
+                  label="Sim ROI"
+                  description="Profit divided by total wagered. The ranking metric — a $200 profit on $400 wagered (50% ROI) outranks a $500 profit on $5,000 wagered (10%)."
+                />
+                <RankCriteria
+                  label="Win Rate"
+                  description="How often your bets cash. Shown alongside ROI but doesn't drive ranking — parlays at high odds can be profitable below 30%."
+                />
+                <RankCriteria
+                  label="Total Profit"
+                  description="Net sim dollars won. Big number, but volume-biased — high rollers can lead on profit while losing on ROI."
+                />
+                <RankCriteria
+                  label="W / L Record"
+                  description="Bets won and lost in sim. Color-coded so you can scan who's hot, who's cold, who's grinding."
+                />
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="text-center pb-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+            >
               <Link
                 href="/subscribe"
                 className="inline-block px-10 py-3.5 text-sm font-semibold rounded-full transition-all duration-200"
@@ -152,6 +202,9 @@ export default function LeaderboardPage() {
               >
                 Upgrade to VIP
               </Link>
+              <p className="text-xs mt-4" style={{ color: "rgba(0,0,0,0.35)" }}>
+                Includes priority picks, advanced analytics, Discord, and Remotion cards.
+              </p>
             </motion.div>
           </div>
         </div>
@@ -171,8 +224,35 @@ export default function LeaderboardPage() {
                   className="text-lg md:text-xl max-w-2xl"
                   style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}
                 >
-                  Top sim performers this week.
+                  Top sim performers this week. Ranked by <strong style={{ color: "#0a0a0a" }}>Sim ROI</strong> — profit divided by total wagered. ROI rewards efficiency, not just volume.
                 </p>
+                <div
+                  className="mt-5 flex items-center gap-2 flex-wrap text-[11px] uppercase tracking-widest"
+                  style={{ color: "rgba(0,0,0,0.4)" }}
+                >
+                  <span
+                    className="px-2.5 py-1 rounded-full"
+                    style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
+                  >
+                    All VIPs
+                  </span>
+                  <span style={{ color: "rgba(0,0,0,0.25)" }}>·</span>
+                  <Link
+                    href="/my-stats"
+                    className="px-2.5 py-1 rounded-full transition-colors hover:bg-black/5"
+                    style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+                  >
+                    Your sim record &rarr;
+                  </Link>
+                  <span style={{ color: "rgba(0,0,0,0.25)" }}>·</span>
+                  <Link
+                    href="/results"
+                    className="px-2.5 py-1 rounded-full transition-colors hover:bg-black/5"
+                    style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+                  >
+                    AI Track Record &rarr;
+                  </Link>
+                </div>
               </motion.div>
             </div>
           </header>
@@ -458,6 +538,29 @@ export default function LeaderboardPage() {
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+/* ─── Pre-unlock criteria card ─── */
+
+function RankCriteria({ label, description }: { label: string; description: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div
+        className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mt-0.5"
+        style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" }}
+      >
+        <Trophy size={13} style={{ color: "rgba(0,0,0,0.5)" }} />
+      </div>
+      <div className="flex-1">
+        <div className="text-sm font-semibold mb-1" style={{ color: "#0a0a0a" }}>
+          {label}
+        </div>
+        <div className="text-xs leading-relaxed" style={{ color: "rgba(0,0,0,0.55)" }}>
+          {description}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppNav } from "@/app/components/AppNav";
 import { ResultsTabs } from "@/app/components/ResultsTabs";
+import { StatCard, StatCardSkeleton } from "@/app/components/StatCard";
 import {
   ChevronDown,
   ChevronUp,
@@ -14,6 +16,7 @@ import {
   Flame,
   Zap,
   Clock,
+  TrendingUp,
 } from "lucide-react";
 
 /* ─── Types ─── */
@@ -249,14 +252,44 @@ export default function ResultsPage() {
               className="text-5xl md:text-7xl font-normal leading-[1.05] mb-5"
               style={{ fontFamily: "'DM Serif Display', serif", color: "#0a0a0a" }}
             >
-              Track Record
+              AI Track Record
             </h1>
             <p
               className="text-lg md:text-xl max-w-2xl"
               style={{ color: "rgba(0,0,0,0.5)", lineHeight: 1.6 }}
             >
-              Only parlays with AI-verified positive expected value (5%+ EV) are tracked here. No cherry-picking. No hiding losses.
+              Every parlay our AI generated, graded against real game outcomes. Only 5%+ EV parlays tracked. No cherry-picking, no hiding losses.
             </p>
+            <div
+              className="mt-5 flex items-center gap-2 flex-wrap text-[11px] uppercase tracking-widest"
+              style={{ color: "rgba(0,0,0,0.4)" }}
+            >
+              <span
+                className="px-2.5 py-1 rounded-full"
+                style={{
+                  background: "rgba(0,0,0,0.04)",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                }}
+              >
+                AI picks
+              </span>
+              <span style={{ color: "rgba(0,0,0,0.25)" }}>·</span>
+              <Link
+                href="/my-stats"
+                className="px-2.5 py-1 rounded-full transition-colors hover:bg-black/5"
+                style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+              >
+                Your sim bets &rarr;
+              </Link>
+              <span style={{ color: "rgba(0,0,0,0.25)" }}>·</span>
+              <Link
+                href="/leaderboard"
+                className="px-2.5 py-1 rounded-full transition-colors hover:bg-black/5"
+                style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+              >
+                Leaderboard &rarr;
+              </Link>
+            </div>
             {stats?.smallSample && (
               <div
                 className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs"
@@ -337,8 +370,68 @@ export default function ResultsPage() {
             )}
 
             {/* Data loaded */}
-            {!loading && !error && data && stats && (
+            {!loading && !error && data && stats && (() => {
+              const profit = stats.profitAtUnit ?? stats.totalProfit;
+              const unit = stats.unitStake ?? 10;
+              const resolvedCount = stats.won + stats.lost;
+              const stakedAtUnit = stats.stakedAtUnit ?? resolvedCount * unit;
+              const roiAtUnit = stakedAtUnit > 0 ? (profit / stakedAtUnit) * 100 : 0;
+              const profitable = profit > 0;
+              const last7Profit = stats.last7Days.profitAtUnit ?? stats.last7Days.profit;
+              const last7Profitable = last7Profit > 0;
+
+              return (
               <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {/* ─── Why low WR is fine — the conversion saver ─── */}
+                {profitable && (
+                  <motion.div
+                    className="mb-6 rounded-2xl p-5 md:p-6 flex flex-col md:flex-row items-start gap-4 md:gap-6"
+                    style={{
+                      background: "rgba(34,197,94,0.06)",
+                      border: "1px solid rgba(34,197,94,0.18)",
+                    }}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <div
+                      className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
+                      style={{ background: "rgba(34,197,94,0.12)" }}
+                    >
+                      <TrendingUp size={20} style={{ color: "#15803d" }} />
+                    </div>
+                    <div className="flex-1">
+                      <div
+                        className="text-base md:text-lg font-semibold mb-1"
+                        style={{ color: "#0a0a0a" }}
+                      >
+                        Yes, the win rate is below 50%. We&apos;re still profitable — here&apos;s why.
+                      </div>
+                      <div
+                        className="text-sm leading-relaxed"
+                        style={{ color: "rgba(0,0,0,0.65)" }}
+                      >
+                        Parlays don&apos;t pay 1-to-1. A typical AI parlay pays
+                        {" "}<strong style={{ color: "#0a0a0a" }}>3x to 5x</strong>{" "}
+                        on a $10 stake, so we only need to hit{" "}
+                        <strong style={{ color: "#0a0a0a" }}>~22-25%</strong>{" "}
+                        of the time to be profitable. We&apos;re hitting{" "}
+                        <strong style={{ color: "#15803d" }}>{stats.winRate.toFixed(1)}%</strong>{" "}
+                        and netting{" "}
+                        <strong style={{ color: "#15803d" }}>
+                          {formatMoney(profit)}
+                        </strong>{" "}
+                        across {resolvedCount.toLocaleString()} graded parlays at ${unit}/pick.
+                        That&apos;s a{" "}
+                        <strong style={{ color: "#15803d" }}>
+                          {roiAtUnit > 0 ? "+" : ""}{roiAtUnit.toFixed(1)}% ROI
+                        </strong>{" "}
+                        — money won on every dollar risked.
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* ─── Stats Dashboard ─── */}
                 <motion.div
                   className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
@@ -347,88 +440,75 @@ export default function ResultsPage() {
                   transition={{ duration: 0.5, delay: 0.1 }}
                 >
                   <StatCard
-                    icon={<Flame size={16} />}
-                    label="Current Streak"
-                    value={`${stats.currentStreak.type}${stats.currentStreak.count}`}
-                    valueColor={stats.currentStreak.type === "W" ? "#22c55e" : "#ef4444"}
-                    sublabel={stats.currentStreak.type === "W" ? "Winning" : "Losing"}
+                    icon={<DollarSign size={16} />}
+                    label="Total Profit"
+                    value={formatMoney(profit)}
+                    tone={profitable ? "good" : profit < 0 ? "bad" : "muted"}
+                    sublabel={`${roiAtUnit >= 0 ? "+" : ""}${roiAtUnit.toFixed(1)}% ROI · $${unit}/pick`}
+                    tooltip={`Pure profit if you bet $${unit} on every AI parlay. ROI is profit divided by money risked. Anything positive means the AI beats the book over time.`}
                     delay={0}
                   />
                   <StatCard
                     icon={<Trophy size={16} />}
                     label="Win Rate"
                     value={`${stats.winRate.toFixed(1)}%`}
-                    valueColor={stats.winRate >= 50 ? "#22c55e" : "#ef4444"}
-                    sublabel={`${stats.won}W - ${stats.lost}L`}
+                    tone={profitable ? "good" : "bad"}
+                    sublabel={`${stats.won}W - ${stats.lost}L · break-even ~22%`}
+                    tooltip="How often parlays hit. Parlays pay 3-5x, so anything above ~22% is profitable. Single-game bets need 52.4% — parlays are a different math game."
                     delay={0.05}
-                  />
-                  <StatCard
-                    icon={<Clock size={16} />}
-                    label="Last 7 Days"
-                    value={`${stats.last7Days.won}-${stats.last7Days.lost}`}
-                    valueColor={
-                      stats.last7Days.won >= stats.last7Days.lost
-                        ? "#22c55e"
-                        : "#ef4444"
-                    }
-                    sublabel={formatMoney(
-                      stats.last7Days.profitAtUnit ?? stats.last7Days.profit,
-                    )}
-                    delay={0.1}
-                  />
-                  <StatCard
-                    icon={<Hash size={16} />}
-                    label="Total Parlays"
-                    value={String(stats.totalParlays)}
-                    valueColor="#ededed"
-                    sublabel={`${stats.pending} pending`}
-                    delay={0.15}
-                  />
-                  <StatCard
-                    icon={<DollarSign size={16} />}
-                    label="Total Profit"
-                    value={formatMoney(stats.profitAtUnit ?? stats.totalProfit)}
-                    valueColor={
-                      (stats.profitAtUnit ?? stats.totalProfit) >= 0
-                        ? "#22c55e"
-                        : "#ef4444"
-                    }
-                    sublabel={`At $${stats.unitStake ?? 10}/pick`}
-                    delay={0.2}
-                  />
-                  <StatCard
-                    icon={<Zap size={16} />}
-                    label="Best Payout"
-                    value={`$${(stats.bestPayoutAtUnit ?? stats.bestPayout).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                    valueColor="#0a0a0a"
-                    sublabel={`Single parlay · $${stats.unitStake ?? 10} stake`}
-                    delay={0.25}
                   />
                   {typeof stats.avgClv === "number" && (stats.clvSample ?? 0) > 0 && (
                     <StatCard
                       icon={<BarChart3 size={16} />}
                       label="Avg CLV"
                       value={`${stats.avgClv > 0 ? "+" : ""}${stats.avgClv.toFixed(2)}%`}
-                      valueColor={stats.avgClv > 0 ? "#22c55e" : "#ef4444"}
+                      tone={stats.avgClv > 0 ? "good" : "bad"}
                       sublabel={`${stats.clvSample} graded · ${stats.avgClv > 0 ? "beating close" : "losing to close"}`}
-                      delay={0.3}
+                      tooltip="Closing Line Value — how much better our price was vs the line right before tipoff. Positive CLV is the only real proof a model has edge. Pros track this above all else."
+                      delay={0.1}
                     />
                   )}
+                  <StatCard
+                    icon={<Clock size={16} />}
+                    label="Last 7 Days"
+                    value={`${stats.last7Days.won}-${stats.last7Days.lost}`}
+                    tone={last7Profitable ? "good" : last7Profit < 0 ? "bad" : "muted"}
+                    sublabel={`${formatMoney(last7Profit)} · recent form`}
+                    tooltip="Wins and losses in the last 7 days. Color follows profit, not record — a 3-9 week can still be net positive if the wins paid big."
+                    delay={0.15}
+                  />
+                  <StatCard
+                    icon={<Flame size={16} />}
+                    label="Current Streak"
+                    value={`${stats.currentStreak.type}${stats.currentStreak.count}`}
+                    tone="muted"
+                    sublabel={
+                      stats.currentStreak.type === "W"
+                        ? "Winning streak"
+                        : "Losing streak · normal in parlay land"
+                    }
+                    tooltip="Streaks are noise. Parlays cluster — you can lose 5 in a row at +400 odds and still be profitable on the month. Don't read too much into a streak."
+                    delay={0.2}
+                  />
+                  <StatCard
+                    icon={<Hash size={16} />}
+                    label="Total Parlays"
+                    value={stats.totalParlays.toLocaleString()}
+                    tone="neutral"
+                    sublabel={`${stats.pending} pending · ${resolvedCount.toLocaleString()} graded`}
+                    tooltip="Every AI-generated parlay we've tracked. Pending = games still in progress. Graded = result is in and counted in the profit math."
+                    delay={0.25}
+                  />
+                  <StatCard
+                    icon={<Zap size={16} />}
+                    label="Best Payout"
+                    value={`$${(stats.bestPayoutAtUnit ?? stats.bestPayout).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                    tone="neutral"
+                    sublabel={`Top parlay return · $${unit} stake`}
+                    tooltip={`The biggest single-parlay payout, scaled to a $${unit} bet. This is the upside on a single ticket — what one big hit looks like.`}
+                    delay={0.3}
+                  />
                 </motion.div>
-
-                {/* CLV explainer — only shown if we have CLV data, since users
-                    don't know what CLV is and will google it if we don't explain. */}
-                {typeof stats.avgClv === "number" && (stats.clvSample ?? 0) > 0 && (
-                  <motion.p
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.35 }}
-                    className="mt-4 text-xs md:text-sm"
-                    style={{ color: "rgba(0,0,0,0.55)", maxWidth: 720 }}
-                  >
-                    CLV = Closing Line Value. Measures how much better our opening price was vs the line right before the game started. Positive CLV over time is the only real proof a model has edge. Hit rate is noise; CLV is signal.
-                  </motion.p>
-                )}
 
                 {/* ─── Sport Breakdown ─── */}
                 {sportBreakdown.length > 0 && (
@@ -1052,7 +1132,8 @@ export default function ResultsPage() {
                   )}
                 </motion.div>
               </motion.div>
-            )}
+              );
+            })()}
           </AnimatePresence>
         </div>
       </main>
@@ -1072,72 +1153,13 @@ export default function ResultsPage() {
   );
 }
 
-/* ─── Stat Card ─── */
-
-function StatCard({
-  icon,
-  label,
-  value,
-  valueColor,
-  sublabel,
-  delay,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  valueColor: string;
-  sublabel: string;
-  delay: number;
-}) {
-  return (
-    <motion.div
-      className="rounded-xl p-5 md:p-6"
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid rgba(0,0,0,0.06)",
-      }}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.15 + delay }}
-      whileHover={{
-        borderColor: "rgba(255,255,255,0.12)",
-        transition: { duration: 0.2 },
-      }}
-    >
-      <div className="flex items-center gap-2 mb-4">
-        <div style={{ color: "rgba(0,0,0,0.4)" }}>{icon}</div>
-        <span className="text-xs uppercase tracking-wider font-medium" style={{ color: "rgba(0,0,0,0.45)" }}>
-          {label}
-        </span>
-      </div>
-      <div
-        className="text-3xl md:text-4xl font-bold tracking-tight"
-        style={{ color: valueColor, fontFamily: "var(--font-geist-mono)" }}
-      >
-        {value}
-      </div>
-      <div className="text-xs mt-2" style={{ color: "rgba(0,0,0,0.3)" }}>
-        {sublabel}
-      </div>
-    </motion.div>
-  );
-}
-
 /* ─── Skeletons ─── */
 
 function StatsSkeletons() {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
       {[1, 2, 3, 4, 5, 6].map((i) => (
-        <div
-          key={i}
-          className="rounded-xl p-5 md:p-6 animate-pulse"
-          style={{ background: "#FFFFFF", border: "1px solid rgba(0,0,0,0.06)" }}
-        >
-          <div className="w-20 h-3 rounded mb-4" style={{ background: "rgba(0,0,0,0.06)" }} />
-          <div className="w-24 h-9 rounded mb-2" style={{ background: "rgba(0,0,0,0.08)" }} />
-          <div className="w-16 h-3 rounded" style={{ background: "rgba(0,0,0,0.04)" }} />
-        </div>
+        <StatCardSkeleton key={i} />
       ))}
     </div>
   );
