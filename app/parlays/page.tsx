@@ -338,6 +338,36 @@ export default function ParlaysPage() {
   const isVipAccess = isAdmin || isAuthAdmin || tier === "vip" || tier === "admin";
   const isSharpAccess = isPro || isVipAccess; // includes sharp + vip + admin
 
+  // Filter availability — which buttons should be live vs grayed out.
+  // Computed against the full slate (parlays), not the currently-filtered
+  // visibleParlays, so users can see "this filter would yield results"
+  // independent of their other selections.
+  const availability = (() => {
+    const sports = new Set<string>(["All"]);
+    const legCounts = new Set<number>();
+    const oddsRanges = new Set<string>(["all"]);
+    const sortBuckets = new Set<string>(["confidence", "payout"]);
+
+    for (const p of parlays) {
+      legCounts.add(p.legs.length);
+      for (const l of p.legs) {
+        const s = (l.sport || "").toUpperCase();
+        if (s) sports.add(s);
+      }
+      const o = combinedOddsToAmerican(p);
+      if (Number.isFinite(o)) {
+        for (const r of ODDS_RANGES) {
+          if (r.value === "all") continue;
+          if (o >= r.min && o <= r.max) oddsRanges.add(r.value);
+        }
+      }
+      const ai = p.aiEstimate ?? p.confidence ?? 0;
+      if (ai >= BEST_EV_AI_FLOOR) sortBuckets.add("ev");
+      else sortBuckets.add("longshot");
+    }
+    return { sports, legCounts, oddsRanges, sortBuckets };
+  })();
+
   // Pipeline: sport → sort-floor → odds range. Order is independent —
   // each filter is additive — but sport runs first so the empty-state
   // can read "no MLS picks today" instead of "no picks match all your
@@ -669,20 +699,37 @@ export default function ParlaysPage() {
             <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-2 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
               Sport
             </span>
-            {SPORTS.map((sport) => (
-              <button
-                key={sport}
-                onClick={() => setSelectedSport(sport)}
-                className="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
-                style={{
-                  background: selectedSport === sport ? "#0a0a0a" : "rgba(0,0,0,0.04)",
-                  color: selectedSport === sport ? "#FFFFFF" : "rgba(0,0,0,0.55)",
-                  border: selectedSport === sport ? "1px solid #0a0a0a" : "1px solid rgba(0,0,0,0.08)",
-                }}
-              >
-                {sport}
-              </button>
-            ))}
+            {SPORTS.map((sport) => {
+              const isActive = selectedSport === sport;
+              const isAvailable = availability.sports.has(sport.toUpperCase()) || sport === "All";
+              return (
+                <button
+                  key={sport}
+                  onClick={() => isAvailable && setSelectedSport(sport)}
+                  disabled={!isAvailable}
+                  title={isAvailable ? "" : "No picks for this sport in the current slate"}
+                  className="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-sm font-medium transition-all duration-200 flex-shrink-0"
+                  style={{
+                    background: isActive
+                      ? "#0a0a0a"
+                      : isAvailable
+                        ? "rgba(0,0,0,0.04)"
+                        : "rgba(0,0,0,0.02)",
+                    color: isActive
+                      ? "#FFFFFF"
+                      : isAvailable
+                        ? "rgba(0,0,0,0.55)"
+                        : "rgba(0,0,0,0.25)",
+                    border: isActive
+                      ? "1px solid #0a0a0a"
+                      : "1px solid rgba(0,0,0,0.08)",
+                    cursor: isAvailable ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {sport}
+                </button>
+              );
+            })}
           </div>
 
           {/* Sort + Legs in one row on mobile */}
@@ -691,21 +738,36 @@ export default function ParlaysPage() {
               <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
                 Sort
               </span>
-              {SORT_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSortBy(opt.value)}
-                  className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 whitespace-nowrap"
-                  style={{
-                    background: sortBy === opt.value ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
-                    color: sortBy === opt.value ? "#0a0a0a" : "rgba(0,0,0,0.45)",
-                    fontWeight: sortBy === opt.value ? 600 : 400,
-                    border: sortBy === opt.value ? "1px solid rgba(0,0,0,0.18)" : "1px solid transparent",
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {SORT_OPTIONS.map((opt) => {
+                const isActive = sortBy === opt.value;
+                const isAvailable = availability.sortBuckets.has(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => isAvailable && setSortBy(opt.value)}
+                    disabled={!isAvailable}
+                    title={isAvailable ? "" : "No picks match this sort right now"}
+                    className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm transition-all duration-200 whitespace-nowrap"
+                    style={{
+                      background: isActive
+                        ? "rgba(0,0,0,0.08)"
+                        : isAvailable
+                          ? "rgba(0,0,0,0.04)"
+                          : "rgba(0,0,0,0.02)",
+                      color: isActive
+                        ? "#0a0a0a"
+                        : isAvailable
+                          ? "rgba(0,0,0,0.45)"
+                          : "rgba(0,0,0,0.22)",
+                      fontWeight: isActive ? 600 : 400,
+                      border: isActive ? "1px solid rgba(0,0,0,0.18)" : "1px solid transparent",
+                      cursor: isAvailable ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="h-5 w-px flex-shrink-0" style={{ background: "rgba(0,0,0,0.08)" }} />
@@ -725,20 +787,37 @@ export default function ParlaysPage() {
               >
                 Mix
               </button>
-              {LEG_COUNTS.map((count) => (
-                <button
-                  key={count}
-                  onClick={() => setSelectedLegs(selectedLegs === count ? null : count)}
-                  className="w-8 h-8 md:w-10 md:h-10 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 flex items-center justify-center"
-                  style={{
-                    background: selectedLegs === count ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
-                    color: selectedLegs === count ? "#0a0a0a" : "rgba(0,0,0,0.5)",
-                    border: selectedLegs === count ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
-                  }}
-                >
-                  {count}
-                </button>
-              ))}
+              {LEG_COUNTS.map((count) => {
+                const isActive = selectedLegs === count;
+                const isAvailable = availability.legCounts.has(count);
+                return (
+                  <button
+                    key={count}
+                    onClick={() => isAvailable && setSelectedLegs(selectedLegs === count ? null : count)}
+                    disabled={!isAvailable}
+                    title={isAvailable ? "" : `No ${count}-leg picks in current slate`}
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 flex items-center justify-center"
+                    style={{
+                      background: isActive
+                        ? "rgba(0,0,0,0.08)"
+                        : isAvailable
+                          ? "rgba(0,0,0,0.04)"
+                          : "rgba(0,0,0,0.02)",
+                      color: isActive
+                        ? "#0a0a0a"
+                        : isAvailable
+                          ? "rgba(0,0,0,0.5)"
+                          : "rgba(0,0,0,0.22)",
+                      border: isActive
+                        ? "1px solid rgba(0,0,0,0.25)"
+                        : "1px solid rgba(0,0,0,0.06)",
+                      cursor: isAvailable ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {count}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -747,20 +826,37 @@ export default function ParlaysPage() {
             <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
               Odds
             </span>
-            {ODDS_RANGES.map((r) => (
-              <button
-                key={r.value}
-                onClick={() => setOddsRange(r.value)}
-                className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex-shrink-0 whitespace-nowrap"
-                style={{
-                  background: oddsRange === r.value ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0.04)",
-                  color: oddsRange === r.value ? "#0a0a0a" : "rgba(0,0,0,0.5)",
-                  border: oddsRange === r.value ? "1px solid rgba(0,0,0,0.25)" : "1px solid rgba(0,0,0,0.06)",
-                }}
-              >
-                {r.label}
-              </button>
-            ))}
+            {ODDS_RANGES.map((r) => {
+              const isActive = oddsRange === r.value;
+              const isAvailable = availability.oddsRanges.has(r.value);
+              return (
+                <button
+                  key={r.value}
+                  onClick={() => isAvailable && setOddsRange(r.value)}
+                  disabled={!isAvailable}
+                  title={isAvailable ? "" : "No picks in this odds range right now"}
+                  className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex-shrink-0 whitespace-nowrap"
+                  style={{
+                    background: isActive
+                      ? "rgba(0,0,0,0.08)"
+                      : isAvailable
+                        ? "rgba(0,0,0,0.04)"
+                        : "rgba(0,0,0,0.02)",
+                    color: isActive
+                      ? "#0a0a0a"
+                      : isAvailable
+                        ? "rgba(0,0,0,0.5)"
+                        : "rgba(0,0,0,0.22)",
+                    border: isActive
+                      ? "1px solid rgba(0,0,0,0.25)"
+                      : "1px solid rgba(0,0,0,0.06)",
+                    cursor: isAvailable ? "pointer" : "not-allowed",
+                  }}
+                >
+                  {r.label}
+                </button>
+              );
+            })}
           </div>
 
         </div>
