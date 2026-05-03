@@ -15,6 +15,7 @@ import { NavUser } from "@/app/components/NavUser";
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/parlays", label: "Picks" },
+  { href: "/ufc", label: "UFC" },
   { href: "/simulator", label: "Simulator" },
   { href: "/results", label: "Results" },
 ];
