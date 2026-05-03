@@ -1686,8 +1686,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // UFC fight cards are concentrated on Saturdays (occasional Friday).
+    // Skip UFC fetches Sun-Thu so we don't burn Odds API credits on
+    // empty schedules. extractLegsFromGame already blocks UFC entirely
+    // (no model coverage), so this is purely a credit-saving guard.
+    const dow = new Date().getUTCDay(); // 0 = Sun ... 6 = Sat
+    const isUfcWindow = dow === 5 || dow === 6; // Fri/Sat UTC
+    const fetchableSports = sports.filter(
+      (s) => s !== "ufc" || isUfcWindow,
+    );
+
     // Fetch odds, team records, AND raw scores (for Elo/situational) in parallel
-    const sportFetches = sports.map((sport) => {
+    const sportFetches = fetchableSports.map((sport) => {
       const sportKey = SPORT_MAP[sport];
       return Promise.all([
         fetchOddsForSport(sportKey).then((games) => ({ sport, games })),
