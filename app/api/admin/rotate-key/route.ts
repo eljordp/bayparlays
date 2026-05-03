@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 import { invalidateOddsKeyCache } from "@/lib/odds-key";
 
 export const dynamic = "force-dynamic";
+
+// Use service-role client here, NOT the shared lib (which uses anon).
+// api_keys has RLS policies that block anon inserts — by design, we don't
+// want anonymous users writing to a key vault. Server-side admin endpoints
+// authenticate via the OWNER_EMAILS allowlist below and use service role
+// to bypass RLS.
+function adminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  return createClient(url, key);
+}
 
 // Owner-only key rotation endpoint.
 //
@@ -59,6 +70,8 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    const supabase = adminClient();
 
     // Deactivate the previous active row (if table exists and any exists).
     try {
