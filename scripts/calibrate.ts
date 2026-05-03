@@ -38,6 +38,7 @@ interface ResolvedParlay {
   ev_percent: number | null;
   sports: string[] | null;
   legs: Array<{ sport?: string; market?: string }> | null;
+  leg_results: boolean[] | null; // per-leg outcomes when score-check graded individually
 }
 
 interface CalibrationRow {
@@ -82,9 +83,11 @@ async function main() {
   // Per-table column lists — sim_parlays is missing ev_percent and sports.
   // Calibration falls back to combined_decimal alone for those rows, which
   // gives a slightly less-accurate predicted probability but still valid signal.
+  // leg_results: pulled when present so calibrate can attribute outcomes per-leg
+  // instead of attributing parlay outcome to all legs.
   const tableSelects: Record<string, string> = {
-    parlays: "id, status, combined_decimal, ev_percent, sports, legs",
-    sim_parlays: "id, status, combined_decimal, legs",
+    parlays: "id, status, combined_decimal, ev_percent, sports, legs, leg_results",
+    sim_parlays: "id, status, combined_decimal, legs, leg_results",
   };
 
   for (const tableName of Object.keys(tableSelects)) {
@@ -132,19 +135,24 @@ async function main() {
     return groups.get(id)!.bucket;
   };
 
-  // Calibration is at the LEG level — each leg in a resolved parlay is one
-  // observation. Parlay-level "ourProb" is the product of legs, so calibrating
-  // at the parlay level conflates leg signals. Going leg-by-leg means
-  // (sport, market) buckets actually capture market-specific edge.
+  // Calibration is at the LEG level. Two attribution strategies:
+  //
+  // 1. CLEAN ATTRIBUTION — used when leg_results is present (per-leg ground
+  //    truth from score-check) OR when the parlay is "homogeneous" (every
+  //    leg shares the same sport+market). In those cases each leg's outcome
+  //    is unambiguous and we can write per-(sport, market) calibration rows.
+  //
+  // 2. NOISY ATTRIBUTION — used for older mixed parlays without leg_results.
+  //    Falls back to (sport, null) and (null, null) only. Skipping per-market
+  //    here so we don't pollute market factors with cross-market noise.
+  //
+  // Net effect: as score-check fills leg_results going forward, per-market
+  // factors get more accurate. Old data still contributes via per-sport rows.
   for (const p of allParlays) {
     if (!p.combined_decimal || p.combined_decimal <= 1) continue;
     if (!p.legs || p.legs.length === 0) continue;
 
-    // Parlay-level outcome stands in for each leg's outcome — we don't have
-    // per-leg grading stored on every old row. This is noisy for multi-leg
-    // parlays (a leg can hit while the parlay loses) but the noise averages
-    // out; we just need DIRECTIONAL signal per (sport, market).
-    const actual = p.status === "won" ? 1 : 0;
+    const parlayActual = p.status === "won" ? 1 : 0;
     const bookImpliedProb = 1 / p.combined_decimal;
     const aiPredictedProb =
       bookImpliedProb * (1 + (p.ev_percent ?? 0) / 100);
@@ -158,21 +166,55 @@ async function main() {
     // Global bucket (parlay-level — keeps the original signal intact)
     const globalBucket = ensure({ sport: null, market: null });
     globalBucket.predicted.push(Math.max(0.01, Math.min(0.99, aiPredictedProb)));
-    globalBucket.actual.push(actual);
+    globalBucket.actual.push(parlayActual);
 
-    for (const leg of p.legs) {
+    // Detect homogeneity: every leg has the same sport+market combo
+    const firstLeg = p.legs[0];
+    const isHomogeneous =
+      firstLeg.sport != null &&
+      firstLeg.market != null &&
+      p.legs.every(
+        (l) => l.sport === firstLeg.sport && l.market === firstLeg.market,
+      );
+
+    const hasLegResults =
+      Array.isArray(p.leg_results) &&
+      p.leg_results.length === p.legs.length;
+
+    for (let i = 0; i < p.legs.length; i++) {
+      const leg = p.legs[i];
       const sport = leg.sport ?? null;
-      if (sport) {
-        ensure({ sport, market: null }).predicted.push(legPredicted);
-        ensure({ sport, market: null }).actual.push(actual);
+      const market = leg.market ?? null;
+      if (!sport) continue;
+
+      // Per-leg observed outcome:
+      //   - leg_results[i] when populated (1 / 0)
+      //   - parlay outcome when homogeneous (clean attribution)
+      //   - parlay outcome but only feed (sport, null) bucket otherwise
+      let legActual: number;
+      let canWriteMarket = false;
+
+      if (hasLegResults) {
+        const r = (p.leg_results as boolean[])[i];
+        legActual = r ? 1 : 0;
+        canWriteMarket = market != null;
+      } else if (isHomogeneous) {
+        legActual = parlayActual;
+        canWriteMarket = market != null;
+      } else {
+        legActual = parlayActual;
+        canWriteMarket = false;
       }
-      // Per-(sport, market) rows are intentionally NOT written here. Parlay-
-      // level outcome attribution to a single leg's market is unreliable when
-      // multi-leg parlays mix markets — a great NBA spread leg gets attributed
-      // "lost" because some other leg in the parlay missed. Per-market factors
-      // belong in a leg-level grader (final scores) and are seeded manually
-      // from that source. Leaving the (sport, null) fallback as the auto-loop's
-      // contribution.
+
+      // (sport, null) — every leg contributes here
+      ensure({ sport, market: null }).predicted.push(legPredicted);
+      ensure({ sport, market: null }).actual.push(legActual);
+
+      // (sport, market) — only when attribution is clean
+      if (canWriteMarket && market) {
+        ensure({ sport, market }).predicted.push(legPredicted);
+        ensure({ sport, market }).actual.push(legActual);
+      }
     }
   }
 
