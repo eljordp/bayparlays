@@ -49,7 +49,7 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isVipOrAdmin = tier === "vip" || tier === "admin";
+  const isVipOrAdmin = tier === "vip" || tier === "admin" || tier === "owner";
 
   useEffect(() => {
     if (!user || !isVipOrAdmin) return;

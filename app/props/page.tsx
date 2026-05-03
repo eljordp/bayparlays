@@ -235,8 +235,8 @@ export default function PropsPage() {
   const [tab, setTab] = useState<string>("points");
   const [copied, setCopied] = useState<string | null>(null);
 
-  // VIP+ gate — VIP, admin, or explicit admin bypass
-  const hasVipAccess = isAdmin || tier === "vip" || tier === "admin";
+  // VIP+ gate — VIP, admin, owner, or explicit admin bypass
+  const hasVipAccess = isAdmin || tier === "vip" || tier === "admin" || tier === "owner";
 
   const categories = useMemo<Record<string, PropCategory>>(
     () => (data ? normalizeCategories(data) : {}),

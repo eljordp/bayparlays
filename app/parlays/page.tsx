@@ -335,7 +335,7 @@ export default function ParlaysPage() {
   }, []);
 
   // Tier-based access
-  const isVipAccess = isAdmin || isAuthAdmin || tier === "vip" || tier === "admin";
+  const isVipAccess = isAdmin || isAuthAdmin || tier === "vip" || tier === "admin" || tier === "owner";
   const isSharpAccess = isPro || isVipAccess; // includes sharp + vip + admin
 
   // Filter availability — which buttons should be live vs grayed out.
@@ -421,11 +421,13 @@ export default function ParlaysPage() {
     try {
       const effectiveTier = isAdmin
         ? "admin"
-        : tier === "vip" || tier === "admin"
-          ? "vip"
-          : isPro
-            ? "sharp"
-            : "free";
+        : tier === "owner"
+          ? "admin"
+          : tier === "vip" || tier === "admin"
+            ? "vip"
+            : isPro
+              ? "sharp"
+              : "free";
       const countForTier =
         effectiveTier === "admin"
           ? 30

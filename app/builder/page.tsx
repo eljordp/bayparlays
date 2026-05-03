@@ -180,7 +180,7 @@ export default function BuilderPage() {
 
   // Auth — builder is VIP/Admin only
   const { isAdmin: isAuthAdmin, tier } = useAuth();
-  const isVipAccess = isAuthAdmin || tier === "vip" || tier === "admin";
+  const isVipAccess = isAuthAdmin || tier === "vip" || tier === "admin" || tier === "owner";
 
   // Fetch games when sport changes
   useEffect(() => {

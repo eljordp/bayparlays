@@ -223,7 +223,7 @@ export default function SimulatorPage() {
       const active =
         data?.subscription_status === "active" ||
         data?.subscription_status === "trialing";
-      const hasAccess = data?.subscription_tier === "vip" || data?.subscription_tier === "sharp" || data?.subscription_tier === "admin";
+      const hasAccess = data?.subscription_tier === "vip" || data?.subscription_tier === "sharp" || data?.subscription_tier === "admin" || data?.subscription_tier === "owner";
       setUserTier(data?.subscription_tier || "free");
       setIsVip(active && hasAccess);
       setTierLoading(false);
