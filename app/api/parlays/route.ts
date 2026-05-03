@@ -37,6 +37,23 @@ import {
   findNhlGoalieMatchup,
   type GoalieMatchup,
 } from "@/lib/nhl-goalies";
+import {
+  fetchLineMovements,
+  findLineMovement,
+  type LineMovement,
+} from "@/lib/line-movement";
+import { getMlbParkBias } from "@/lib/mlb-parks";
+import {
+  fetchBullpenLoads,
+  getBullpenMatchup,
+  type BullpenLoad,
+  type BullpenMatchup,
+} from "@/lib/mlb-bullpen";
+import {
+  fetchMlbUmpires,
+  findMlbUmpire,
+  type UmpireBias,
+} from "@/lib/mlb-umpires";
 import { readQuotaHeaders, persistQuota, canFetch } from "@/lib/odds-quota";
 import { getOddsApiKey } from "@/lib/odds-key";
 import {
@@ -487,6 +504,9 @@ interface ExtractCtx {
   injuries?: InjuryMap | null;
   lastGames?: LastGameMap | null;  // NBA/NHL only — teams' most recent completed game
   nhlGoalie?: GoalieMatchup | null;  // NHL only — projected starting goalies
+  lineMovements?: Map<string, LineMovement> | null;
+  bullpenMatchup?: BullpenMatchup | null;  // MLB only
+  umpire?: UmpireBias | null;             // MLB only
 }
 
 // ─── Confidence-bias pipeline ────────────────────────────────────────────────
@@ -905,6 +925,24 @@ function extractLegsFromGame(
               const { bias } = pitcherMatchupBias(ctx.lineup);
               adjustedTotal += bias;
             }
+            // Park factor (added 2026-05-03): static per-stadium multiplier
+            // captures Coors-vs-Oracle structural difference that the recent-
+            // scoring averages can't fully see. ±0.6 runs cap inside lib.
+            const parkBias = getMlbParkBias(game.home_team);
+            if (parkBias.totalBias) {
+              adjustedTotal += parkBias.totalBias;
+            }
+            // Bullpen rest (added 2026-05-03): both pens gassed → favor
+            // Over (tier-3 arms in late innings leak runs); both fresh
+            // → slight Under. ±0.4 runs cap inside lib.
+            if (ctx?.bullpenMatchup?.totalBias) {
+              adjustedTotal += ctx.bullpenMatchup.totalBias;
+            }
+            // HP ump (added 2026-05-03): tight zone → walks → Over;
+            // wide zone → strikeouts → Under. ±0.4 runs cap inside lib.
+            if (ctx?.umpire?.totalBias) {
+              adjustedTotal += ctx.umpire.totalBias;
+            }
           }
           // NHL: apply projected-goalie bias (capped ±0.7 goals). Strong
           // pair pulls Under, backup pair pushes Over. Without this, the
@@ -1007,6 +1045,24 @@ function extractLegsFromGame(
               totalDelta += d;
               biasReasons.push(`rest ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
             }
+          }
+        }
+
+        // Line movement signal — sharp money moves lines early. If the
+        // line on this exact pick has shortened since we first snapshotted
+        // it, sharps are backing this side. Drift means sharps are taking
+        // the other side. ±0.025pp cap inside line-movement.ts already.
+        if (ctx?.lineMovements) {
+          const mv = findLineMovement(
+            ctx.lineMovements,
+            game.id,
+            marketKey,
+            outcomeInfo.name,
+            outcomeInfo.point,
+          );
+          if (mv && mv.signal !== "noise" && Math.abs(mv.bias) >= 0.001) {
+            sideDelta += mv.bias;
+            biasReasons.push(`line ${mv.signal} ${mv.bias >= 0 ? "+" : ""}${(mv.bias * 100).toFixed(1)}pp`);
           }
         }
 
@@ -1737,13 +1793,49 @@ export async function GET(request: NextRequest) {
       ? fetchNhlGoalieMatchups()
       : Promise.resolve(new Map());
 
-    const [results, mlbLineups, injuryBySport, lastGamesBySport, nhlGoalies] = await Promise.all([
+    // MLB bullpen rest from yesterday's boxscores. ~20 boxscore fetches
+    // worst case but cached for 1h so subsequent /api/parlays calls within
+    // the hour skip the work entirely.
+    const bullpenPromise: Promise<Map<string, BullpenLoad>> = sports.includes("mlb")
+      ? fetchBullpenLoads()
+      : Promise.resolve(new Map());
+
+    // MLB home plate umpires — assigned ~2-3 hours pre-game. ±0.4 run
+    // bias on totals based on the ump's season Over% tendency.
+    const umpiresPromise: Promise<Map<string, UmpireBias>> = sports.includes("mlb")
+      ? fetchMlbUmpires()
+      : Promise.resolve(new Map());
+
+    // Line movement detection — pulled after odds fetch so we know which
+    // game IDs to query line_history against. Computed lazily inside the
+    // game loop below so it doesn't block the main odds fetch.
+    let lineMovements: Map<string, LineMovement> = new Map();
+
+    const [results, mlbLineups, injuryBySport, lastGamesBySport, nhlGoalies, bullpenLoads, mlbUmpires] = await Promise.all([
       Promise.allSettled(sportFetches),
       mlbLineupsPromise,
       injuryPromise,
       restPromise,
       nhlGoaliesPromise,
+      bullpenPromise,
+      umpiresPromise,
     ]);
+
+    // Now we have all games — fetch line movements for them in one query
+    try {
+      const allGameIds: string[] = [];
+      for (const r of results) {
+        if (r.status === "fulfilled") {
+          const [oddsRes] = r.value as [{ games?: OddsGame[] }, ...unknown[]];
+          if (oddsRes?.games) for (const g of oddsRes.games) allGameIds.push(g.id);
+        }
+      }
+      if (allGameIds.length > 0) {
+        lineMovements = await fetchLineMovements(allGameIds);
+      }
+    } catch (e) {
+      console.error("line movement fetch failed (non-fatal):", e);
+    }
 
     // Collect all games and extract scored legs
     const allLegs: ScoredLeg[] = [];
@@ -1812,11 +1904,31 @@ export async function GET(request: NextRequest) {
             weather = null;
           }
           ctx = { ...(ctx || {}), weather, lineup };
+          // MLB-only: bullpen rest matchup from yesterday's boxscores.
+          const bullpenMatchup = getBullpenMatchup(
+            bullpenLoads,
+            game.home_team,
+            game.away_team,
+          );
+          if (bullpenMatchup) {
+            ctx = { ...(ctx || {}), bullpenMatchup };
+          }
+          // MLB-only: HP umpire bias.
+          const umpire = findMlbUmpire(
+            mlbUmpires,
+            game.home_team,
+            game.away_team,
+          );
+          if (umpire) {
+            ctx = { ...(ctx || {}), umpire };
+          }
         }
         if (sport === "nhl") {
           const nhlGoalie = findNhlGoalieMatchup(nhlGoalies, game.home_team, game.away_team);
           ctx = { ...(ctx || {}), nhlGoalie };
         }
+        // Always include line movements (covers every leg, every sport).
+        ctx = { ...(ctx || {}), lineMovements };
 
         const gameLegs = extractLegsFromGame(
           game,
