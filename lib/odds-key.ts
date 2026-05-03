@@ -1,38 +1,49 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 // Resolves the active Odds API key.
 //
 // Priority order:
 //   1. api_keys row where service='odds_api' AND active=true (Supabase)
-//   2. process.env.ODDS_API_KEY (fallback for first-run / migration-019-not-applied)
+//   2. process.env.ODDS_API_KEY (fallback for first-run / migration-not-applied)
+//
+// Uses a service-role client because api_keys is RLS-protected — anon
+// reads are blocked (key vault). All callers of getOddsApiKey() are
+// server-side anyway (cron routes, /api/parlays), so service role is
+// safe.
 //
 // 30-second module cache so repeated calls inside a single cron run don't
 // hammer Supabase. Cache is invalidated when /api/admin/rotate-key flips
-// the active row, via setActiveOddsKey() below.
-//
-// Why this exists: JP's free-tier key burns 500/credits/mo by ~3 weeks in.
-// Rotating to a fresh key used to require updating Vercel env + redeploy
-// (~2 min round-trip). With this, /admin/keys → paste → click → live.
+// the active row, via invalidateOddsKeyCache() below.
 
 let cached: { key: string; cachedAt: number } | null = null;
 const CACHE_TTL_MS = 30 * 1000;
+
+function adminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export async function getOddsApiKey(): Promise<string | null> {
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
     return cached.key;
   }
 
-  // Try Supabase first
+  // Try Supabase first (service role to bypass RLS)
   try {
-    const { data } = await supabase
-      .from("api_keys")
-      .select("key_value")
-      .eq("service", "odds_api")
-      .eq("active", true)
-      .maybeSingle();
-    if (data?.key_value) {
-      cached = { key: data.key_value, cachedAt: Date.now() };
-      return data.key_value;
+    const sb = adminClient();
+    if (sb) {
+      const { data } = await sb
+        .from("api_keys")
+        .select("key_value")
+        .eq("service", "odds_api")
+        .eq("active", true)
+        .maybeSingle();
+      if (data?.key_value) {
+        cached = { key: data.key_value, cachedAt: Date.now() };
+        return data.key_value;
+      }
     }
   } catch {
     /* table may not exist yet — fall through to env */
