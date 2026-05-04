@@ -174,12 +174,19 @@ export default function CalibrationAdminPage() {
           over-estimates and gets penalized. Cascade order: most-specific cell wins, falling back to
           less specific.
         </p>
-        <p className="text-xs mb-8 max-w-3xl" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+        <p className="text-xs mb-3 max-w-3xl" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
           <strong style={{ color: "rgba(255,255,255,0.6)" }}>CLV gate:</strong> rolling 60-day average
           closing line value per bucket. Buckets with avg CLV ≤ −0.30% on ≥{CLV_GATE_MIN_SAMPLE}{" "}
           graded legs are <span style={{ color: "#ef4444" }}>blocked</span> from the parlay generator —
           those are the buckets demonstrably losing to the close. Sharp / Edge / Fading / Small are
           informational only.
+        </p>
+        <p className="text-xs mb-8 max-w-3xl" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+          <strong style={{ color: "rgba(255,255,255,0.6)" }}>Exploration:</strong> 5% of would-be-blocked
+          legs slip through anyway (epsilon-greedy) so benched buckets keep collecting fresh data. Without
+          it, a blocked bucket would starve out — we&apos;d never know if its edge came back. Watch the
+          <code style={{ color: "#ededed", margin: "0 4px" }}>legsClvExplored</code> count in
+          /api/parlays response meta.
         </p>
 
         <div className="flex items-center gap-3 flex-wrap mb-8">

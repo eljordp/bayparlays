@@ -99,6 +99,17 @@ const CALIBRATION_TTL_MS = 5 * 60 * 1000;
 const CLV_GATE_BLOCK = -0.3; // avg CLV % at which we drop a bucket
 const CLV_GATE_MIN_SAMPLE = 40; // min legs with CLV before the gate fires
 
+// Epsilon-greedy exploration: occasionally let blocked legs through so the
+// system keeps collecting fresh data on benched buckets. Without this, a
+// bucket that gets blocked starves out — we'd never learn if its edge has
+// returned because the generator stops picking it.
+//
+// 5% means roughly 1 in 20 blocked legs slips through. Over a typical slate
+// of 200 candidate legs, that's a few exploration legs per generation —
+// enough to maintain rolling-window data on benched buckets, small enough
+// that the gate still does its job suppressing the bad ones.
+const CLV_EXPLORATION_RATE = 0.05;
+
 async function getCalibrationData(): Promise<CalibrationData> {
   if (calibrationCache && Date.now() - calibrationCache.loadedAt < CALIBRATION_TTL_MS) {
     return calibrationCache.data;
@@ -395,6 +406,7 @@ interface ParlayResponse {
     tier: string;
     generatedAt: string;
     legsClvBlocked?: number; // legs dropped by the rolling-60d CLV gate
+    legsClvExplored?: number; // blocked legs that slipped through via epsilon-greedy
   };
 }
 
@@ -2236,10 +2248,19 @@ export async function GET(request: NextRequest) {
     // negative on a meaningful sample. Uses the same cascade as calibration
     // — most-specific bucket with enough samples wins. Buckets without a
     // verdict fall through and the leg is allowed.
+    //
+    // Epsilon-greedy: each would-be-blocked leg gets a CLV_EXPLORATION_RATE
+    // chance to slip through anyway. Keeps fresh data flowing into benched
+    // buckets so we can detect recovery instead of starving them out.
     let legsClvBlocked = 0;
+    let legsClvExplored = 0;
     const legsAfterClv = allLegs.filter((leg) => {
       const verdict = clvGateBlocked(clvGates, leg.sport, leg.market, leg.decimalOdds);
       if (verdict?.blocked) {
+        if (Math.random() < CLV_EXPLORATION_RATE) {
+          legsClvExplored++;
+          return true;
+        }
         legsClvBlocked++;
         return false;
       }
@@ -2266,6 +2287,7 @@ export async function GET(request: NextRequest) {
         tier,
         generatedAt: new Date().toISOString(),
         legsClvBlocked,
+        legsClvExplored,
       },
     };
 
