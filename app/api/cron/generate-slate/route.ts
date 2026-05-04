@@ -197,15 +197,26 @@ export async function GET(req: NextRequest) {
   // pollutes /parlays with junk cards. Skip the insert entirely — slate_runs
   // gets a row showing why so the dashboard reflects the outage instead of
   // pretending the slate ran fine.
+  // EV floor — published picks must have at least 2% claimed edge AFTER
+  // calibration. Pre-2026-05-04 the gate was `Math.abs(ev) < 1`, which
+  // accepted -50% EV picks if they happened to come through. Calibration
+  // v2 multiplies ourProb by per-bucket factors that compound across
+  // legs, often pushing parlay EV deeply negative. Honest answer: don't
+  // publish a slate that the model itself thinks has no edge.
+  const MIN_PUBLISH_EV = 2;
   const goodCandidates = candidates.filter((c) => {
     const ev = c.row.ev_percent as number | undefined;
-    if (ev === undefined || Math.abs(ev) < 1) return false;
+    if (ev === undefined || ev < MIN_PUBLISH_EV) return false;
     const firstLeg = c.legs?.[0] as { gameId?: string } | undefined;
     if (!firstLeg?.gameId) return false;
     return true;
   });
 
   if (goodCandidates.length === 0) {
+    const negativeEvCount = candidates.filter((c) => {
+      const ev = c.row.ev_percent as number | undefined;
+      return ev !== undefined && ev < MIN_PUBLISH_EV;
+    }).length;
     await supabase.from("slate_runs").insert({
       slate_id: slateId,
       label,
@@ -215,7 +226,7 @@ export async function GET(req: NextRequest) {
       last_insert_error:
         candidates.length === 0
           ? "upstream returned 0 candidates (likely Odds API quota exhausted)"
-          : "all " + candidates.length + " candidates failed health check (ev≈0 or unscored legs)",
+          : `all ${candidates.length} candidates below ${MIN_PUBLISH_EV}% EV after calibration (${negativeEvCount} negative). No edge today.`,
     });
     return NextResponse.json({
       slateId,
@@ -223,7 +234,10 @@ export async function GET(req: NextRequest) {
       persisted: 0,
       candidatesBeforeFilter: candidates.length,
       candidatesAfterHealthCheck: 0,
-      message: "Aborted — upstream data unhealthy. Check Odds API quota.",
+      message:
+        candidates.length === 0
+          ? "Aborted — upstream data unhealthy. Check Odds API quota."
+          : `No edge today: all ${candidates.length} candidates below ${MIN_PUBLISH_EV}% EV after calibration.`,
       debug,
       timestamp: now.toISOString(),
     });

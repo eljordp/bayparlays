@@ -16,7 +16,17 @@ export const maxDuration = 60;
 
 const MIN_SAMPLE = 25;
 const FULL_TRUST_AT = 100;
-const MIN_FACTOR = 0.6;
+// MIN_FACTOR widened 0.6 → 0.75 (2026-05-04). At 0.6, the per-leg
+// calibration penalty compounded across 3 legs to 0.6³ = 0.216 — a 78%
+// reduction in combined parlay probability that pushed every parlay
+// post-calibration into deep negative EV. The math was technically
+// correct (multiplicative penalty assuming independent legs), but at
+// our sample sizes (40-200 legs per bucket) the underlying ratio is
+// noisy enough that a 25% max penalty better reflects "the bucket is
+// likely worse than predicted but we're not 100% sure by how much."
+// 0.75 still flags real bleed (NHL, MLB totals) without crushing
+// every multi-leg parlay's EV math beyond viability.
+const MIN_FACTOR = 0.75;
 const MAX_FACTOR = 1.4;
 
 interface ResolvedParlay {
