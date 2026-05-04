@@ -119,7 +119,11 @@ async function getMLModel(): Promise<{ model: MLModelWeights | null; trainingSiz
   let model: MLModelWeights | null = null;
   let trainingSize = 0;
   try {
-    const { supabase } = await import("@/lib/supabase");
+    // Use service-role when available so RLS gaps on model_weights can't
+    // silently hide rows. Falls back to anon for dev environments.
+    const { supabaseAdmin } = await import("@/lib/supabase-admin");
+    const { supabase: anon } = await import("@/lib/supabase");
+    const supabase = supabaseAdmin ?? anon;
     const { data, error } = await supabase
       .from("model_weights")
       .select("weights, training_size, model_version, trained_at")
@@ -178,7 +182,12 @@ async function getCalibrationData(): Promise<CalibrationData> {
   const factors = new Map<string, number>();
   const clv = new Map<string, { avg: number; sample: number }>();
   try {
-    const { supabase } = await import("@/lib/supabase");
+    // Service-role bypasses RLS — model_calibration's anon SELECT grant
+    // wasn't applied automatically and we don't want a missing GRANT to
+    // silently disable the entire calibration system.
+    const { supabaseAdmin } = await import("@/lib/supabase-admin");
+    const { supabase: anon } = await import("@/lib/supabase");
+    const supabase = supabaseAdmin ?? anon;
     // v2 schema: rows can have sport, market, AND odds_bucket (per migration
     // 023). Cascade priority for callers (most-specific wins):
     //   sport|market|bucket  →  sport|market  →  sport|bucket  →  sport

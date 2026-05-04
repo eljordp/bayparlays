@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase as anonSupabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
+
+// Server-side only — gated by isAdmin in the calling page. Service-role
+// client bypasses RLS so anon-grant gaps don't silently hide rows.
+const supabase = supabaseAdmin ?? anonSupabase;
 
 // Returns the latest model_weights row + a recent history slice for the
 // admin /admin/model page. Falls back gracefully if the table doesn't

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase as anonSupabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
+
+// Server-side only — this route is gated by isAdmin in the calling page.
+// Using the service-role client bypasses RLS so anon-grant gaps don't
+// silently swallow rows. Falls back to the anon client if the service
+// role env var isn't set (dev environments without the secret).
+const supabase = supabaseAdmin ?? anonSupabase;
 
 // Returns the latest calibration row per (sport, market, odds_bucket) cell so
 // the admin page can render the model's current learned adjustments. Falls
