@@ -1620,44 +1620,36 @@ function buildParlays(
       selected.map((l) => ({ decimalOdds: l.decimalOdds }))
     );
 
-    // Combined-odds gates per mode. Aggressively tight, grounded in
-    // /postmortem's win-vs-loss anatomy:
-    //   wins   avg 4.83× combined  (~ +383)  — claimed EV 37.9%
-    //   losses avg 26.5× combined  (~ +2552) — claimed EV 61.0%
-    // The model's EV math hallucinates worse the higher the combined odds
-    // go. Pre-2026-05-03, confidence + payout had Infinity ceilings and
-    // the system was spraying 50× / 100× moonshots it had no business
-    // projecting edge on. That's where the −$876 weekly bleed lived.
+    // Combined-odds gates per mode. Loose enough to let real parlay shapes
+    // through, tight enough to kill obvious nonsense. The actual bleed-vs-
+    // edge filtering is done by the calibration table + CLV gate, which
+    // operate per-bucket — those are smarter than blanket odds caps.
     //
-    // New bands keep all three modes inside the win zone with DISTINCT
-    // identities — no more confidence/ev overlap, no more lottery-ticket
-    // payout mode pretending it has edge:
+    // Postmortem says wins avg 4.83× / losses avg 26.5×, BUT the leg-count
+    // breakdown also says every count up to 4 is net profitable:
+    //   2-leg: +$1,548   3-leg: +$1,180   4-leg: +$775
+    // A 3-leg parlay of -110 favorites is ~7× combined. A 4-leg of -110s
+    // is ~13×. Capping at 5–8× would block the bread-and-butter parlays
+    // the system actually wins on. Plus the "best payout" of $215 on $10
+    // (21.5×) was a real win — those big hits matter.
     //
-    //   confidence: 3.0–5.0   "safest stack"  · $10 pays $30–$50
-    //   ev:         3.0–8.0   "math edge"     · widest band, math-driven
-    //   payout:     5.0–10.0  "biggest swing" · $10 pays $50–$100
+    // Bands now:
+    //   confidence: 3.0–8.0    safer stacks, allows 3-leg -110 favorites
+    //   ev:         3.0–13.0   math edge, allows 4-leg favorites
+    //   payout:     7.0–25.0   real lottery range, kills 50×+ fantasy
     //
-    // Why payout caps at 10× and not higher: at our actual win rate of
-    // ~26%, parlays above 10× are net-negative EV no matter what the
-    // model claims. The "lottery ticket" framing was costing money. A
-    // 10× parlay at $10 still pays $100 — real swing, not fantasy.
-    //
-    // Why confidence caps at 5×: confidence mode means "most likely to
-    // hit." At 3-leg parlays of -110 favorites you're already at ~7×.
-    // Capping at 5× forces confidence picks to be 2-leg solid favorites
-    // or 3-leg juiced favorites — the actual safe picks, not "safe-ish."
-    //
-    // Side effect: total parlays generated per day drops. That's the
-    // point. Trading volume for quality.
+    // The +1200 (13×) ev ceiling matches the original — that limit was
+    // sound, an earlier crackdown to 8× was overcorrection. Payout at 25×
+    // kills 50× / 100× moonshots without erasing actual lottery hits.
     const minDecimalByMode: Record<typeof sortMode, number> = {
       confidence: 3.0,
-      payout: 5.0,
+      payout: 7.0,
       ev: 3.0,
     };
     const maxDecimalByMode: Record<typeof sortMode, number> = {
-      confidence: 5.0,   // was Infinity (then briefly 8.0, 6.0) — solid favorites only
-      payout: 10.0,      // was Infinity (then 25.0) — no moonshots, real swings only
-      ev: 8.0,           // was 13.0 — win-zone band, math edge across mid odds
+      confidence: 8.0,   // was Infinity → 5.0 (too tight) → 8.0 (allows 3-leg -110s)
+      payout: 25.0,      // was Infinity → 10.0 (too tight) → 25.0 (kills moonshots, keeps lottery)
+      ev: 13.0,          // was 13.0 → 8.0 (too tight) → 13.0 (back to original)
     };
     if (combinedDecimal < minDecimalByMode[sortMode]) continue;
     if (combinedDecimal > maxDecimalByMode[sortMode]) continue;
