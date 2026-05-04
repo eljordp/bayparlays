@@ -75,7 +75,10 @@ export default function ModelAdminPage() {
     setRetraining(true);
     setRetrainResult(null);
     try {
-      const res = await fetch("/api/cron/train-model", { cache: "no-store" });
+      // Use the admin proxy so this works whether CRON_SECRET is set or
+      // not — the proxy runs server-side and attaches the bearer header
+      // for us.
+      const res = await fetch("/api/admin/retrain-model", { cache: "no-store" });
       const json = await res.json();
       if (json.error) {
         setRetrainResult(`Error: ${json.error}`);

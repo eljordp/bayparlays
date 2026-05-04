@@ -15,7 +15,11 @@ export const maxDuration = 60;
 // /api/parlays loads the most recent row of the current MODEL_VERSION at
 // generation time. Old rows are kept for audit / rollback.
 
-const MIN_TRAIN_SIZE = 200; // below this the model is memorizing — abort
+// Below this the model is memorizing rather than generalizing. Bumped
+// 200 → 300 (2026-05-03) — with ~25 features one-hot encoded, the
+// rule-of-thumb is ≥10 samples per feature for stable logistic
+// regression weights. 300 keeps us safely on the right side of that.
+const MIN_TRAIN_SIZE = 300;
 
 interface ParlayRow {
   legs: Array<{

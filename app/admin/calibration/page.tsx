@@ -96,10 +96,10 @@ export default function CalibrationAdminPage() {
     setRefreshing(true);
     setRecalcResult(null);
     try {
-      // Hit the cron endpoint directly. Without CRON_SECRET set in the
-      // browser, this only succeeds locally — in prod, set CRON_SECRET on
-      // the request via a server action or run via GH Actions.
-      const res = await fetch("/api/cron/calibrate", { cache: "no-store" });
+      // Use the admin proxy so this works whether CRON_SECRET is set or
+      // not — the proxy runs server-side and attaches the bearer header
+      // for us. Direct cron URL would 401 once CRON_SECRET is wired up.
+      const res = await fetch("/api/admin/recompute-calibration", { cache: "no-store" });
       const json = await res.json();
       if (json.error) {
         setRecalcResult(`Error: ${json.error}`);
