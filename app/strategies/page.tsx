@@ -223,7 +223,10 @@ function DimensionBlock({
           <div className="text-right">Avg Win</div>
           <div />
         </div>
-        {rows.map((s, i) => (
+        {rows.map((s, i) => {
+          const strike = s.avoid ? ("line-through" as const) : ("none" as const);
+          const dim = s.avoid ? 0.55 : 1;
+          return (
           <Link
             key={s.id}
             href={`/strategies/${s.id}`}
@@ -235,11 +238,16 @@ function DimensionBlock({
                 : s.avoid
                   ? "rgba(255,59,59,0.04)"
                   : "transparent",
+              opacity: dim,
             }}
+            title={s.avoid ? "Avoid — negative ROI on a meaningful sample. Not recommended." : undefined}
           >
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-base font-semibold" style={{ color: "#0a0a0a" }}>
+                <span
+                  className="text-base font-semibold"
+                  style={{ color: "#0a0a0a", textDecoration: strike }}
+                >
                   {s.name}
                 </span>
                 {s.recommended && (
@@ -259,14 +267,23 @@ function DimensionBlock({
                   </span>
                 )}
               </div>
-              <div className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.5)" }}>
+              <div
+                className="text-xs mt-1"
+                style={{ color: "rgba(0,0,0,0.5)", textDecoration: strike }}
+              >
                 {s.description}
               </div>
             </div>
-            <div className="text-right text-sm font-mono" style={{ color: "rgba(0,0,0,0.7)" }}>
+            <div
+              className="text-right text-sm font-mono"
+              style={{ color: "rgba(0,0,0,0.7)", textDecoration: strike }}
+            >
               {s.picks}
             </div>
-            <div className="text-right text-sm font-mono font-semibold" style={{ color: "#0a0a0a" }}>
+            <div
+              className="text-right text-sm font-mono font-semibold"
+              style={{ color: "#0a0a0a", textDecoration: strike }}
+            >
               {s.hitRate.toFixed(1)}%
             </div>
             <div
@@ -274,6 +291,7 @@ function DimensionBlock({
               style={{
                 color:
                   s.roi > 0 ? "#16a34a" : s.roi < 0 ? "#dc2626" : "rgba(0,0,0,0.5)",
+                textDecoration: strike,
               }}
             >
               {s.roi > 0 ? "+" : ""}
@@ -288,23 +306,31 @@ function DimensionBlock({
                     : s.profitAtUnit < 0
                       ? "#dc2626"
                       : "rgba(0,0,0,0.5)",
+                textDecoration: strike,
               }}
             >
               {s.profitAtUnit >= 0 ? "+" : ""}${Math.round(s.profitAtUnit)}
             </div>
-            <div className="text-right text-sm font-mono" style={{ color: "rgba(0,0,0,0.6)" }}>
+            <div
+              className="text-right text-sm font-mono"
+              style={{ color: "rgba(0,0,0,0.6)", textDecoration: strike }}
+            >
               ${s.avgPayoutWhenWin.toFixed(0)}
             </div>
             <div className="flex justify-end" style={{ color: "rgba(0,0,0,0.35)" }}>
               <ChevronRight size={16} />
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
-        {rows.map((s) => (
+        {rows.map((s) => {
+          const strike = s.avoid ? ("line-through" as const) : ("none" as const);
+          const dim = s.avoid ? 0.55 : 1;
+          return (
           <Link
             key={s.id}
             href={`/strategies/${s.id}`}
@@ -320,12 +346,16 @@ function DimensionBlock({
                 : s.avoid
                   ? "rgba(255,59,59,0.04)"
                   : "#fff",
+              opacity: dim,
             }}
           >
             <div className="flex items-start justify-between mb-2">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-lg font-semibold" style={{ color: "#0a0a0a" }}>
+                  <span
+                    className="text-lg font-semibold"
+                    style={{ color: "#0a0a0a", textDecoration: strike }}
+                  >
                     {s.name}
                   </span>
                   {s.recommended && (
@@ -345,7 +375,10 @@ function DimensionBlock({
                     </span>
                   )}
                 </div>
-                <div className="text-xs mt-1" style={{ color: "rgba(0,0,0,0.55)" }}>
+                <div
+                  className="text-xs mt-1"
+                  style={{ color: "rgba(0,0,0,0.55)", textDecoration: strike }}
+                >
                   {s.description}
                 </div>
               </div>
@@ -355,13 +388,23 @@ function DimensionBlock({
                 <div className="text-[10px] uppercase tracking-widest" style={{ color: "rgba(0,0,0,0.4)" }}>
                   Picks
                 </div>
-                <div className="text-sm font-mono font-semibold mt-1">{s.picks}</div>
+                <div
+                  className="text-sm font-mono font-semibold mt-1"
+                  style={{ textDecoration: strike }}
+                >
+                  {s.picks}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-widest" style={{ color: "rgba(0,0,0,0.4)" }}>
                   Hit
                 </div>
-                <div className="text-sm font-mono font-semibold mt-1">{s.hitRate.toFixed(0)}%</div>
+                <div
+                  className="text-sm font-mono font-semibold mt-1"
+                  style={{ textDecoration: strike }}
+                >
+                  {s.hitRate.toFixed(0)}%
+                </div>
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-widest" style={{ color: "rgba(0,0,0,0.4)" }}>
@@ -369,7 +412,10 @@ function DimensionBlock({
                 </div>
                 <div
                   className="text-sm font-mono font-bold mt-1"
-                  style={{ color: s.roi > 0 ? "#16a34a" : s.roi < 0 ? "#dc2626" : "rgba(0,0,0,0.5)" }}
+                  style={{
+                    color: s.roi > 0 ? "#16a34a" : s.roi < 0 ? "#dc2626" : "rgba(0,0,0,0.5)",
+                    textDecoration: strike,
+                  }}
                 >
                   {s.roi > 0 ? "+" : ""}
                   {s.roi.toFixed(0)}%
@@ -384,6 +430,7 @@ function DimensionBlock({
                   style={{
                     color:
                       s.profitAtUnit > 0 ? "#16a34a" : s.profitAtUnit < 0 ? "#dc2626" : "rgba(0,0,0,0.5)",
+                    textDecoration: strike,
                   }}
                 >
                   {s.profitAtUnit >= 0 ? "+" : ""}${Math.round(s.profitAtUnit)}
@@ -391,7 +438,8 @@ function DimensionBlock({
               </div>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

@@ -178,8 +178,11 @@ export default function CalibrationAdminPage() {
           <strong style={{ color: "rgba(255,255,255,0.6)" }}>CLV gate:</strong> rolling 60-day average
           closing line value per bucket. Buckets with avg CLV ≤ −0.30% on ≥{CLV_GATE_MIN_SAMPLE}{" "}
           graded legs are <span style={{ color: "#ef4444" }}>blocked</span> from the parlay generator —
-          those are the buckets demonstrably losing to the close. Sharp / Edge / Fading / Small are
-          informational only.
+          those are the buckets demonstrably losing to the close. Blocked rows are{" "}
+          <span style={{ textDecoration: "line-through", color: "rgba(255,255,255,0.5)" }}>
+            struck through
+          </span>{" "}
+          below to show they&apos;re not in use. Sharp / Edge / Fading / Small are informational only.
         </p>
         <p className="text-xs mb-8 max-w-3xl" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
           <strong style={{ color: "rgba(255,255,255,0.6)" }}>Exploration:</strong> 5% of would-be-blocked
@@ -257,6 +260,13 @@ export default function CalibrationAdminPage() {
               const tone = factorTone(c.calibration_factor);
               const lbl = cellLabel(c);
               const verdict = clvVerdict(c);
+              const isBlocked =
+                c.avg_clv !== null &&
+                c.clv_sample !== null &&
+                c.clv_sample >= CLV_GATE_MIN_SAMPLE &&
+                c.avg_clv <= CLV_GATE_BLOCK;
+              const strike = isBlocked ? ("line-through" as const) : ("none" as const);
+              const dim = isBlocked ? 0.45 : 1;
               return (
                 <div
                   key={`${c.sport}-${c.market}-${c.odds_bucket}-${idx}`}
@@ -265,33 +275,51 @@ export default function CalibrationAdminPage() {
                     gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.7fr 0.8fr 0.8fr 0.9fr",
                     borderTop: "1px solid rgba(255,255,255,0.06)",
                     fontFamily: "var(--font-geist-mono)",
-                    background:
-                      c.avg_clv !== null &&
-                      c.clv_sample !== null &&
-                      c.clv_sample >= CLV_GATE_MIN_SAMPLE &&
-                      c.avg_clv <= CLV_GATE_BLOCK
-                        ? "rgba(239,68,68,0.05)"
-                        : "transparent",
+                    background: isBlocked ? "rgba(239,68,68,0.05)" : "transparent",
+                    opacity: dim,
                   }}
+                  title={isBlocked ? "Blocked by CLV gate — not used in parlay generation" : undefined}
                 >
                   <div>
-                    <div style={{ fontFamily: "inherit", color: "#ededed", fontWeight: 600 }}>
+                    <div
+                      style={{
+                        fontFamily: "inherit",
+                        color: "#ededed",
+                        fontWeight: 600,
+                        textDecoration: strike,
+                      }}
+                    >
                       {lbl.primary}
                     </div>
-                    <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                    <div
+                      className="text-[11px] mt-0.5"
+                      style={{ color: "rgba(255,255,255,0.4)", textDecoration: strike }}
+                    >
                       {lbl.secondary}
                     </div>
                   </div>
-                  <div className="text-right" style={{ color: "rgba(255,255,255,0.7)" }}>
+                  <div
+                    className="text-right"
+                    style={{ color: "rgba(255,255,255,0.7)", textDecoration: strike }}
+                  >
                     {c.sample_size}
                   </div>
-                  <div className="text-right" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  <div
+                    className="text-right"
+                    style={{ color: "rgba(255,255,255,0.55)", textDecoration: strike }}
+                  >
                     {(c.predicted_prob_avg * 100).toFixed(1)}%
                   </div>
-                  <div className="text-right" style={{ color: "rgba(255,255,255,0.7)" }}>
+                  <div
+                    className="text-right"
+                    style={{ color: "rgba(255,255,255,0.7)", textDecoration: strike }}
+                  >
                     {(c.actual_hit_rate * 100).toFixed(1)}%
                   </div>
-                  <div className="text-right font-bold" style={{ color: tone.color }}>
+                  <div
+                    className="text-right font-bold"
+                    style={{ color: tone.color, textDecoration: strike }}
+                  >
                     {c.calibration_factor.toFixed(3)}×
                   </div>
                   <div
@@ -303,6 +331,7 @@ export default function CalibrationAdminPage() {
                           : c.avg_clv > 0
                             ? "#22c55e"
                             : "#ef4444",
+                      textDecoration: strike,
                     }}
                   >
                     {c.avg_clv !== null
