@@ -83,11 +83,72 @@ export const dynamic = "force-dynamic";
 // what the model has actually been right about. See migration 016 +
 // scripts/calibrate.ts for how the rows are computed.
 
+import {
+  predictProb as mlPredictProb,
+  MODEL_VERSION as ML_MODEL_VERSION,
+  type ModelWeights as MLModelWeights,
+} from "@/lib/ml-inference";
+
 interface CalibrationData {
   factors: Map<string, number>;
   // CLV gate per bucket key. avg < CLV_GATE_BLOCK with sample >= CLV_GATE_MIN
   // means legs in that bucket are losing to the close hard enough to drop.
   clv: Map<string, { avg: number; sample: number }>;
+}
+
+// ─── ML model cache ─────────────────────────────────────────────────────────
+// Loads the latest weights row matching the current MODEL_VERSION. Cached in
+// module memory for 5 min — same TTL as calibration so warm requests don't
+// hit the DB twice. Returns null if no row exists (e.g. before first
+// training run); inference falls back to ourProb in that case.
+let mlModelCache: { model: MLModelWeights | null; trainingSize: number; loadedAt: number } | null = null;
+const ML_MODEL_TTL_MS = 5 * 60 * 1000;
+
+// Trust knob: how much weight the blended probability gives to mlProb vs
+// the heuristic ourProb. 0 = ignore ML, 1 = trust ML completely. We start
+// at 0.5 (equal trust) but throttle down when training_size is small —
+// a model fit on 200 legs shouldn't get the same authority as one fit on
+// 5,000.
+const ML_BLEND_BASE = 0.5;
+const ML_BLEND_FULL_TRUST_AT = 2000; // sample size at which we apply full base weight
+
+async function getMLModel(): Promise<{ model: MLModelWeights | null; trainingSize: number }> {
+  if (mlModelCache && Date.now() - mlModelCache.loadedAt < ML_MODEL_TTL_MS) {
+    return { model: mlModelCache.model, trainingSize: mlModelCache.trainingSize };
+  }
+  let model: MLModelWeights | null = null;
+  let trainingSize = 0;
+  try {
+    const { supabase } = await import("@/lib/supabase");
+    const { data, error } = await supabase
+      .from("model_weights")
+      .select("weights, training_size, model_version, trained_at")
+      .eq("model_version", ML_MODEL_VERSION)
+      .order("trained_at", { ascending: false })
+      .limit(1);
+    if (!error && data && data[0]) {
+      const row = data[0] as { weights: MLModelWeights; training_size: number };
+      model = row.weights;
+      trainingSize = row.training_size;
+    }
+  } catch {
+    // Table missing or other transient — leave model null and let callers
+    // fall back to ourProb.
+  }
+  mlModelCache = { model, trainingSize, loadedAt: Date.now() };
+  return { model, trainingSize };
+}
+
+function mlBlendWeight(trainingSize: number): number {
+  if (trainingSize <= 0) return 0;
+  const trust = Math.min(1, trainingSize / ML_MODEL_FULL_TRUST_AT_SAFE());
+  return ML_BLEND_BASE * trust;
+}
+
+// Defined as a function so the constant is captured by closure but still
+// readable at the top of the file as a tunable.
+function ML_MODEL_FULL_TRUST_AT_SAFE() {
+  return ML_BLEND_FULL_TRUST_AT;
 }
 
 let calibrationCache: { data: CalibrationData; loadedAt: number } | null = null;
@@ -407,6 +468,10 @@ interface ParlayResponse {
     generatedAt: string;
     legsClvBlocked?: number; // legs dropped by the rolling-60d CLV gate
     legsClvExplored?: number; // blocked legs that slipped through via epsilon-greedy
+    mlActive?: boolean; // whether the ML model influenced this generation
+    mlBlendWeight?: number; // 0..1 weight given to mlProb in the blend
+    mlTrainingSize?: number; // sample size of the loaded model
+    legsAdjustedByMl?: number; // legs whose ourProb shifted by >0.001 due to ML
   };
 }
 
@@ -2244,6 +2309,44 @@ export async function GET(request: NextRequest) {
     // losing buckets get dropped before they spray into more parlays.
     const { factors: calibrationFactors, clv: clvGates } = await getCalibrationData();
 
+    // Pull the latest trained logistic regression weights (cached 5 min).
+    // If the model exists and has enough training samples, we blend its
+    // per-leg probability into ourProb. Trust scales with sample size so
+    // a fresh-but-tiny model doesn't override the heuristic baseline.
+    const { model: mlModel, trainingSize: mlTrainingSize } = await getMLModel();
+    const mlBlend = mlModel ? mlBlendWeight(mlTrainingSize) : 0;
+    let legsAdjustedByMl = 0;
+
+    if (mlModel && mlBlend > 0) {
+      for (const leg of allLegs) {
+        const mlProb = mlPredictProb(
+          {
+            sport: leg.sport,
+            market: leg.market,
+            decimalOdds: leg.decimalOdds,
+            ourProb: leg.ourProb,
+            fairProb: leg.fairProb,
+            evVsFair: leg.evVsFair,
+            bookCount: leg.bookCount,
+            sharpEdge: leg.sharpEdge,
+            hasWeatherNote: !!leg.weatherNote,
+            hasPitcherNote: !!leg.pitcherNote,
+            hasInjuryNote: !!leg.injuryNote,
+            hasRestNote: !!leg.restNote,
+            scored: leg.scored,
+          },
+          mlModel,
+        );
+        const blended = mlBlend * mlProb + (1 - mlBlend) * leg.ourProb;
+        const newProb = Math.max(0.01, Math.min(0.99, blended));
+        if (Math.abs(newProb - leg.ourProb) > 0.001) legsAdjustedByMl++;
+        leg.ourProb = Math.round(newProb * 10000) / 10000;
+        // trueEdge derives from ourProb − impliedProb. Keep it in sync so
+        // the downstream ranking uses the blended estimate.
+        leg.trueEdge = Math.round((leg.ourProb - leg.impliedProb) * 10000) / 10000;
+      }
+    }
+
     // CLV gate: drop legs from buckets with rolling 60d avg CLV materially
     // negative on a meaningful sample. Uses the same cascade as calibration
     // — most-specific bucket with enough samples wins. Buckets without a
@@ -2288,6 +2391,10 @@ export async function GET(request: NextRequest) {
         generatedAt: new Date().toISOString(),
         legsClvBlocked,
         legsClvExplored,
+        mlActive: !!mlModel && mlBlend > 0,
+        mlBlendWeight: Math.round(mlBlend * 1000) / 1000,
+        mlTrainingSize: mlTrainingSize,
+        legsAdjustedByMl,
       },
     };
 
