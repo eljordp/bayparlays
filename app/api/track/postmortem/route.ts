@@ -211,23 +211,48 @@ export async function GET() {
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       );
 
-    // For each team subject, build a chronological win/loss list and find
-    // the longest current run (most recent consecutive same-status streak).
-    const teamLog = new Map<string, Array<{ status: string; at: string }>>();
+    // For each team subject, build a chronological win/loss list at GAME
+    // granularity — not parlay granularity. Pre-2026-05-03 we counted every
+    // parlay the leg appeared in, which inflated streaks 5-10×: if the AI
+    // stacked Washington Nationals into 95 parlays over 14 days and they
+    // all lost, that read as "95L in a row" when there were really only
+    // ~10 distinct losing games.
+    //
+    // Dedup by gameId (or game+market+pick fallback) so each distinct
+    // game contributes one observation per team subject. The status is
+    // still the parlay's status, which is a proxy for the leg's outcome —
+    // not perfect, but bounded by the actual game count and far less
+    // misleading than the raw parlay-count.
+    type GameObs = { status: string; at: string };
+    const teamLog = new Map<string, Map<string, GameObs>>();
     for (const p of last14d) {
       for (const l of p.legs ?? []) {
         const subject = pickSubject(l);
         if (!subject) continue;
-        const arr = teamLog.get(subject) ?? [];
-        arr.push({ status: p.status, at: p.created_at });
-        teamLog.set(subject, arr);
+        const legAny = l as Record<string, unknown>;
+        const gameId =
+          typeof legAny.gameId === "string" ? legAny.gameId : undefined;
+        const key =
+          gameId ||
+          `${l.game ?? ""}|${l.market ?? ""}|${l.pick ?? ""}`;
+        if (!key) continue;
+        const games = teamLog.get(subject) ?? new Map<string, GameObs>();
+        // Earliest occurrence per game wins — preserves chronological order.
+        if (!games.has(key)) {
+          games.set(key, { status: p.status, at: p.created_at });
+        }
+        teamLog.set(subject, games);
       }
     }
 
     const streaks = Array.from(teamLog.entries())
-      .map(([subject, log]) => {
+      .map(([subject, games]) => {
+        // Convert per-game map back to a chronological list.
+        const log = Array.from(games.values()).sort(
+          (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
+        );
         if (log.length < 2) return null;
-        // Trailing streak — count back from the end while status matches
+        // Trailing streak — count back from the end while status matches.
         let streakLen = 1;
         const lastStatus = log[log.length - 1].status;
         for (let i = log.length - 2; i >= 0; i--) {

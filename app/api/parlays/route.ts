@@ -1620,31 +1620,44 @@ function buildParlays(
       selected.map((l) => ({ decimalOdds: l.decimalOdds }))
     );
 
-    // Minimum payout gate per sort mode. Nobody bets $10 to win $5 — heavy-
-    // favorite juice parlays (combined -185) are structurally bad even if
-    // they hit 65% of the time. Confidence mode needs real upside; payout
-    // mode needs actual longshots; EV mode is math-driven and can flex.
+    // Combined-odds gates per mode. Aggressively tight, grounded in
+    // /postmortem's win-vs-loss anatomy:
+    //   wins   avg 4.83× combined  (~ +383)  — claimed EV 37.9%
+    //   losses avg 26.5× combined  (~ +2552) — claimed EV 61.0%
+    // The model's EV math hallucinates worse the higher the combined odds
+    // go. Pre-2026-05-03, confidence + payout had Infinity ceilings and
+    // the system was spraying 50× / 100× moonshots it had no business
+    // projecting edge on. That's where the −$876 weekly bleed lived.
     //
-    //   confidence: min +200 (decimal 3.0)  — $10 pays at least $30 profit
-    //   payout:     min +600 (decimal 7.0)  — real swings, not mid-odds
-    //   ev:         range +200 to +1200     — math edge AT REALISTIC ODDS
+    // New bands keep all three modes inside the win zone with DISTINCT
+    // identities — no more confidence/ev overlap, no more lottery-ticket
+    // payout mode pretending it has edge:
     //
-    // The ev range is bounded on BOTH sides. Without an upper cap, EV math
-    // hijacks longshots (a +176156 parlay with 0.05% hit rate has higher
-    // claimed EV than a +400 parlay with 30% hit rate, because tiny
-    // probability × massive payout still beats reasonable probability ×
-    // moderate payout). That made "Best EV" indistinguishable from
-    // "Highest Payout" for users. Capping at +1200 forces Best EV to mean
-    // "best math at picks that actually have a real shot to hit."
+    //   confidence: 3.0–5.0   "safest stack"  · $10 pays $30–$50
+    //   ev:         3.0–8.0   "math edge"     · widest band, math-driven
+    //   payout:     5.0–10.0  "biggest swing" · $10 pays $50–$100
+    //
+    // Why payout caps at 10× and not higher: at our actual win rate of
+    // ~26%, parlays above 10× are net-negative EV no matter what the
+    // model claims. The "lottery ticket" framing was costing money. A
+    // 10× parlay at $10 still pays $100 — real swing, not fantasy.
+    //
+    // Why confidence caps at 5×: confidence mode means "most likely to
+    // hit." At 3-leg parlays of -110 favorites you're already at ~7×.
+    // Capping at 5× forces confidence picks to be 2-leg solid favorites
+    // or 3-leg juiced favorites — the actual safe picks, not "safe-ish."
+    //
+    // Side effect: total parlays generated per day drops. That's the
+    // point. Trading volume for quality.
     const minDecimalByMode: Record<typeof sortMode, number> = {
       confidence: 3.0,
-      payout: 7.0,
-      ev: 3.0, // +200 floor — same as confidence, so EV picks aren't juiced favorites either
+      payout: 5.0,
+      ev: 3.0,
     };
     const maxDecimalByMode: Record<typeof sortMode, number> = {
-      confidence: Infinity,
-      payout: Infinity,
-      ev: 13.0, // +1200 ceiling — anything bigger is a longshot, belongs in payout
+      confidence: 5.0,   // was Infinity (then briefly 8.0, 6.0) — solid favorites only
+      payout: 10.0,      // was Infinity (then 25.0) — no moonshots, real swings only
+      ev: 8.0,           // was 13.0 — win-zone band, math edge across mid odds
     };
     if (combinedDecimal < minDecimalByMode[sortMode]) continue;
     if (combinedDecimal > maxDecimalByMode[sortMode]) continue;

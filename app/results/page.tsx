@@ -120,9 +120,9 @@ const CATEGORY_LABEL: Record<ParlayCategory, string> = {
 };
 
 const CATEGORY_DESC: Record<ParlayCategory, string> = {
-  ev: "math-first picks with the biggest edge",
-  payout: "longshots hunting the big cash",
-  confidence: "safe favorites most likely to hit",
+  ev: "math edge across realistic odds (3-8×)",
+  payout: "biggest swings, capped to win-zone (5-10×)",
+  confidence: "safest stacks of solid favorites (3-5×)",
 };
 
 /* ─── Helpers ─── */
@@ -589,7 +589,7 @@ export default function ResultsPage() {
                       By Strategy
                     </h2>
                     <p className="text-xs mb-8 max-w-2xl" style={{ color: "rgba(0,0,0,0.45)", lineHeight: 1.6 }}>
-                      Three flavors the AI generates each day. Most Confident hits more often but pays less. Best EV is the math play. Highest Payout is the lottery.
+                      Three flavors the AI generates each day. Most Confident hits more often but pays less. Best EV is the math play. Highest Payout is the biggest swing — capped to the win zone, no longer a lottery.
                     </p>
                     <div className="space-y-4">
                       {categoryBreakdown.map((cat, idx) => (

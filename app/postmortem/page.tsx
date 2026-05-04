@@ -162,6 +162,36 @@ export default function PostmortemPage() {
             </p>
           </section>
 
+          {/* Auto-system banner — many of the tweaks below are now applied
+              automatically by the calibration + CLV gate. Surface that
+              context so JP doesn't manually do work the system already does. */}
+          <section
+            className="rounded-xl p-4 border flex items-start gap-3"
+            style={{
+              background: "rgba(34,197,94,0.05)",
+              borderColor: "rgba(34,197,94,0.25)",
+            }}
+          >
+            <div
+              className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center mt-0.5"
+              style={{ background: "rgba(34,197,94,0.12)" }}
+            >
+              <span style={{ color: "#15803d", fontSize: 18 }}>✓</span>
+            </div>
+            <div className="flex-1 text-sm" style={{ color: "rgba(0,0,0,0.75)" }}>
+              <strong style={{ color: "#0a0a0a" }}>Most of this is automated now.</strong>{" "}
+              Per-bucket calibration adjusts sport / market / odds-bucket
+              probabilities every night.{" "}
+              <a href="/admin/calibration" className="underline" style={{ color: "#15803d" }}>
+                Calibration table
+              </a>{" "}
+              shows what&apos;s currently boosted vs penalized. The CLV gate
+              auto-blocks losing buckets with 5% exploration to keep them
+              under test. Tweaks below are flagged as additional context —
+              act on them only if the auto-system isn&apos;t catching them.
+            </div>
+          </section>
+
           {/* Recommendations */}
           {data.recommendations.length > 0 && (
             <section>
