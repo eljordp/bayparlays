@@ -24,13 +24,28 @@ interface ResolvedParlay {
   combined_decimal: number;
   ev_percent: number | null;
   sports: string[] | null;
-  legs: Array<{ sport?: string; market?: string; odds?: number; decimalOdds?: number }> | null;
+  created_at?: string;
+  legs: Array<{
+    sport?: string;
+    market?: string;
+    odds?: number;
+    decimalOdds?: number;
+    pick?: string;
+    gameId?: string;
+  }> | null;
   leg_results: Array<{
     sport?: string | null;
     market?: string | null;
     odds?: number | null;
     decimalOdds?: number | null;
     result: "won" | "lost" | "pending";
+  }> | null;
+  closing_lines: Array<{
+    gameId: string | null;
+    market: string | null;
+    pick: string | null;
+    closingOdds: number | null;
+    clv: number | null;
   }> | null;
 }
 
@@ -57,6 +72,14 @@ interface Bucket {
   actual: number[];
 }
 
+// Separate CLV bucket — sourced from closing_lines, scoped to a rolling
+// window so old data doesn't keep dead buckets alive.
+interface ClvBucket {
+  values: number[];
+}
+
+const CLV_WINDOW_DAYS = 60;
+
 interface CalibRow {
   sport: string | null;
   market: string | null;
@@ -66,6 +89,8 @@ interface CalibRow {
   actual_hit_rate: number;
   calibration_factor: number;
   notes: string;
+  avg_clv: number | null;
+  clv_sample: number | null;
 }
 
 function shrinkAndClamp(predictedAvg: number, actualRate: number, n: number) {
@@ -103,34 +128,33 @@ export async function GET(req: NextRequest) {
   // Pull resolved data from BOTH parlays (AI's daily picks) and
   // research_parlays (top-EV combos from the brute-force scanner).
   const allParlays: ResolvedParlay[] = [];
+  // Try the full v2-aware select first; if any column is missing on a stale
+  // deploy, drop columns one tier at a time until something works.
+  const SELECTS = [
+    "status, combined_decimal, ev_percent, sports, legs, leg_results, closing_lines, created_at",
+    "status, combined_decimal, ev_percent, sports, legs, leg_results, created_at",
+    "status, combined_decimal, ev_percent, sports, legs",
+  ];
+
   for (const tableName of ["parlays", "research_parlays"] as const) {
     let from = 0;
     const PAGE = 1000;
+    let select = SELECTS[0];
     while (true) {
       const { data, error } = await supabase
         .from(tableName)
-        .select("status, combined_decimal, ev_percent, sports, legs, leg_results")
+        .select(select)
         .neq("status", "pending")
         .range(from, from + PAGE - 1);
       if (error) {
-        // leg_results may not exist yet on older deploys — retry without it.
-        if (/column .*leg_results/i.test(error.message || "")) {
-          const { data: fallback, error: fallbackErr } = await supabase
-            .from(tableName)
-            .select("status, combined_decimal, ev_percent, sports, legs")
-            .neq("status", "pending")
-            .range(from, from + PAGE - 1);
-          if (fallbackErr) {
-            return NextResponse.json(
-              { error: `${tableName}: ${fallbackErr.message}` },
-              { status: 500 },
-            );
+        // Walk the fallback ladder: if a column is missing, try the next
+        // narrower select. Once we exhaust SELECTS, surface the error.
+        if (/column .*(closing_lines|leg_results|created_at)/i.test(error.message || "")) {
+          const idx = SELECTS.indexOf(select);
+          if (idx >= 0 && idx < SELECTS.length - 1) {
+            select = SELECTS[idx + 1];
+            continue;
           }
-          if (!fallback || fallback.length === 0) break;
-          allParlays.push(...(fallback as ResolvedParlay[]));
-          if (fallback.length < PAGE) break;
-          from += PAGE;
-          continue;
         }
         return NextResponse.json(
           { error: `${tableName}: ${error.message}` },
@@ -138,7 +162,7 @@ export async function GET(req: NextRequest) {
         );
       }
       if (!data || data.length === 0) break;
-      allParlays.push(...(data as ResolvedParlay[]));
+      allParlays.push(...(data as unknown as ResolvedParlay[]));
       if (data.length < PAGE) break;
       from += PAGE;
     }
@@ -156,6 +180,14 @@ export async function GET(req: NextRequest) {
   // Key format: `${sport}|${market}|${bucket}` (also intermediate keys with
   // null components for less-specific cells).
   const legBuckets = new Map<string, Bucket>();
+
+  // ── CLV buckets (rolling 60d) ─────────────────────────────────────────
+  // Same key scheme as legBuckets so they map 1:1 onto calibration rows.
+  // Sourced from parlays.closing_lines (populated when the resolver grades),
+  // matched back to parlays.legs to recover sport / market / odds bucket.
+  const clvBuckets = new Map<string, ClvBucket>();
+  const clvCutoff = Date.now() - CLV_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  let clvLegsCounted = 0;
 
   // ── Stats for the response payload ────────────────────────────────────
   let legsGraded = 0;
@@ -223,6 +255,64 @@ export async function GET(req: NextRequest) {
         }
       }
     }
+
+    // CLV gate buckets — only consume parlays inside the rolling window so
+    // a bucket that's faded recently doesn't keep coasting on stale wins.
+    if (Array.isArray(p.closing_lines) && Array.isArray(p.legs) && p.created_at) {
+      const createdMs = Date.parse(p.created_at);
+      if (!isFinite(createdMs) || createdMs < clvCutoff) {
+        // Outside the rolling window — skip CLV contribution but still feed
+        // hit-rate calibration above (older outcomes still inform that).
+      } else {
+        // Match closing lines to their legs by (gameId, market, pick) so we
+        // recover sport + decimal odds for bucketing. Closing lines without
+        // a matching leg are skipped (rare; usually means a leg was edited).
+        const legByKey = new Map<string, NonNullable<ResolvedParlay["legs"]>[number]>();
+        for (const leg of p.legs) {
+          if (!leg.gameId || !leg.market || !leg.pick) continue;
+          legByKey.set(`${leg.gameId}|${leg.market}|${leg.pick}`, leg);
+        }
+        for (const cl of p.closing_lines) {
+          if (cl.clv === null || typeof cl.clv !== "number") continue;
+          if (!cl.gameId || !cl.market || !cl.pick) continue;
+          const leg = legByKey.get(`${cl.gameId}|${cl.market}|${cl.pick}`);
+          if (!leg) continue;
+          const dec =
+            typeof leg.decimalOdds === "number" && leg.decimalOdds > 1
+              ? leg.decimalOdds
+              : typeof leg.odds === "number"
+                ? americanToDecimal(leg.odds)
+                : null;
+          const bucket = dec ? oddsBucket(dec) : null;
+          const legSport = leg.sport ?? null;
+          const legMarket = leg.market ?? null;
+
+          const keys = new Set<string>();
+          if (legSport && legMarket && bucket) keys.add(`${legSport}|${legMarket}|${bucket}`);
+          if (legSport && legMarket) keys.add(`${legSport}|${legMarket}|`);
+          if (legSport && bucket) keys.add(`${legSport}||${bucket}`);
+          if (bucket) keys.add(`||${bucket}`);
+          if (keys.size === 0) continue;
+
+          clvLegsCounted++;
+          for (const k of keys) {
+            if (!clvBuckets.has(k)) clvBuckets.set(k, { values: [] });
+            clvBuckets.get(k)!.values.push(cl.clv);
+          }
+        }
+      }
+    }
+  }
+
+  // Helper: pull avg/sample from clvBuckets at a given key, or null if missing.
+  function clvFor(key: string): { avg: number; sample: number } | null {
+    const b = clvBuckets.get(key);
+    if (!b || b.values.length === 0) return null;
+    const sum = b.values.reduce((s, v) => s + v, 0);
+    return {
+      avg: Math.round((sum / b.values.length) * 100) / 100,
+      sample: b.values.length,
+    };
   }
 
   const rows: CalibRow[] = [];
@@ -234,6 +324,10 @@ export async function GET(req: NextRequest) {
     const predictedAvg = predicted.reduce((s, v) => s + v, 0) / n;
     const actualRate = actual.reduce((s, v) => s + v, 0) / n;
     const { factor, notes } = shrinkAndClamp(predictedAvg, actualRate, n);
+    // Parlay-level CLV uses the sport-only bucket; reuses the leg-level CLV
+    // accumulator so we don't double-count or recompute.
+    const clvKey = sport ? sport : "";
+    const clv = clvFor(clvKey);
     rows.push({
       sport,
       market: null,
@@ -243,6 +337,8 @@ export async function GET(req: NextRequest) {
       actual_hit_rate: Math.round(actualRate * 10000) / 10000,
       calibration_factor: Math.round(factor * 10000) / 10000,
       notes: `parlay-level | ${notes}`,
+      avg_clv: clv?.avg ?? null,
+      clv_sample: clv?.sample ?? null,
     });
   }
 
@@ -254,6 +350,7 @@ export async function GET(req: NextRequest) {
     const predictedAvg = predicted.reduce((s, v) => s + v, 0) / n;
     const actualRate = actual.reduce((s, v) => s + v, 0) / n;
     const { factor, notes } = shrinkAndClamp(predictedAvg, actualRate, n);
+    const clv = clvFor(key);
     rows.push({
       sport: sportPart || null,
       market: marketPart || null,
@@ -263,6 +360,8 @@ export async function GET(req: NextRequest) {
       actual_hit_rate: Math.round(actualRate * 10000) / 10000,
       calibration_factor: Math.round(factor * 10000) / 10000,
       notes: `leg-level | ${notes}`,
+      avg_clv: clv?.avg ?? null,
+      clv_sample: clv?.sample ?? null,
     });
   }
 
@@ -271,26 +370,39 @@ export async function GET(req: NextRequest) {
       resolved: allParlays.length,
       legs_graded: legsGraded,
       legs_skipped: legsSkipped,
+      clv_legs_window: clvLegsCounted,
       written: 0,
       message: "no buckets met sample threshold",
     });
   }
 
-  // Some installs don't have odds_bucket migrated yet — try with it first,
-  // fall back to the v1 columns if the column is missing.
+  // Insert with progressive fallback: drop avg_clv/clv_sample first, then
+  // odds_bucket, so older deploys missing those migrations still record the
+  // hit-rate calibration they support.
+  function stripCols(rs: CalibRow[], drop: Array<keyof CalibRow>) {
+    return rs.map((r) => {
+      const copy: Partial<CalibRow> = { ...r };
+      for (const k of drop) delete copy[k];
+      return copy;
+    });
+  }
+
   let insertErr: { message: string } | null = null;
   {
     const { error } = await supabase.from("model_calibration").insert(rows);
     insertErr = error;
   }
+  if (insertErr && /column .*(avg_clv|clv_sample)/i.test(insertErr.message || "")) {
+    const { error } = await supabase
+      .from("model_calibration")
+      .insert(stripCols(rows, ["avg_clv", "clv_sample"]));
+    insertErr = error;
+  }
   if (insertErr && /column .*odds_bucket/i.test(insertErr.message || "")) {
-    const v1Rows = rows
-      .filter((r) => r.odds_bucket === null)
-      .map((r) => {
-        const copy = { ...r } as Partial<CalibRow>;
-        delete copy.odds_bucket;
-        return copy;
-      });
+    const v1Rows = stripCols(
+      rows.filter((r) => r.odds_bucket === null),
+      ["odds_bucket", "avg_clv", "clv_sample"],
+    );
     const { error: retryErr } = await supabase.from("model_calibration").insert(v1Rows);
     insertErr = retryErr;
   }
@@ -302,6 +414,7 @@ export async function GET(req: NextRequest) {
     resolved: allParlays.length,
     legs_graded: legsGraded,
     legs_skipped: legsSkipped,
+    clv_legs_window: clvLegsCounted,
     written: rows.length,
     rows,
     timestamp: new Date().toISOString(),

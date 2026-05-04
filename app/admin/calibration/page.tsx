@@ -15,6 +15,31 @@ interface CalibCell {
   calibration_factor: number;
   notes: string | null;
   computed_at: string;
+  avg_clv: number | null;
+  clv_sample: number | null;
+}
+
+// Same thresholds as the parlay route gate.
+const CLV_GATE_BLOCK = -0.3;
+const CLV_GATE_MIN_SAMPLE = 40;
+
+function clvVerdict(c: CalibCell): { label: string; color: string } {
+  if (c.avg_clv === null || c.clv_sample === null) {
+    return { label: "—", color: "rgba(255,255,255,0.3)" };
+  }
+  if (c.clv_sample < CLV_GATE_MIN_SAMPLE) {
+    return { label: `Small (${c.clv_sample})`, color: "rgba(255,255,255,0.4)" };
+  }
+  if (c.avg_clv <= CLV_GATE_BLOCK) {
+    return { label: "BLOCKED", color: "#ef4444" };
+  }
+  if (c.avg_clv >= 0.5) {
+    return { label: "Sharp", color: "#22c55e" };
+  }
+  if (c.avg_clv > 0) {
+    return { label: "Edge", color: "#a3e635" };
+  }
+  return { label: "Fading", color: "#f59e0b" };
 }
 
 const BUCKET_LABEL: Record<string, string> = {
@@ -142,12 +167,19 @@ export default function CalibrationAdminPage() {
         >
           Model Calibration
         </h1>
-        <p className="text-sm mb-8 max-w-2xl" style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
+        <p className="text-sm mb-3 max-w-3xl" style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>
           What the AI has learned from graded results. Each cell is a (sport × market × odds bucket)
           slice with its own multiplier on <code style={{ color: "#ededed" }}>ourProb</code>. Factor
           &gt; 1.0 means the AI under-estimates that bucket and gets boosted; &lt; 1.0 means it
           over-estimates and gets penalized. Cascade order: most-specific cell wins, falling back to
           less specific.
+        </p>
+        <p className="text-xs mb-8 max-w-3xl" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+          <strong style={{ color: "rgba(255,255,255,0.6)" }}>CLV gate:</strong> rolling 60-day average
+          closing line value per bucket. Buckets with avg CLV ≤ −0.30% on ≥{CLV_GATE_MIN_SAMPLE}{" "}
+          graded legs are <span style={{ color: "#ef4444" }}>blocked</span> from the parlay generator —
+          those are the buckets demonstrably losing to the close. Sharp / Edge / Fading / Small are
+          informational only.
         </p>
 
         <div className="flex items-center gap-3 flex-wrap mb-8">
@@ -200,7 +232,7 @@ export default function CalibrationAdminPage() {
             <div
               className="grid text-[11px] uppercase tracking-wider px-5 py-3"
               style={{
-                gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr",
+                gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.7fr 0.8fr 0.8fr 0.9fr",
                 background: "rgba(255,255,255,0.04)",
                 color: "rgba(255,255,255,0.45)",
                 fontWeight: 600,
@@ -211,19 +243,28 @@ export default function CalibrationAdminPage() {
               <div className="text-right">Predicted</div>
               <div className="text-right">Actual</div>
               <div className="text-right">Factor</div>
+              <div className="text-right">CLV (60d)</div>
               <div className="text-right">Verdict</div>
             </div>
             {cells.map((c, idx) => {
               const tone = factorTone(c.calibration_factor);
               const lbl = cellLabel(c);
+              const verdict = clvVerdict(c);
               return (
                 <div
                   key={`${c.sport}-${c.market}-${c.odds_bucket}-${idx}`}
                   className="grid items-center px-5 py-4 text-sm"
                   style={{
-                    gridTemplateColumns: "1.4fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr",
+                    gridTemplateColumns: "1.6fr 0.6fr 0.7fr 0.7fr 0.8fr 0.8fr 0.9fr",
                     borderTop: "1px solid rgba(255,255,255,0.06)",
                     fontFamily: "var(--font-geist-mono)",
+                    background:
+                      c.avg_clv !== null &&
+                      c.clv_sample !== null &&
+                      c.clv_sample >= CLV_GATE_MIN_SAMPLE &&
+                      c.avg_clv <= CLV_GATE_BLOCK
+                        ? "rgba(239,68,68,0.05)"
+                        : "transparent",
                   }}
                 >
                   <div>
@@ -243,17 +284,34 @@ export default function CalibrationAdminPage() {
                   <div className="text-right" style={{ color: "rgba(255,255,255,0.7)" }}>
                     {(c.actual_hit_rate * 100).toFixed(1)}%
                   </div>
-                  <div
-                    className="text-right font-bold"
-                    style={{ color: tone.color }}
-                  >
+                  <div className="text-right font-bold" style={{ color: tone.color }}>
                     {c.calibration_factor.toFixed(3)}×
                   </div>
                   <div
-                    className="text-right text-[11px] uppercase tracking-wider"
-                    style={{ color: tone.color }}
+                    className="text-right"
+                    style={{
+                      color:
+                        c.avg_clv === null
+                          ? "rgba(255,255,255,0.3)"
+                          : c.avg_clv > 0
+                            ? "#22c55e"
+                            : "#ef4444",
+                    }}
                   >
-                    {tone.verdict}
+                    {c.avg_clv !== null
+                      ? `${c.avg_clv > 0 ? "+" : ""}${c.avg_clv.toFixed(2)}%`
+                      : "—"}
+                    {c.clv_sample !== null && (
+                      <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        n={c.clv_sample}
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    className="text-right text-[11px] uppercase tracking-wider"
+                    style={{ color: verdict.color, fontWeight: 700 }}
+                  >
+                    {verdict.label}
                   </div>
                 </div>
               );

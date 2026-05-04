@@ -17,34 +17,46 @@ interface CalibRow {
   calibration_factor: number;
   notes: string | null;
   computed_at: string;
+  avg_clv: number | null;
+  clv_sample: number | null;
 }
 
 export async function GET() {
   let rows: CalibRow[] | null = null;
 
-  const { data, error } = await supabase
-    .from("model_calibration")
-    .select(
-      "sport, market, odds_bucket, sample_size, predicted_prob_avg, actual_hit_rate, calibration_factor, notes, computed_at",
-    )
-    .order("computed_at", { ascending: false })
-    .limit(1000);
+  // Fallback ladder — fullest select first, drop columns one tier at a time
+  // if a deploy is behind on migrations.
+  const SELECTS = [
+    "sport, market, odds_bucket, sample_size, predicted_prob_avg, actual_hit_rate, calibration_factor, notes, computed_at, avg_clv, clv_sample",
+    "sport, market, odds_bucket, sample_size, predicted_prob_avg, actual_hit_rate, calibration_factor, notes, computed_at",
+    "sport, market, sample_size, predicted_prob_avg, actual_hit_rate, calibration_factor, notes, computed_at",
+  ];
 
-  if (error && /column .*odds_bucket/i.test(error.message || "")) {
-    // v1-only DB — fetch without odds_bucket and synthesize the field as null.
-    const { data: v1, error: v1err } = await supabase
+  for (const sel of SELECTS) {
+    const { data, error } = await supabase
       .from("model_calibration")
-      .select(
-        "sport, market, sample_size, predicted_prob_avg, actual_hit_rate, calibration_factor, notes, computed_at",
-      )
+      .select(sel)
       .order("computed_at", { ascending: false })
       .limit(1000);
-    if (v1err) return NextResponse.json({ error: v1err.message }, { status: 500 });
-    rows = (v1 ?? []).map((r) => ({ ...r, odds_bucket: null }));
-  } else if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  } else {
-    rows = data;
+    if (!error) {
+      rows = (data as unknown as CalibRow[]).map((r) => ({
+        sport: r.sport ?? null,
+        market: r.market ?? null,
+        odds_bucket: r.odds_bucket ?? null,
+        sample_size: r.sample_size,
+        predicted_prob_avg: r.predicted_prob_avg,
+        actual_hit_rate: r.actual_hit_rate,
+        calibration_factor: r.calibration_factor,
+        notes: r.notes ?? null,
+        computed_at: r.computed_at,
+        avg_clv: r.avg_clv ?? null,
+        clv_sample: r.clv_sample ?? null,
+      }));
+      break;
+    }
+    if (!/column .*(odds_bucket|avg_clv|clv_sample)/i.test(error.message || "")) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
 
   if (!rows) return NextResponse.json({ cells: [] });

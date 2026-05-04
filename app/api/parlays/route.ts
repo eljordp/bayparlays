@@ -83,14 +83,28 @@ export const dynamic = "force-dynamic";
 // what the model has actually been right about. See migration 016 +
 // scripts/calibrate.ts for how the rows are computed.
 
-let calibrationCache: { factors: Map<string, number>; loadedAt: number } | null = null;
+interface CalibrationData {
+  factors: Map<string, number>;
+  // CLV gate per bucket key. avg < CLV_GATE_BLOCK with sample >= CLV_GATE_MIN
+  // means legs in that bucket are losing to the close hard enough to drop.
+  clv: Map<string, { avg: number; sample: number }>;
+}
+
+let calibrationCache: { data: CalibrationData; loadedAt: number } | null = null;
 const CALIBRATION_TTL_MS = 5 * 60 * 1000;
 
-async function getCalibrationFactors(): Promise<Map<string, number>> {
+// CLV gate thresholds — only block when sample is meaningful AND CLV is
+// materially negative. Borderline buckets (and small-sample ones) fall
+// through to less-specific cells in the cascade.
+const CLV_GATE_BLOCK = -0.3; // avg CLV % at which we drop a bucket
+const CLV_GATE_MIN_SAMPLE = 40; // min legs with CLV before the gate fires
+
+async function getCalibrationData(): Promise<CalibrationData> {
   if (calibrationCache && Date.now() - calibrationCache.loadedAt < CALIBRATION_TTL_MS) {
-    return calibrationCache.factors;
+    return calibrationCache.data;
   }
   const factors = new Map<string, number>();
+  const clv = new Map<string, { avg: number; sample: number }>();
   try {
     const { supabase } = await import("@/lib/supabase");
     // v2 schema: rows can have sport, market, AND odds_bucket (per migration
@@ -99,27 +113,36 @@ async function getCalibrationFactors(): Promise<Map<string, number>> {
     //   →  bucket  →  _GLOBAL
     // Older rows without odds_bucket simply land at the sport|market or sport
     // tier, so v1 calibration still feeds the cascade as a fallback.
-    let data: Array<{
+    type CalibRowFromDb = {
       sport: string | null;
       market: string | null;
       odds_bucket?: string | null;
       calibration_factor: number;
-    }> | null = null;
-    const { data: v2Data, error: v2Err } = await supabase
-      .from("model_calibration")
-      .select("sport, market, odds_bucket, calibration_factor, computed_at")
-      .order("computed_at", { ascending: false })
-      .limit(500);
-    if (v2Err && /column .*odds_bucket/i.test(v2Err.message || "")) {
-      // odds_bucket column not migrated yet — fall back to v1 query.
-      const { data: v1Data } = await supabase
+      avg_clv?: number | null;
+      clv_sample?: number | null;
+    };
+    let data: CalibRowFromDb[] | null = null;
+
+    // Try the fullest select; walk down through fallbacks if columns are
+    // missing on a deploy that's behind on migrations.
+    const SELECTS = [
+      "sport, market, odds_bucket, calibration_factor, avg_clv, clv_sample, computed_at",
+      "sport, market, odds_bucket, calibration_factor, computed_at",
+      "sport, market, calibration_factor, computed_at",
+    ];
+    for (const sel of SELECTS) {
+      const { data: rows, error } = await supabase
         .from("model_calibration")
-        .select("sport, market, calibration_factor, computed_at")
+        .select(sel)
         .order("computed_at", { ascending: false })
-        .limit(200);
-      data = v1Data;
-    } else if (!v2Err) {
-      data = v2Data;
+        .limit(500);
+      if (!error) {
+        data = rows as unknown as CalibRowFromDb[];
+        break;
+      }
+      if (!/column .*(odds_bucket|avg_clv|clv_sample)/i.test(error.message || "")) {
+        break;
+      }
     }
     if (data) {
       for (const row of data) {
@@ -137,15 +160,24 @@ async function getCalibrationFactors(): Promise<Map<string, number>> {
         // freshest; skip subsequent older duplicates.
         if (!factors.has(key)) {
           factors.set(key, row.calibration_factor);
+          if (
+            typeof row.avg_clv === "number" &&
+            typeof row.clv_sample === "number"
+          ) {
+            clv.set(key, { avg: row.avg_clv, sample: row.clv_sample });
+          }
         }
       }
     }
   } catch {
-    // Calibration unavailable — return empty map, callers fall back to 1.0.
+    // Calibration unavailable — return empty maps, callers fall back to 1.0
+    // / no gate.
   }
-  calibrationCache = { factors, loadedAt: Date.now() };
-  return factors;
+  const out = { factors, clv };
+  calibrationCache = { data: out, loadedAt: Date.now() };
+  return out;
 }
+
 
 // Decimal-odds buckets — must match the labels written by /api/cron/calibrate
 // and documented on model_calibration.odds_bucket (migration 023).
@@ -186,6 +218,37 @@ function calibrationFactorFor(
   }
   if (factors.has("_GLOBAL")) return factors.get("_GLOBAL")!;
   return 1.0;
+}
+
+// CLV gate decision. Returns the most-specific qualifying bucket entry — i.e.
+// the cell that has both a meaningful sample AND a definitive verdict (block
+// or allow). If no bucket in the cascade clears the sample threshold, returns
+// null and the leg is allowed (innocent until proven guilty).
+function clvGateBlocked(
+  clvMap: Map<string, { avg: number; sample: number }>,
+  sport: string | undefined,
+  market: string | undefined,
+  decimalOdds: number | undefined,
+): { blocked: boolean; matchedKey: string; avg: number; sample: number } | null {
+  const bucket = oddsBucketFor(decimalOdds);
+  const candidateKeys: string[] = [];
+  if (sport && market && bucket) candidateKeys.push(`${sport}|${market}|${bucket}`);
+  if (sport && market) candidateKeys.push(`${sport}|${market}`);
+  if (sport && bucket) candidateKeys.push(`${sport}||${bucket}`);
+  if (sport) candidateKeys.push(sport);
+  if (bucket) candidateKeys.push(`||${bucket}`);
+  for (const key of candidateKeys) {
+    const entry = clvMap.get(key);
+    if (!entry) continue;
+    if (entry.sample < CLV_GATE_MIN_SAMPLE) continue; // too small — fall through
+    return {
+      blocked: entry.avg <= CLV_GATE_BLOCK,
+      matchedKey: key,
+      avg: entry.avg,
+      sample: entry.sample,
+    };
+  }
+  return null;
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -331,6 +394,7 @@ interface ParlayResponse {
     poolSize: number;        // how many legs made it into the ranked pool
     tier: string;
     generatedAt: string;
+    legsClvBlocked?: number; // legs dropped by the rolling-60d CLV gate
   };
 }
 
@@ -2163,13 +2227,32 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Pull learned calibration factors (cached 5 min) so combinedProb gets
-    // scaled toward observed reality. Empty map = no adjustment yet.
-    const calibrationFactors = await getCalibrationFactors();
+    // Pull learned calibration factors AND CLV gates (cached 5 min) so
+    // combinedProb gets scaled toward observed reality, and demonstrably
+    // losing buckets get dropped before they spray into more parlays.
+    const { factors: calibrationFactors, clv: clvGates } = await getCalibrationData();
+
+    // CLV gate: drop legs from buckets with rolling 60d avg CLV materially
+    // negative on a meaningful sample. Uses the same cascade as calibration
+    // — most-specific bucket with enough samples wins. Buckets without a
+    // verdict fall through and the leg is allowed.
+    let legsClvBlocked = 0;
+    const legsAfterClv = allLegs.filter((leg) => {
+      const verdict = clvGateBlocked(clvGates, leg.sport, leg.market, leg.decimalOdds);
+      if (verdict?.blocked) {
+        legsClvBlocked++;
+        return false;
+      }
+      return true;
+    });
+    // Safety: if the gate eats everything (e.g. unexpected catastrophic CLV
+    // signal across the slate), fall back to the unfiltered pool so we never
+    // return zero legs to the caller.
+    const finalLegs = legsAfterClv.length > 0 ? legsAfterClv : allLegs;
 
     // Build optimized parlays
-    const parlays = buildParlays(allLegs, numLegs, count, sortMode, tier, calibrationFactors);
-    const legsScored = allLegs.filter((l) => l.scored).length;
+    const parlays = buildParlays(finalLegs, numLegs, count, sortMode, tier, calibrationFactors);
+    const legsScored = finalLegs.filter((l) => l.scored).length;
     const tierCfg = (TIER_CONFIG as Record<string, { poolSize: number }>)[tier] ?? TIER_CONFIG.sharp;
 
     const response: ParlayResponse = {
@@ -2182,6 +2265,7 @@ export async function GET(request: NextRequest) {
         poolSize: tierCfg.poolSize,
         tier,
         generatedAt: new Date().toISOString(),
+        legsClvBlocked,
       },
     };
 
