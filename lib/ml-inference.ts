@@ -46,6 +46,16 @@ export interface LegFeatures {
 // vector for the same leg, or weights learned on one will be applied to a
 // different shape on the other. extractFeatures is the single source of
 // truth for that mapping.
+//
+// INVARIANT: every code path that needs a feature vector — training,
+// inference, validation, debug tooling — calls extractFeatures(leg)
+// directly. NEVER inline the field reads or default-fills elsewhere.
+// If a leg is missing a field (e.g. fairProb on a leg that skipped
+// de-vig), the default applied here is what the model was trained on,
+// so the inference value matches the training distribution by
+// construction. Inlining defaults at the call site would silently
+// break this — the model would have learned weights for one default
+// and the caller would feed it another.
 
 const SPORTS = ["NBA", "NFL", "MLB", "NHL", "UFC", "NCAAF", "NCAAB", "soccer"] as const;
 const MARKETS = ["moneyline", "spread", "total"] as const;
