@@ -272,6 +272,19 @@ async function checkScores() {
       let allResolved = true;
       let anyLost = false;
 
+      // Per-leg outcome log written back to the parlay row so the calibration
+      // job can bucket by (sport, market, odds_bucket) at LEG granularity
+      // instead of just rolling everything up to the parlay's win/loss.
+      const legResults: Array<{
+        gameId: string | null;
+        sport: string;
+        market: string;
+        pick: string;
+        odds: number | null;
+        decimalOdds: number | null;
+        result: "won" | "lost";
+      }> = [];
+
       for (const leg of legs) {
         const sportKey = SPORT_MAP[leg.sport?.toUpperCase()];
         if (!sportKey) {
@@ -296,6 +309,21 @@ async function checkScores() {
         if (!result) {
           anyLost = true;
         }
+
+        legResults.push({
+          gameId: leg.gameId ?? null,
+          sport: leg.sport,
+          market: leg.market,
+          pick: leg.pick,
+          odds: typeof leg.odds === "number" ? leg.odds : null,
+          decimalOdds: (() => {
+            const decRaw = (leg as unknown as { decimalOdds?: unknown }).decimalOdds;
+            if (typeof decRaw === "number") return decRaw;
+            if (typeof leg.odds === "number") return americanToDecimal(leg.odds);
+            return null;
+          })(),
+          result: result ? "won" : "lost",
+        });
       }
 
       if (!allResolved && !anyLost) continue;
@@ -355,6 +383,7 @@ async function checkScores() {
       const updatePayload: Record<string, unknown> = { status: newStatus, profit };
       if (clvPercent !== null) updatePayload.clv_percent = clvPercent;
       if (closingLines.length > 0) updatePayload.closing_lines = closingLines;
+      if (legResults.length > 0) updatePayload.leg_results = legResults;
 
       const { error: updateError } = await supabase
         .from("parlays")
@@ -362,8 +391,9 @@ async function checkScores() {
         .eq("id", parlay.id);
 
       if (updateError) {
-        // If the CLV columns haven't been migrated yet, retry without them.
-        if (/column .*(clv_percent|closing_lines)/i.test(updateError.message || "")) {
+        // If new columns haven't been migrated yet, retry without them so
+        // grading still proceeds on environments lagging on migrations.
+        if (/column .*(clv_percent|closing_lines|leg_results)/i.test(updateError.message || "")) {
           const { error: retryErr } = await supabase
             .from("parlays")
             .update({ status: newStatus, profit })

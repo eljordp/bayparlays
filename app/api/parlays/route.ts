@@ -93,21 +93,48 @@ async function getCalibrationFactors(): Promise<Map<string, number>> {
   const factors = new Map<string, number>();
   try {
     const { supabase } = await import("@/lib/supabase");
-    // Pull the most recent calibration row per (sport, market) combination.
-    // Keys: "SPORT|MARKET" for per-market, "SPORT" for per-sport, "_GLOBAL" for the global row.
-    // Lookup falls back from most-specific to most-general so brand-new market
-    // splits don't break callers that only have a sport-level row.
-    const { data } = await supabase
+    // v2 schema: rows can have sport, market, AND odds_bucket (per migration
+    // 023). Cascade priority for callers (most-specific wins):
+    //   sport|market|bucket  →  sport|market  →  sport|bucket  →  sport
+    //   →  bucket  →  _GLOBAL
+    // Older rows without odds_bucket simply land at the sport|market or sport
+    // tier, so v1 calibration still feeds the cascade as a fallback.
+    let data: Array<{
+      sport: string | null;
+      market: string | null;
+      odds_bucket?: string | null;
+      calibration_factor: number;
+    }> | null = null;
+    const { data: v2Data, error: v2Err } = await supabase
       .from("model_calibration")
-      .select("sport, market, calibration_factor, computed_at")
+      .select("sport, market, odds_bucket, calibration_factor, computed_at")
       .order("computed_at", { ascending: false })
-      .limit(200);
+      .limit(500);
+    if (v2Err && /column .*odds_bucket/i.test(v2Err.message || "")) {
+      // odds_bucket column not migrated yet — fall back to v1 query.
+      const { data: v1Data } = await supabase
+        .from("model_calibration")
+        .select("sport, market, calibration_factor, computed_at")
+        .order("computed_at", { ascending: false })
+        .limit(200);
+      data = v1Data;
+    } else if (!v2Err) {
+      data = v2Data;
+    }
     if (data) {
       for (const row of data) {
+        const sport = row.sport ?? "";
+        const market = row.market ?? "";
+        const bucket = row.odds_bucket ?? "";
         let key: string;
-        if (row.sport && row.market) key = `${row.sport}|${row.market}`;
-        else if (row.sport) key = row.sport;
+        if (sport && market && bucket) key = `${sport}|${market}|${bucket}`;
+        else if (sport && market) key = `${sport}|${market}`;
+        else if (sport && bucket) key = `${sport}||${bucket}`;
+        else if (sport) key = sport;
+        else if (bucket) key = `||${bucket}`;
         else key = "_GLOBAL";
+        // computed_at DESC means the first row we see for any key is the
+        // freshest; skip subsequent older duplicates.
         if (!factors.has(key)) {
           factors.set(key, row.calibration_factor);
         }
@@ -120,17 +147,43 @@ async function getCalibrationFactors(): Promise<Map<string, number>> {
   return factors;
 }
 
+// Decimal-odds buckets — must match the labels written by /api/cron/calibrate
+// and documented on model_calibration.odds_bucket (migration 023).
+function oddsBucketFor(decimal: number | undefined): string | null {
+  if (typeof decimal !== "number" || !isFinite(decimal) || decimal <= 1) return null;
+  if (decimal <= 1.5) return "heavy_fav";
+  if (decimal <= 1.91) return "fav";
+  if (decimal <= 2.1) return "pick";
+  if (decimal <= 3.0) return "dog";
+  if (decimal <= 6.0) return "long";
+  return "moon";
+}
+
 function calibrationFactorFor(
   factors: Map<string, number>,
   sport: string | undefined,
   market?: string | undefined,
+  decimalOdds?: number | undefined,
 ): number {
-  // Most-specific wins: sport+market > sport > global.
+  // Most-specific wins. Cascade order matches getCalibrationFactors keys.
+  const bucket = oddsBucketFor(decimalOdds);
+  if (sport && market && bucket) {
+    const k = `${sport}|${market}|${bucket}`;
+    if (factors.has(k)) return factors.get(k)!;
+  }
   if (sport && market) {
     const k = `${sport}|${market}`;
     if (factors.has(k)) return factors.get(k)!;
   }
+  if (sport && bucket) {
+    const k = `${sport}||${bucket}`;
+    if (factors.has(k)) return factors.get(k)!;
+  }
   if (sport && factors.has(sport)) return factors.get(sport)!;
+  if (bucket) {
+    const k = `||${bucket}`;
+    if (factors.has(k)) return factors.get(k)!;
+  }
   if (factors.has("_GLOBAL")) return factors.get("_GLOBAL")!;
   return 1.0;
 }
@@ -1456,7 +1509,8 @@ function buildParlays(
     // get penalized — instead of one blanket NBA factor that averages them
     // and punishes the good picks. Falls back to per-sport, then global.
     const calibratedProbs = selected.map((leg) =>
-      leg.ourProb * calibrationFactorFor(calibrationFactors, leg.sport, leg.market),
+      leg.ourProb *
+      calibrationFactorFor(calibrationFactors, leg.sport, leg.market, leg.decimalOdds),
     );
     const rawCombinedProb = calibratedProbs.reduce((acc, p) => acc * p, 1);
     const combinedProb = Math.max(0.01, Math.min(0.99, rawCombinedProb));
