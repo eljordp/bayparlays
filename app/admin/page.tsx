@@ -383,6 +383,21 @@ export default function AdminPage() {
                         Logistic regression fit nightly on graded legs. See learned feature weights, training loss, and history. Retrain on demand.
                       </p>
                     </Link>
+                    <Link
+                      href="/admin/signals"
+                      className="block p-5 rounded-xl transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <div className="text-base font-semibold mb-1" style={{ color: "#ededed" }}>
+                        Betting Signals →
+                      </div>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        Action Network public/money split + Pinnacle sharp lines. Free public sources — zero Odds API cost. Sharp/square divergence per game.
+                      </p>
+                    </Link>
                   </div>
                 </section>
               )}

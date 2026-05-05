@@ -1,0 +1,46 @@
+name: BayParlays Fetch Signals
+
+# Hourly cron that pulls Action Network public/money data + Pinnacle sharp
+# lines and writes them to betting_signals. Both sources are FREE public
+# APIs — zero Odds API credit cost. Schedule mirrors the line-snapshot
+# active-hours window (16:00-04:00 UTC) since that's when US games tip
+# and the public/money percentages are meaningful.
+#
+# /api/admin/recompute-calibration-style auth: gated by CRON_SECRET when
+# set, falls open when not. The /api/cron/fetch-signals endpoint handles
+# both. We use a service-role insert so RLS policies on betting_signals
+# don't block writes.
+
+on:
+  schedule:
+    - cron: "0 16 * * *"
+    - cron: "0 17 * * *"
+    - cron: "0 18 * * *"
+    - cron: "0 19 * * *"
+    - cron: "0 20 * * *"
+    - cron: "0 21 * * *"
+    - cron: "0 22 * * *"
+    - cron: "0 23 * * *"
+    - cron: "0 0 * * *"
+    - cron: "0 1 * * *"
+    - cron: "0 2 * * *"
+    - cron: "0 3 * * *"
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger fetch-signals cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          AUTH_HEADER=""
+          if [ -n "$CRON_SECRET" ]; then
+            AUTH_HEADER="-H 'Authorization: Bearer $CRON_SECRET'"
+          fi
+          curl -s -o /dev/null -w "fetch-signals HTTP %{http_code} in %{time_total}s\n" \
+            $AUTH_HEADER \
+            "https://bayparlays.vercel.app/api/cron/fetch-signals"
