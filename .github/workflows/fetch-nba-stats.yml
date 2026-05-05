@@ -1,0 +1,33 @@
+name: BayParlays Fetch NBA Stats
+
+# Daily cron — pulls NBA team stats from ESPN's public core API and
+# upserts to nba_team_stats. Runs at 13:00 UTC = 9am ET, after the
+# overnight ESPN refresh and before our morning slate generation.
+#
+# stats.nba.com is fully blocked from Vercel-region IPs (HTTP 000) so
+# we route around it via ESPN. ESPN's stats are slightly less granular
+# than nba.com's official feed (no on/off splits, no shot zones) but
+# cover all the fundamentals: pace, off/def rating, FG/3P%, rebound
+# splits, turnover rates.
+
+on:
+  schedule:
+    - cron: "0 13 * * *"  # 13:00 UTC = 9am ET
+  workflow_dispatch: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger fetch-nba-stats cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          AUTH_HEADER=""
+          if [ -n "$CRON_SECRET" ]; then
+            AUTH_HEADER="-H 'Authorization: Bearer $CRON_SECRET'"
+          fi
+          curl -s -o /dev/null -w "fetch-nba-stats HTTP %{http_code} in %{time_total}s\n" \
+            $AUTH_HEADER \
+            "https://bayparlays.vercel.app/api/cron/fetch-nba-stats"

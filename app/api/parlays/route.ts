@@ -734,6 +734,10 @@ interface ExtractCtx {
     awayXwoba: number | null;
     confirmed: boolean;
   } | null;  // MLB only — confirmed lineup avg xWOBA vs league
+  nbaTeams?: {
+    home: { pace: number | null; off_rating: number | null; def_rating: number | null; net_rating: number | null } | null;
+    away: { pace: number | null; off_rating: number | null; def_rating: number | null; net_rating: number | null } | null;
+  } | null;  // NBA only — pace + efficiency ratings per team
 }
 
 // Subset of statcast_pitchers we read into the leg pipeline. Stored separately
@@ -752,6 +756,17 @@ interface StatcastBatterSnapshot {
   player_id: number;
   est_woba: number | null;
   woba: number | null;
+}
+
+// NBA team stats snapshot used for game-context features. Pace + ratings
+// drive total expectations; net rating is the headline quality metric.
+interface NbaTeamSnapshot {
+  team_name: string;
+  team_abbrev: string | null;
+  pace: number | null;
+  off_rating: number | null;
+  def_rating: number | null;
+  net_rating: number | null;
 }
 
 // ─── Confidence-bias pipeline ────────────────────────────────────────────────
@@ -2157,6 +2172,45 @@ export async function GET(request: NextRequest) {
         })()
       : Promise.resolve(new Map<number, StatcastPitcherSnapshot>());
 
+    // NBA team stats map — keyed by lowercase team name. Loads both
+    // regular-season and playoff rows; we prefer the playoff row when
+    // it exists since it's more recent during the postseason. Empty
+    // map means nba_team_stats wasn't populated yet — leg construction
+    // falls back to the existing Elo-only signal.
+    const nbaTeamStatsPromise: Promise<Map<string, NbaTeamSnapshot>> = sports.includes("nba")
+      ? (async () => {
+          try {
+            const { supabaseAdmin } = await import("@/lib/supabase-admin");
+            const { supabase: anon } = await import("@/lib/supabase");
+            const sb = supabaseAdmin ?? anon;
+            const { data } = await sb
+              .from("nba_team_stats")
+              .select("team_name, team_abbrev, pace, off_rating, def_rating, net_rating, season_type")
+              .order("season_type", { ascending: false }); // playoffs (3) before regular (2)
+            const m = new Map<string, NbaTeamSnapshot>();
+            for (const row of (data ?? []) as Array<NbaTeamSnapshot & { season_type: number }>) {
+              if (!row.team_name) continue;
+              const key = row.team_name.toLowerCase();
+              // First write wins — we ordered DESC by season_type so
+              // playoff row (3) lands first when present.
+              if (!m.has(key)) {
+                m.set(key, {
+                  team_name: row.team_name,
+                  team_abbrev: row.team_abbrev,
+                  pace: row.pace,
+                  off_rating: row.off_rating,
+                  def_rating: row.def_rating,
+                  net_rating: row.net_rating,
+                });
+              }
+            }
+            return m;
+          } catch {
+            return new Map<string, NbaTeamSnapshot>();
+          }
+        })()
+      : Promise.resolve(new Map<string, NbaTeamSnapshot>());
+
     // Statcast batter map — used to compute lineup strength when MLB
     // confirms starting batters. Same shape as pitcher map.
     const statcastBattersPromise: Promise<Map<number, StatcastBatterSnapshot>> = sports.includes("mlb")
@@ -2189,6 +2243,7 @@ export async function GET(request: NextRequest) {
       mlbUmpires,
       statcastPitchers,
       statcastBatters,
+      nbaTeamStats,
     ] = await Promise.all([
       Promise.allSettled(sportFetches),
       mlbLineupsPromise,
@@ -2199,6 +2254,7 @@ export async function GET(request: NextRequest) {
       umpiresPromise,
       statcastPitchersPromise,
       statcastBattersPromise,
+      nbaTeamStatsPromise,
     ]);
 
     // Now we have all games — fetch line movements for them in one query
@@ -2353,6 +2409,35 @@ export async function GET(request: NextRequest) {
         if (sport === "nhl") {
           const nhlGoalie = findNhlGoalieMatchup(nhlGoalies, game.home_team, game.away_team);
           ctx = { ...(ctx || {}), nhlGoalie };
+        }
+        if (sport === "nba" && nbaTeamStats.size > 0) {
+          // ESPN team names match The Odds API team names exactly for NBA
+          // (both use "Los Angeles Lakers" etc.) — direct lookup, no fuzzy.
+          const home = nbaTeamStats.get(game.home_team.toLowerCase()) ?? null;
+          const away = nbaTeamStats.get(game.away_team.toLowerCase()) ?? null;
+          if (home || away) {
+            ctx = {
+              ...(ctx || {}),
+              nbaTeams: {
+                home: home
+                  ? {
+                      pace: home.pace,
+                      off_rating: home.off_rating,
+                      def_rating: home.def_rating,
+                      net_rating: home.net_rating,
+                    }
+                  : null,
+                away: away
+                  ? {
+                      pace: away.pace,
+                      off_rating: away.off_rating,
+                      def_rating: away.def_rating,
+                      net_rating: away.net_rating,
+                    }
+                  : null,
+              },
+            };
+          }
         }
         // Always include line movements (covers every leg, every sport).
         ctx = { ...(ctx || {}), lineMovements };

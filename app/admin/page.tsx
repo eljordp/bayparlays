@@ -428,6 +428,21 @@ export default function AdminPage() {
                         Season-to-date save % / GAA from the official NHL Stats API. Free, daily refresh. The starting goalie matchup is the single biggest signal for NHL game-level betting — a backup at .885 vs starter at .920 moves a total a full goal.
                       </p>
                     </Link>
+                    <Link
+                      href="/admin/nba-stats"
+                      className="block p-5 rounded-xl transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <div className="text-base font-semibold mb-1" style={{ color: "#ededed" }}>
+                        NBA Team Stats →
+                      </div>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        Per-team pace, off/def rating, net rating. Routed via ESPN since stats.nba.com blocks Vercel IPs. Pace + ratings drive total expectations and let the model see which teams play in scoring environments vs grindy defensive ones.
+                      </p>
+                    </Link>
                   </div>
                 </section>
               )}
