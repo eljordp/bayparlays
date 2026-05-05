@@ -15,25 +15,42 @@ name: BayParlays Line Snapshot
 # closing-line estimate is within ~60 min of tipoff for any game in
 # our window — was 6+ hours stale before this cron existed.
 #
-# Cost: 5 sports × 13 hours = ~65 credits/day. Combined with 6
-# research scans (30) and resolver runs (~30) = ~125 credits/day.
-# Budget is 500/day, leaves 375 headroom.
+# Cost: ~21 snapshots × 5 sports = ~105 credits/day. Combined with 6
+# research scans (30) and resolver runs (~30) = ~165 credits/day.
+# Budget is 500/day, leaves 335 headroom (intentional — additional
+# snapshot density past 30-min has diminishing returns; remaining
+# budget reserved for retries, future player-props markets, or
+# manual workflow_dispatch runs).
 
 on:
   schedule:
+    # Hourly base coverage during active hours.
     - cron: "0 16 * * *"  # 16:00 UTC = 12pm ET / 9am PT
     - cron: "0 17 * * *"
     - cron: "0 18 * * *"
-    - cron: "0 19 * * *"
-    - cron: "0 20 * * *"
-    - cron: "0 21 * * *"
-    - cron: "0 22 * * *"
-    - cron: "0 23 * * *"
-    - cron: "0 0 * * *"   # 00:00 UTC = 8pm ET / 5pm PT — peak tipoff
-    - cron: "0 1 * * *"
-    - cron: "0 2 * * *"
-    - cron: "0 3 * * *"
     - cron: "0 4 * * *"   # 04:00 UTC = 12am ET / 9pm PT
+    # 30-min cadence during 19:00-02:00 UTC — peak US tipoff window
+    # (3pm ET to 10pm ET). Most MLB / NBA / NHL games tip in here, and
+    # the closing line forms in the last hour. Denser sampling means
+    # the line_history row used for CLV calculation is within ~30 min
+    # of tipoff instead of ~60 min.
+    - cron: "0 19 * * *"
+    - cron: "30 19 * * *"
+    - cron: "0 20 * * *"
+    - cron: "30 20 * * *"
+    - cron: "0 21 * * *"
+    - cron: "30 21 * * *"
+    - cron: "0 22 * * *"
+    - cron: "30 22 * * *"
+    - cron: "0 23 * * *"
+    - cron: "30 23 * * *"
+    - cron: "0 0 * * *"   # peak NBA/NHL tipoff
+    - cron: "30 0 * * *"
+    - cron: "0 1 * * *"
+    - cron: "30 1 * * *"
+    - cron: "0 2 * * *"
+    - cron: "30 2 * * *"
+    - cron: "0 3 * * *"
   workflow_dispatch: {}
 
 jobs:
