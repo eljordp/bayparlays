@@ -289,6 +289,14 @@ export default function ResultsPage() {
               >
                 Leaderboard &rarr;
               </Link>
+              <span style={{ color: "rgba(0,0,0,0.25)" }}>·</span>
+              <Link
+                href="/learnings"
+                className="px-2.5 py-1 rounded-full transition-colors hover:bg-black/5"
+                style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+              >
+                Where We Have Edge &rarr;
+              </Link>
             </div>
             {stats?.smallSample && (
               <div
