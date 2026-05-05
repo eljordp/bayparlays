@@ -38,6 +38,10 @@ export interface LegFeatures {
   hasInjuryNote?: boolean;
   hasRestNote?: boolean;
   scored?: boolean;
+  // External signals from betting_signals (Action Network + Pinnacle).
+  // Optional — legs without signal data fall back to defaults that contribute
+  // nothing to the prediction (zero after standardization).
+  sharpLeanForPick?: number | null;
 }
 
 // ─── Feature canonicalization ──────────────────────────────────────────────
@@ -75,7 +79,14 @@ export function oddsBucketFor(decimal: number | undefined): string | null {
 // both for training (so weights end up in a consistent order) and as the
 // `feature_order` array stored alongside the weights.
 export function canonicalFeatureOrder(): string[] {
-  const cont = ["decimalOdds", "ourProb", "fairProb", "evVsFair", "bookCount"];
+  const cont = [
+    "decimalOdds",
+    "ourProb",
+    "fairProb",
+    "evVsFair",
+    "bookCount",
+    "sharpLeanForPick", // money% − public% on this leg's pick side; positive = sharp side
+  ];
   const bools = [
     "sharpEdge",
     "hasWeatherNote",
@@ -90,7 +101,14 @@ export function canonicalFeatureOrder(): string[] {
   return [...cont, ...bools, ...sportOneHot, ...marketOneHot, ...bucketOneHot];
 }
 
-export const CONTINUOUS_FEATURES = ["decimalOdds", "ourProb", "fairProb", "evVsFair", "bookCount"];
+export const CONTINUOUS_FEATURES = [
+  "decimalOdds",
+  "ourProb",
+  "fairProb",
+  "evVsFair",
+  "bookCount",
+  "sharpLeanForPick",
+];
 
 export function extractFeatures(leg: LegFeatures): Record<string, number> {
   const out: Record<string, number> = {};
@@ -103,6 +121,12 @@ export function extractFeatures(leg: LegFeatures): Record<string, number> {
   out.fairProb = typeof leg.fairProb === "number" ? leg.fairProb : (out.ourProb ?? 0.5);
   out.evVsFair = typeof leg.evVsFair === "number" ? leg.evVsFair : 0;
   out.bookCount = typeof leg.bookCount === "number" ? leg.bookCount : 1;
+  // sharpLeanForPick defaults to 0 when AN didn't report (game wasn't in
+  // their scoreboard or pre-game window not yet open). Zero on a centered
+  // feature is "no signal," which is the right default — the model should
+  // ignore it instead of guessing a mean.
+  out.sharpLeanForPick =
+    typeof leg.sharpLeanForPick === "number" ? leg.sharpLeanForPick : 0;
 
   // Booleans
   out.sharpEdge = leg.sharpEdge ? 1 : 0;

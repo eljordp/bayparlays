@@ -417,6 +417,21 @@ interface ScoredLeg {
   restNote?: string | null;     // e.g. "Lakers: B2B (1d rest) · Warriors: 3d rest" (NBA/NHL)
   homeForm?: FormGame[];        // last 5 completed games for the home team — ESPN-style inline context
   awayForm?: FormGame[];        // last 5 completed games for the away team
+  // ── External signal join (May 2026) ─────────────────────────────────
+  // Pulled from betting_signals table at /api/parlays request time. The
+  // public/money split is the headline sharp signal; pinnacle_max_stake
+  // indicates Pinnacle's confidence in their own line.
+  publicPctHome?: number | null;
+  publicPctAway?: number | null;
+  moneyPctHome?: number | null;
+  moneyPctAway?: number | null;
+  pinnacleMlHome?: number | null;
+  pinnacleMlAway?: number | null;
+  pinnacleMaxStake?: number | null;
+  // Computed: money% on this side − public% on this side. >0 = sharp
+  // money is on this side relative to crowd. <0 = square money on this
+  // side. Computed at attach time so leg consumers don't redo the math.
+  sharpLeanForPick?: number | null;
 }
 
 interface ParlayLeg {
@@ -2318,6 +2333,75 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Attach external betting signals (Action Network public/money split +
+    // Pinnacle benchmark lines) to each leg by team match. The cron at
+    // /api/cron/fetch-signals populates betting_signals every hour during
+    // active windows; here we pull the latest snapshot per game for the
+    // sports we're scanning and graft the signal onto matching legs.
+    try {
+      const { supabaseAdmin } = await import("@/lib/supabase-admin");
+      const { supabase: anon } = await import("@/lib/supabase");
+      const sigClient = supabaseAdmin ?? anon;
+      const sportLabels = Array.from(
+        new Set(allLegs.map((l) => l.sport.toUpperCase())),
+      );
+      if (sportLabels.length > 0) {
+        const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+        const { data: signalRows } = await sigClient
+          .from("betting_signals")
+          .select(
+            "source, sport, home_team, away_team, commence_time, ml_home, ml_away, public_pct_home, public_pct_away, money_pct_home, money_pct_away, pinnacle_max_stake, captured_at",
+          )
+          .in("sport", sportLabels)
+          .gte("captured_at", cutoff)
+          .order("captured_at", { ascending: false })
+          .limit(1000);
+
+        // Dedup to most-recent signal per (source, normalized teams).
+        type SigRow = NonNullable<typeof signalRows>[number];
+        const teamKey = (a: string, b: string) =>
+          [a, b].map((t) => t.toLowerCase().replace(/[^a-z0-9]/g, "")).sort().join("|");
+        const an = new Map<string, SigRow>();
+        const pin = new Map<string, SigRow>();
+        for (const r of signalRows ?? []) {
+          const k = teamKey(r.home_team, r.away_team);
+          if (r.source === "actionnetwork" && !an.has(k)) an.set(k, r);
+          if (r.source === "pinnacle" && !pin.has(k)) pin.set(k, r);
+        }
+
+        for (const leg of allLegs) {
+          const k = teamKey(leg.homeTeam ?? "", leg.awayTeam ?? "");
+          const a = an.get(k);
+          const p = pin.get(k);
+          if (a) {
+            leg.publicPctHome = a.public_pct_home;
+            leg.publicPctAway = a.public_pct_away;
+            leg.moneyPctHome = a.money_pct_home;
+            leg.moneyPctAway = a.money_pct_away;
+            // Compute sharpLeanForPick: positive = sharp money is on the
+            // side this leg picks, negative = square. Neutral if AN
+            // didn't report on this game.
+            const isHomePick = !!leg.homeTeam && leg.pick.includes(leg.homeTeam);
+            const isAwayPick = !!leg.awayTeam && leg.pick.includes(leg.awayTeam);
+            if (isHomePick && a.public_pct_home != null && a.money_pct_home != null) {
+              leg.sharpLeanForPick =
+                Math.round((a.money_pct_home - a.public_pct_home) * 10) / 10;
+            } else if (isAwayPick && a.public_pct_away != null && a.money_pct_away != null) {
+              leg.sharpLeanForPick =
+                Math.round((a.money_pct_away - a.public_pct_away) * 10) / 10;
+            }
+          }
+          if (p) {
+            leg.pinnacleMlHome = p.ml_home;
+            leg.pinnacleMlAway = p.ml_away;
+            leg.pinnacleMaxStake = p.pinnacle_max_stake;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to attach betting_signals to legs:", err);
+    }
+
     // Pull learned calibration factors AND CLV gates (cached 5 min) so
     // combinedProb gets scaled toward observed reality, and demonstrably
     // losing buckets get dropped before they spray into more parlays.
@@ -2348,6 +2432,7 @@ export async function GET(request: NextRequest) {
             hasInjuryNote: !!leg.injuryNote,
             hasRestNote: !!leg.restNote,
             scored: leg.scored,
+            sharpLeanForPick: leg.sharpLeanForPick,
           },
           mlModel,
         );

@@ -141,6 +141,13 @@ export async function GET(req: NextRequest) {
         hasInjuryNote: !!leg.injuryNote,
         hasRestNote: !!leg.restNote,
         scored: leg.scored,
+        // sharpLeanForPick was added 2026-05-04. Old graded legs don't
+        // have it stored on parlays.legs jsonb (the field didn't exist
+        // when they were inserted), so for historical samples this is
+        // undefined → defaults to 0 in extractFeatures → no influence.
+        // New parlays generated post-deploy will have the value
+        // populated and the model picks up the signal as it retrains.
+        sharpLeanForPick: (leg as { sharpLeanForPick?: number }).sharpLeanForPick,
       });
       legsMatched++;
       samples.push({
