@@ -1,0 +1,30 @@
+name: BayParlays Fetch Statcast
+
+# Daily cron — pulls Baseball Savant expected statistics + exit velocity
+# leaderboards and upserts to statcast_pitchers / statcast_batters. Runs
+# at 14:00 UTC = 9am ET, after Savant's overnight refresh (around 6am ET)
+# but before our morning slate generation kicks off at 12:00 UTC.
+#
+# Free public CSV — zero Odds API credit cost.
+
+on:
+  schedule:
+    - cron: "0 14 * * *"  # 14:00 UTC = 9am ET
+  workflow_dispatch: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger fetch-statcast cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          AUTH_HEADER=""
+          if [ -n "$CRON_SECRET" ]; then
+            AUTH_HEADER="-H 'Authorization: Bearer $CRON_SECRET'"
+          fi
+          curl -s -o /dev/null -w "fetch-statcast HTTP %{http_code} in %{time_total}s\n" \
+            $AUTH_HEADER \
+            "https://bayparlays.vercel.app/api/cron/fetch-statcast"
