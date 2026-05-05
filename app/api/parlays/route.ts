@@ -2415,163 +2415,32 @@ export async function GET(request: NextRequest) {
     // Cache the response
     setCachedResponse(response, sports, numLegs, count, sortMode + ":" + tier);
 
-    // Save parlays to tracking database. Per-call dedup uses a leg-signature
-    // set against today's existing rows so cross-call duplicates within the
-    // daily cron's six combo batches don't pile up, but unique parlays from
-    // each batch persist (vs the old 5-min time gate which blocked all but
-    // the first batch's inserts and choked the data flow at ~5/run).
+    // Single source of truth for what gets WRITTEN to the parlays table:
+    // the slate generation cron at /api/cron/generate-slate. This route
+    // (/api/parlays) used to also insert parlays inline whenever it was
+    // called, with its own EV ≥ 15% gate. The slate cron had its own
+    // path with a more-permissive gate. The two filters drifted and the
+    // slate cron started publishing post-calibration negative-EV picks.
+    //
+    // Refactored 2026-05-04: /api/parlays is now READ-ONLY for parlays.
+    // Only the slate cron writes. One filter, one source of truth, no
+    // way for the gates to drift. Line_history is still snapshotted
+    // here because it's a separate table that benefits from frequent
+    // updates regardless of who triggered the request.
     const debugInsert = searchParams.get("debug") === "insert";
     const insertDiag: Record<string, unknown> = {};
     try {
       const { supabase } = await import("@/lib/supabase");
 
-      // Pull today's already-tracked parlay signatures so we skip duplicates
-      // without blocking unique inserts. Signature = sorted "gameId::pick"
-      // joined by "|" — exact match collapses identical parlays, different
-      // legs go through.
-      const todayStart = new Date();
-      todayStart.setUTCHours(0, 0, 0, 0);
-      const { data: existing } = await supabase
-        .from("parlays")
-        .select("legs")
-        .gte("created_at", todayStart.toISOString());
-      const existingSigs = new Set<string>();
-      for (const row of existing || []) {
-        const legs = (row as { legs?: Array<{ gameId?: string; pick?: string }> }).legs;
-        if (!Array.isArray(legs)) continue;
-        const sig = legs
-          .map((l) => `${l.gameId ?? ""}::${l.pick ?? ""}`)
-          .sort()
-          .join("|");
-        existingSigs.add(sig);
-      }
-      insertDiag.existingTodayCount = existingSigs.size;
-
-      {
-        // Only track parlays with meaningful claimed edge. Was 5; raised to
-        // 15 because edge accuracy analysis (admin/research/edge-accuracy)
-        // showed zero parlays were actually being generated below 20% — the
-        // 5 floor was decorative. Setting the real floor where the actual
-        // floor is so the data we keep is consistently mid-edge or above.
-        const MIN_EV_TO_TRACK = 15;
-        // Hit-rate floor (added 2026-04-29). The EV gate alone passes
-        // longshots: a 5%-confidence parlay at +9000 has EV +250%, which
-        // looks great on paper and disastrously on the scoreboard. Past 3
-        // days, picks below confidence 15% went 3W/87L (3.3% hit rate).
-        // Pair the EV claim with a real-shot threshold so what we track
-        // is at least plausible to actually land.
-        const MIN_CONFIDENCE_TO_TRACK = 15;
-        const sigOf = (legs: Array<{ gameId?: string; pick?: string }>) =>
-          legs
-            .map((l) => `${l.gameId ?? ""}::${l.pick ?? ""}`)
-            .sort()
-            .join("|");
-        const trackable = parlays.filter((p) => {
-          if (p.evPercent < MIN_EV_TO_TRACK) return false;
-          if (p.confidence < MIN_CONFIDENCE_TO_TRACK) return false;
-          const sig = sigOf(p.legs);
-          if (existingSigs.has(sig)) return false;
-          existingSigs.add(sig); // dedupe within this batch too
-          return true;
-        });
-        insertDiag.afterDedupCount = trackable.length;
-
-        if (trackable.length > 0) {
-          const nowIso = new Date().toISOString();
-          const baseRows = trackable.map((p) => ({
-            legs: p.legs,
-            combined_odds: p.combinedOdds,
-            combined_decimal: p.combinedDecimal,
-            ev: p.ev,
-            ev_percent: p.evPercent,
-            confidence: p.confidence,
-            payout: p.payout,
-            legs_total: p.legs.length,
-            sports: [...new Set(p.legs.map((l) => l.sport))],
-          }));
-          // Compact opening-lines snapshot — compared to closing-line at
-          // score-check time to compute CLV (the real sharpness metric).
-          const openingLinesByParlay = trackable.map((p) =>
-            p.legs.map((l) => ({
-              gameId: l.gameId,
-              market: l.market,
-              pick: l.pick,
-              odds: l.odds,
-              book: l.book,
-              impliedProb: l.impliedProb,
-              fairProb: l.fairProb,
-              capturedAt: nowIso,
-            })),
-          );
-          const rowsWithCategory = baseRows.map((r, i) => ({
-            ...r,
-            category: trackable[i].category,
-            opening_lines: openingLinesByParlay[i],
-          }));
-
-          // Try the full payload first; if column migrations (010, 012) have
-          // not been applied, fall back to dropping the new columns.
-          const { error: insertErr, data: insertData } = await supabase
-            .from("parlays")
-            .insert(rowsWithCategory)
-            .select();
-
-          insertDiag.attemptedCount = rowsWithCategory.length;
-          insertDiag.firstAttempt = insertErr
-            ? { error: insertErr.message, code: insertErr.code, details: insertErr.details }
-            : { ok: true, inserted: insertData?.length ?? 0 };
-
-          if (insertErr) {
-            console.error("Parlay insert failed:", insertErr);
-          }
-
-          // Detect schema-drift errors via PostgREST error code (PGRST204 =
-          // schema cache miss for an unknown column) OR by substring match
-          // on the column name. The previous regex assumed "column X" word
-          // order; PostgREST uses "X column" so it never matched and the
-          // fallback never ran. Result: 3 days of zero inserts on prod.
-          const isSchemaMiss = (err: { message?: string | null; code?: string | null } | null) => {
-            if (!err) return false;
-            if (err.code === "PGRST204") return true;
-            const msg = err.message || "";
-            return /(category|opening_lines|closing_lines|clv_percent)/i.test(msg);
-          };
-
-          if (isSchemaMiss(insertErr)) {
-            // Fall back step 1: drop opening_lines, keep category
-            const withCat = baseRows.map((r, i) => ({ ...r, category: trackable[i].category }));
-            const { error: catErr } = await supabase.from("parlays").insert(withCat);
-            insertDiag.secondAttempt = catErr
-              ? { error: catErr.message, code: catErr.code }
-              : { ok: true };
-            if (catErr) console.error("Parlay insert (cat fallback) failed:", catErr);
-            if (isSchemaMiss(catErr)) {
-              // Fall back step 2: bare row, no category, no opening_lines
-              const { error: bareErr } = await supabase.from("parlays").insert(baseRows);
-              insertDiag.thirdAttempt = bareErr
-                ? { error: bareErr.message, code: bareErr.code }
-                : { ok: true };
-              if (bareErr) console.error("Parlay insert (bare fallback) failed:", bareErr);
-            }
-          }
-        } else {
-          insertDiag.attemptedCount = 0;
-          insertDiag.note = "no parlays met EV>=5 gate";
-        }
-
-        // Snapshot current best lines for movement analysis.
-        // Gated on the same 5-minute window as parlay inserts to avoid
-        // hammering the table on every request.
-        if (lineHistoryRows.length > 0) {
-          try {
-            await supabase.from("line_history").insert(lineHistoryRows);
-          } catch (err) {
-            console.error("Failed to snapshot line_history:", err);
-          }
+      if (lineHistoryRows.length > 0) {
+        try {
+          await supabase.from("line_history").insert(lineHistoryRows);
+        } catch (err) {
+          console.error("Failed to snapshot line_history:", err);
         }
       }
     } catch (e) {
-      console.error("Failed to track parlays:", e);
+      console.error("Failed to snapshot line_history:", e);
       insertDiag.outerCatch = String(e);
     }
 

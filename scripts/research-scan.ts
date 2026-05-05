@@ -24,10 +24,16 @@ import { createClient } from "@supabase/supabase-js";
 
 const BASE_URL =
   process.env.BAYPARLAYS_BASE_URL || "https://bayparlays.vercel.app";
-const SPORTS = "nba,mlb,nhl,ncaab,ncaaf";
+
+// Sports list — only currently-in-season + year-round sports. NCAAB / NCAAF
+// dropped 2026-05-04 (off-season, was burning ~2 credits/scan returning
+// empty). UFC + soccer (EPL) added: UFC runs year-round, soccer covers
+// May tail of EPL season.
+const SPORTS = "nba,mlb,nhl,ufc,soccer";
 const LEG_FETCH_COUNT = 200;       // x4 inside /api/parlays = up to 800 legs
-const MAX_LEG_COUNT_FOR_4LEG = 30; // 4-leg pool capped to top-30 by EV
-const TOP_K_TO_PERSIST = 500;      // store top 500 by EV per scan
+const MAX_LEG_COUNT_FOR_4LEG = 50; // was 30; with C(50,4)=230k still tractable
+const TOP_K_TO_PERSIST = 2000;     // was 500 (4× growth) — feeds calibration
+                                   // and ML model with more graded samples
 const SHARP_EV_THRESHOLD = 5;      // ev_percent >= 5 counts as "sharp"
 
 // ─── Types ─────────────────────────────────────────────────────────────────
