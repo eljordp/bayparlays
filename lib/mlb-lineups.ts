@@ -15,6 +15,15 @@ export interface ProbablePitcher {
   losses: number | null;
 }
 
+// One starting batter from a confirmed lineup. Order is the batting slot
+// (1-9). MLB AM IDs match Statcast player_id directly so downstream xWOBA
+// lookups don't need any name fuzzy-matching.
+export interface LineupBatter {
+  id: number;
+  fullName: string;
+  position?: string | null;
+}
+
 export interface GameLineup {
   gamePk: number;
   commenceTime: string;
@@ -22,6 +31,11 @@ export interface GameLineup {
   awayTeam: string;
   homePitcher: ProbablePitcher | null;
   awayPitcher: ProbablePitcher | null;
+  // Batting orders — populated when MLB confirms lineups (typically ~2hrs
+  // before first pitch). Empty array means lineups not yet confirmed.
+  homeBatters: LineupBatter[];
+  awayBatters: LineupBatter[];
+  lineupConfirmed: boolean;
 }
 
 type RawMlbPerson = { id?: number; fullName?: string };
@@ -36,19 +50,32 @@ const BASE = "https://statsapi.mlb.com/api/v1";
  * Returns empty array on failure — never throws (free API, no drama).
  */
 export async function fetchProbablePitchers(date: string): Promise<GameLineup[]> {
+  // hydrate=lineups gets us the confirmed batting orders when MLB has
+  // posted them (~2hrs before first pitch). Pre-confirmation the
+  // homePlayers/awayPlayers arrays are empty and we fall back to just
+  // the probable pitchers.
   const url =
     `${BASE}/schedule?sportId=1&date=${date}` +
-    `&hydrate=probablePitcher(note),team`;
+    `&hydrate=probablePitcher(note),lineups,team`;
 
   try {
     const res = await fetch(url, { next: { revalidate: 1800 } }); // 30min cache
     if (!res.ok) return [];
+    type RawMlbBatter = {
+      id?: number;
+      fullName?: string;
+      primaryPosition?: { abbreviation?: string };
+    };
     type RawMlbGame = {
       gamePk?: number;
       gameDate?: string;
       teams?: {
         home?: { team?: { name?: string }; probablePitcher?: RawMlbPerson };
         away?: { team?: { name?: string }; probablePitcher?: RawMlbPerson };
+      };
+      lineups?: {
+        homePlayers?: RawMlbBatter[];
+        awayPlayers?: RawMlbBatter[];
       };
     };
     type RawMlbSchedule = {
@@ -71,6 +98,24 @@ export async function fetchProbablePitchers(date: string): Promise<GameLineup[]>
         awayPitcherMeta ? fetchPitcherStats(awayPitcherMeta) : Promise.resolve(null),
       ]);
 
+      // Confirmed lineups — empty arrays when not yet posted.
+      const homePlayers = g.lineups?.homePlayers ?? [];
+      const awayPlayers = g.lineups?.awayPlayers ?? [];
+      const homeBatters: LineupBatter[] = homePlayers
+        .filter((p): p is RawMlbBatter & { id: number } => typeof p.id === "number")
+        .map((p) => ({
+          id: p.id,
+          fullName: p.fullName ?? "",
+          position: p.primaryPosition?.abbreviation ?? null,
+        }));
+      const awayBatters: LineupBatter[] = awayPlayers
+        .filter((p): p is RawMlbBatter & { id: number } => typeof p.id === "number")
+        .map((p) => ({
+          id: p.id,
+          fullName: p.fullName ?? "",
+          position: p.primaryPosition?.abbreviation ?? null,
+        }));
+
       lineups.push({
         gamePk: g.gamePk ?? 0,
         commenceTime: g.gameDate ?? "",
@@ -78,6 +123,12 @@ export async function fetchProbablePitchers(date: string): Promise<GameLineup[]>
         awayTeam: awayRaw?.team?.name ?? "",
         homePitcher,
         awayPitcher,
+        homeBatters,
+        awayBatters,
+        // "Confirmed" means BOTH teams have lineups posted. A single team
+        // posting unilaterally early is rare but possible — we treat it
+        // as not-yet-confirmed to avoid acting on partial signal.
+        lineupConfirmed: homeBatters.length > 0 && awayBatters.length > 0,
       });
     }
 

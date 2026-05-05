@@ -729,6 +729,11 @@ interface ExtractCtx {
     home?: StatcastPitcherSnapshot | null;
     away?: StatcastPitcherSnapshot | null;
   } | null;  // MLB only — Savant xWOBA/xERA regression signal per starter
+  lineupStrength?: {
+    homeXwoba: number | null;
+    awayXwoba: number | null;
+    confirmed: boolean;
+  } | null;  // MLB only — confirmed lineup avg xWOBA vs league
 }
 
 // Subset of statcast_pitchers we read into the leg pipeline. Stored separately
@@ -739,6 +744,14 @@ interface StatcastPitcherSnapshot {
   xera: number | null;
   era_xera_diff: number | null;
   est_woba_diff: number | null;
+}
+
+// Subset of statcast_batters used for lineup-strength computation. Just
+// the wOBA family — we don't need barrel% / hard-hit% at this layer.
+interface StatcastBatterSnapshot {
+  player_id: number;
+  est_woba: number | null;
+  woba: number | null;
 }
 
 // ─── Confidence-bias pipeline ────────────────────────────────────────────────
@@ -1364,6 +1377,40 @@ function extractLegsFromGame(
             pitcherNote = pitcherNote
               ? `${pitcherNote} · ${tags.join("; ")}`
               : tags.join("; ");
+          }
+        }
+        // Lineup-strength augmentation. League mean est_woba is ~0.320 — a
+        // posted lineup whose starters average ≥0.020 above (≈ "good
+        // bats playing") or ≥0.020 below ("regulars sitting") moves
+        // expected runs by enough to call out.
+        if (ctx.lineupStrength?.confirmed) {
+          const LEAGUE_MEAN_XWOBA = 0.32;
+          const FLAG = 0.02;
+          const lineupTags: string[] = [];
+          const home = ctx.lineupStrength.homeXwoba;
+          const away = ctx.lineupStrength.awayXwoba;
+          if (home !== null) {
+            const diff = home - LEAGUE_MEAN_XWOBA;
+            if (Math.abs(diff) >= FLAG) {
+              const lbl = diff > 0 ? "loaded" : "thin";
+              lineupTags.push(
+                `${ctx.lineup.homeTeam} lineup ${lbl} (${home.toFixed(3)} xWOBA)`,
+              );
+            }
+          }
+          if (away !== null) {
+            const diff = away - LEAGUE_MEAN_XWOBA;
+            if (Math.abs(diff) >= FLAG) {
+              const lbl = diff > 0 ? "loaded" : "thin";
+              lineupTags.push(
+                `${ctx.lineup.awayTeam} lineup ${lbl} (${away.toFixed(3)} xWOBA)`,
+              );
+            }
+          }
+          if (lineupTags.length > 0) {
+            pitcherNote = pitcherNote
+              ? `${pitcherNote} · ${lineupTags.join("; ")}`
+              : lineupTags.join("; ");
           }
         }
       }
@@ -2110,6 +2157,28 @@ export async function GET(request: NextRequest) {
         })()
       : Promise.resolve(new Map<number, StatcastPitcherSnapshot>());
 
+    // Statcast batter map — used to compute lineup strength when MLB
+    // confirms starting batters. Same shape as pitcher map.
+    const statcastBattersPromise: Promise<Map<number, StatcastBatterSnapshot>> = sports.includes("mlb")
+      ? (async () => {
+          try {
+            const { supabaseAdmin } = await import("@/lib/supabase-admin");
+            const { supabase: anon } = await import("@/lib/supabase");
+            const sb = supabaseAdmin ?? anon;
+            const { data } = await sb
+              .from("statcast_batters")
+              .select("player_id, est_woba, woba");
+            const m = new Map<number, StatcastBatterSnapshot>();
+            for (const row of (data ?? []) as StatcastBatterSnapshot[]) {
+              if (typeof row.player_id === "number") m.set(row.player_id, row);
+            }
+            return m;
+          } catch {
+            return new Map<number, StatcastBatterSnapshot>();
+          }
+        })()
+      : Promise.resolve(new Map<number, StatcastBatterSnapshot>());
+
     const [
       results,
       mlbLineups,
@@ -2119,6 +2188,7 @@ export async function GET(request: NextRequest) {
       bullpenLoads,
       mlbUmpires,
       statcastPitchers,
+      statcastBatters,
     ] = await Promise.all([
       Promise.allSettled(sportFetches),
       mlbLineupsPromise,
@@ -2128,6 +2198,7 @@ export async function GET(request: NextRequest) {
       bullpenPromise,
       umpiresPromise,
       statcastPitchersPromise,
+      statcastBattersPromise,
     ]);
 
     // Now we have all games — fetch line movements for them in one query
@@ -2241,6 +2312,42 @@ export async function GET(request: NextRequest) {
             const home = typeof homeId === "number" ? statcastPitchers.get(homeId) ?? null : null;
             const away = typeof awayId === "number" ? statcastPitchers.get(awayId) ?? null : null;
             if (home || away) ctx = { ...(ctx || {}), statcast: { home, away } };
+
+            // MLB-only: lineup strength signal. When MLB has confirmed the
+            // batting order (~2hrs before first pitch), pull each batter's
+            // season xWOBA from statcast_batters and compute a team
+            // average. Compare to the MLB league mean (~0.320) to flag
+            // unusually strong / weak lineups posted today (key bat
+            // sitting, all-star sitting on a day game after night game,
+            // platoon adjustments, etc.).
+            if (
+              lineup.lineupConfirmed &&
+              statcastBatters.size > 0 &&
+              lineup.homeBatters.length >= 7 &&
+              lineup.awayBatters.length >= 7
+            ) {
+              const meanXwoba = (batters: typeof lineup.homeBatters): number | null => {
+                const xs: number[] = [];
+                for (const b of batters) {
+                  const s = statcastBatters.get(b.id);
+                  if (s?.est_woba !== null && s?.est_woba !== undefined) xs.push(s.est_woba);
+                }
+                if (xs.length < 5) return null; // not enough rated batters to be meaningful
+                return xs.reduce((s, v) => s + v, 0) / xs.length;
+              };
+              const homeMean = meanXwoba(lineup.homeBatters);
+              const awayMean = meanXwoba(lineup.awayBatters);
+              if (homeMean !== null || awayMean !== null) {
+                ctx = {
+                  ...(ctx || {}),
+                  lineupStrength: {
+                    homeXwoba: homeMean,
+                    awayXwoba: awayMean,
+                    confirmed: true,
+                  },
+                };
+              }
+            }
           }
         }
         if (sport === "nhl") {
