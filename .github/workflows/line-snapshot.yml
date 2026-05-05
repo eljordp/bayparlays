@@ -1,0 +1,36 @@
+name: BayParlays Line Snapshot
+
+# Hourly line snapshot cron. Hits /api/parlays once per hour for each
+# in-season sport, which causes the upstream odds processing to insert
+# fresh rows into line_history. Density of those rows directly drives
+# CLV calculation accuracy: at parlay grade time, the resolver looks
+# for the most recent line_history row before commence_time to use as
+# the "closing line." Without these hourly snapshots, closing-line
+# data was 6+ hours stale because lines were only captured when the
+# slate cron or research scanner happened to run.
+#
+# Cost: 5 sports × 24 hours = ~120 credits/day. Plus 8 research scans
+# (40) plus resolver (~30) = ~190 credits/day total. Budget is 500.
+#
+# /api/parlays caches for 5 minutes — hourly calls always hit fresh
+# odds and snapshot fresh line_history rows.
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # top of every hour, UTC
+  workflow_dispatch: {}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hit /api/parlays for fresh line snapshot
+        # Single call across all sports — /api/parlays internally
+        # iterates the sports list, fetches odds for each, and inserts
+        # line_history rows for every priced leg. We don't care about
+        # the parlay output (which we discard); we just need the side-
+        # effect on line_history.
+        run: |
+          curl -s -o /dev/null -w "snapshot HTTP %{http_code} in %{time_total}s\n" \
+            "https://bayparlays.vercel.app/api/parlays?sports=nba,mlb,nhl,ufc,soccer&format=legs&count=50&tier=admin"

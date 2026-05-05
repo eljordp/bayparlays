@@ -31,9 +31,9 @@ const BASE_URL =
 // May tail of EPL season.
 const SPORTS = "nba,mlb,nhl,ufc,soccer";
 const LEG_FETCH_COUNT = 200;       // x4 inside /api/parlays = up to 800 legs
-const MAX_LEG_COUNT_FOR_4LEG = 50; // was 30; with C(50,4)=230k still tractable
-const TOP_K_TO_PERSIST = 2000;     // was 500 (4× growth) — feeds calibration
-                                   // and ML model with more graded samples
+const MAX_LEG_COUNT_FOR_4LEG = 60; // was 30→50→60; C(60,4)=487k still tractable
+const TOP_K_TO_PERSIST = 3000;     // was 500→2000→3000 — JP's 500-credit/day
+                                   // budget unblocks the previous storage cap
 const SHARP_EV_THRESHOLD = 5;      // ev_percent >= 5 counts as "sharp"
 
 // ─── Types ─────────────────────────────────────────────────────────────────

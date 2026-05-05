@@ -1,26 +1,28 @@
 name: BayParlays Research Scan
 
 # Brute-force scans every valid 2/3/4-leg parlay from the day's edge-positive
-# leg pool and persists the top 2,000 by EV to research_parlays. Runs 4x/day
-# (every 6 hours) to capture line movement across the slate:
-#   12:00 UTC (5am PT — pre-morning slate)
-#   18:00 UTC (11am PT — pre-afternoon slate)
-#   00:00 UTC (5pm PT — pre-evening slate)
-#   06:00 UTC (11pm PT — post-late-game / overnight)
+# leg pool and persists the top 3,000 by EV to research_parlays. Runs 8x/day
+# (every 3 hours) to capture line movement throughout the slate window.
 #
-# Credit cost: ~5 credits per scan × 4 scans = 20 credits/day for scans.
-# Combined with resolver runs (~30 credits/day) total is ~50/day — well
-# under the 500/day Odds API budget.
+# 5 sports × 8 scans = 40 credits/day. Combined with hourly line snapshots
+# (~120/day) + resolver (~30/day) total is ~190/day, well under the
+# 500/day Odds API budget JP has from daily key rotations.
 #
 # Uses Supabase service role to bypass the RLS public-read constraint on
 # inserts. Anon key would work too since the table policies allow inserts.
 
 on:
   schedule:
-    - cron: "0 12 * * *"
-    - cron: "0 18 * * *"
+    # Every 3 hours, aligned to UTC clock for clean rollups in the
+    # research_scans timestamp column.
     - cron: "0 0 * * *"
+    - cron: "0 3 * * *"
     - cron: "0 6 * * *"
+    - cron: "0 9 * * *"
+    - cron: "0 12 * * *"
+    - cron: "0 15 * * *"
+    - cron: "0 18 * * *"
+    - cron: "0 21 * * *"
   workflow_dispatch: {}
 
 jobs:
