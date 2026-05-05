@@ -18,8 +18,15 @@ export const maxDuration = 60;
 // Below this the model is memorizing rather than generalizing. Bumped
 // 200 → 300 (2026-05-03) — with ~25 features one-hot encoded, the
 // rule-of-thumb is ≥10 samples per feature for stable logistic
-// regression weights. 300 keeps us safely on the right side of that.
-const MIN_TRAIN_SIZE = 300;
+// regression weights.
+//
+// Temporarily lowered to 100 (2026-05-05) to bootstrap the first
+// model. Resolver only started persisting leg_results today; only ~225
+// legs have outcomes recorded so far. Model will be noisy at this
+// sample size but better than nothing — and it retrains nightly so
+// it improves as data accumulates. Bump back to 300 once we have 1k+
+// graded legs (~5-7 days of new parlays).
+const MIN_TRAIN_SIZE = 100;
 
 interface ParlayRow {
   legs: Array<{
