@@ -1,0 +1,29 @@
+name: BayParlays Fetch NHL Stats
+
+# Daily cron — pulls NHL goalie season summary from api.nhle.com/stats
+# and upserts to nhl_goalies. Runs at 14:30 UTC = 9:30am ET, after NHL's
+# overnight refresh and our Statcast pull at 14:00.
+#
+# Free public API — zero credit cost.
+
+on:
+  schedule:
+    - cron: "30 14 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger fetch-nhl-stats cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          AUTH_HEADER=""
+          if [ -n "$CRON_SECRET" ]; then
+            AUTH_HEADER="-H 'Authorization: Bearer $CRON_SECRET'"
+          fi
+          curl -s -o /dev/null -w "fetch-nhl-stats HTTP %{http_code} in %{time_total}s\n" \
+            $AUTH_HEADER \
+            "https://bayparlays.vercel.app/api/cron/fetch-nhl-stats"

@@ -725,6 +725,20 @@ interface ExtractCtx {
   lineMovements?: Map<string, LineMovement> | null;
   bullpenMatchup?: BullpenMatchup | null;  // MLB only
   umpire?: UmpireBias | null;             // MLB only
+  statcast?: {
+    home?: StatcastPitcherSnapshot | null;
+    away?: StatcastPitcherSnapshot | null;
+  } | null;  // MLB only — Savant xWOBA/xERA regression signal per starter
+}
+
+// Subset of statcast_pitchers we read into the leg pipeline. Stored separately
+// from the full row to avoid leaking unused fields into context payloads.
+interface StatcastPitcherSnapshot {
+  player_id: number;
+  era: number | null;
+  xera: number | null;
+  era_xera_diff: number | null;
+  est_woba_diff: number | null;
 }
 
 // ─── Confidence-bias pipeline ────────────────────────────────────────────────
@@ -1316,6 +1330,42 @@ function extractLegsFromGame(
       if (sportLabel === "MLB" && ctx?.lineup) {
         const { reason } = pitcherMatchupBias(ctx.lineup);
         pitcherNote = reason;
+        // Augment with Savant Statcast regression flags when we have a
+        // material gap between actual ERA and xERA. Threshold ±0.40 ERA
+        // (about half a run / 9 IP) avoids tagging trivial gaps as
+        // "lucky" / "unlucky" — only flag when the regression signal is
+        // big enough to actually move a total.
+        if (ctx.statcast) {
+          const tags: string[] = [];
+          const { home, away } = ctx.statcast;
+          const homeName = ctx.lineup.homePitcher?.fullName;
+          const awayName = ctx.lineup.awayPitcher?.fullName;
+          if (
+            home &&
+            home.era_xera_diff !== null &&
+            Math.abs(home.era_xera_diff) >= 0.4
+          ) {
+            const luck = home.era_xera_diff > 0 ? "lucky" : "unlucky";
+            tags.push(
+              `${homeName ?? "Home SP"} ${luck} (xERA ${home.xera?.toFixed(2) ?? "?"} vs ERA ${home.era?.toFixed(2) ?? "?"})`,
+            );
+          }
+          if (
+            away &&
+            away.era_xera_diff !== null &&
+            Math.abs(away.era_xera_diff) >= 0.4
+          ) {
+            const luck = away.era_xera_diff > 0 ? "lucky" : "unlucky";
+            tags.push(
+              `${awayName ?? "Away SP"} ${luck} (xERA ${away.xera?.toFixed(2) ?? "?"} vs ERA ${away.era?.toFixed(2) ?? "?"})`,
+            );
+          }
+          if (tags.length > 0) {
+            pitcherNote = pitcherNote
+              ? `${pitcherNote} · ${tags.join("; ")}`
+              : tags.join("; ");
+          }
+        }
       }
       const weatherNote =
         sportLabel === "MLB" && ctx?.weather?.reason
@@ -2035,7 +2085,41 @@ export async function GET(request: NextRequest) {
     // game loop below so it doesn't block the main odds fetch.
     let lineMovements: Map<string, LineMovement> = new Map();
 
-    const [results, mlbLineups, injuryBySport, lastGamesBySport, nhlGoalies, bullpenLoads, mlbUmpires] = await Promise.all([
+    // Statcast pitcher map — loaded once per request, keyed by player_id.
+    // The Savant cron at /api/cron/fetch-statcast updates this daily; we
+    // just need a fast read here. Empty Map on any failure so the loop
+    // below treats "no Statcast data for this pitcher" the same as "no
+    // pitcher data at all" — a clean fallback path.
+    const statcastPitchersPromise: Promise<Map<number, StatcastPitcherSnapshot>> = sports.includes("mlb")
+      ? (async () => {
+          try {
+            const { supabaseAdmin } = await import("@/lib/supabase-admin");
+            const { supabase: anon } = await import("@/lib/supabase");
+            const sb = supabaseAdmin ?? anon;
+            const { data } = await sb
+              .from("statcast_pitchers")
+              .select("player_id, era, xera, era_xera_diff, est_woba_diff");
+            const m = new Map<number, StatcastPitcherSnapshot>();
+            for (const row of (data ?? []) as StatcastPitcherSnapshot[]) {
+              if (typeof row.player_id === "number") m.set(row.player_id, row);
+            }
+            return m;
+          } catch {
+            return new Map<number, StatcastPitcherSnapshot>();
+          }
+        })()
+      : Promise.resolve(new Map<number, StatcastPitcherSnapshot>());
+
+    const [
+      results,
+      mlbLineups,
+      injuryBySport,
+      lastGamesBySport,
+      nhlGoalies,
+      bullpenLoads,
+      mlbUmpires,
+      statcastPitchers,
+    ] = await Promise.all([
       Promise.allSettled(sportFetches),
       mlbLineupsPromise,
       injuryPromise,
@@ -2043,6 +2127,7 @@ export async function GET(request: NextRequest) {
       nhlGoaliesPromise,
       bullpenPromise,
       umpiresPromise,
+      statcastPitchersPromise,
     ]);
 
     // Now we have all games — fetch line movements for them in one query
@@ -2145,6 +2230,17 @@ export async function GET(request: NextRequest) {
           );
           if (umpire) {
             ctx = { ...(ctx || {}), umpire };
+          }
+          // MLB-only: attach Statcast snapshots for the projected starters.
+          // lineup.homePitcher.id and .awayPitcher.id are MLB AM IDs which
+          // match the player_id column in statcast_pitchers — no fuzzy
+          // matching needed.
+          if (lineup) {
+            const homeId = lineup.homePitcher?.id;
+            const awayId = lineup.awayPitcher?.id;
+            const home = typeof homeId === "number" ? statcastPitchers.get(homeId) ?? null : null;
+            const away = typeof awayId === "number" ? statcastPitchers.get(awayId) ?? null : null;
+            if (home || away) ctx = { ...(ctx || {}), statcast: { home, away } };
           }
         }
         if (sport === "nhl") {

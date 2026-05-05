@@ -413,6 +413,21 @@ export default function AdminPage() {
                         Baseball Savant xWOBA/xERA/xBA + exit velocity. Free public CSV. Pitchers and batters ranked by regression signal — bigger gap between actual and expected = bigger expected mean reversion.
                       </p>
                     </Link>
+                    <Link
+                      href="/admin/nhl-stats"
+                      className="block p-5 rounded-xl transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.03)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                      }}
+                    >
+                      <div className="text-base font-semibold mb-1" style={{ color: "#ededed" }}>
+                        NHL Goalies →
+                      </div>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                        Season-to-date save % / GAA from the official NHL Stats API. Free, daily refresh. The starting goalie matchup is the single biggest signal for NHL game-level betting — a backup at .885 vs starter at .920 moves a total a full goal.
+                      </p>
+                    </Link>
                   </div>
                 </section>
               )}
