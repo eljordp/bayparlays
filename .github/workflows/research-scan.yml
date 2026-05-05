@@ -1,28 +1,26 @@
 name: BayParlays Research Scan
 
 # Brute-force scans every valid 2/3/4-leg parlay from the day's edge-positive
-# leg pool and persists the top 3,000 by EV to research_parlays. Runs 8x/day
-# (every 3 hours) to capture line movement throughout the slate window.
+# leg pool and persists the top 3,000 by EV to research_parlays. Runs 6x/day
+# during ACTIVE HOURS — when odds actually move and new games appear in the
+# pool. Was 8x/day evenly spread, but the 06:00 / 09:00 UTC slots scan the
+# same leg pool we just captured at 00:00 / 03:00 (US is asleep, no new
+# games or sharp action), so they were burning credits on duplicate data.
 #
-# 5 sports × 8 scans = 40 credits/day. Combined with hourly line snapshots
-# (~120/day) + resolver (~30/day) total is ~190/day, well under the
-# 500/day Odds API budget JP has from daily key rotations.
+# 5 sports × 6 scans = 30 credits/day. Combined with hourly line snapshots
+# (~65/day) + resolver (~30/day) total is ~125/day. Budget is 500/day.
 #
 # Uses Supabase service role to bypass the RLS public-read constraint on
 # inserts. Anon key would work too since the table policies allow inserts.
 
 on:
   schedule:
-    # Every 3 hours, aligned to UTC clock for clean rollups in the
-    # research_scans timestamp column.
-    - cron: "0 0 * * *"
-    - cron: "0 3 * * *"
-    - cron: "0 6 * * *"
-    - cron: "0 9 * * *"
-    - cron: "0 12 * * *"
-    - cron: "0 15 * * *"
-    - cron: "0 18 * * *"
-    - cron: "0 21 * * *"
+    - cron: "0 12 * * *"  # 5am PT — fresh morning odds, before slate post
+    - cron: "0 15 * * *"  # 8am PT — sharp lookahead
+    - cron: "0 18 * * *"  # 11am PT — afternoon games approaching
+    - cron: "0 21 * * *"  # 2pm PT — early MLB tipoffs
+    - cron: "0 0 * * *"   # 5pm PT — peak NBA/NHL tipoff window
+    - cron: "0 3 * * *"   # 8pm PT — late games / closing odds
   workflow_dispatch: {}
 
 jobs:

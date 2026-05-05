@@ -1,23 +1,39 @@
 name: BayParlays Line Snapshot
 
-# Hourly line snapshot cron. Hits /api/parlays once per hour for each
-# in-season sport, which causes the upstream odds processing to insert
-# fresh rows into line_history. Density of those rows directly drives
-# CLV calculation accuracy: at parlay grade time, the resolver looks
-# for the most recent line_history row before commence_time to use as
-# the "closing line." Without these hourly snapshots, closing-line
-# data was 6+ hours stale because lines were only captured when the
-# slate cron or research scanner happened to run.
+# Hourly line snapshot cron, ACTIVE HOURS ONLY. Hits /api/parlays once
+# per hour during US-active sports windows (16:00 UTC = noon ET through
+# 04:00 UTC = midnight ET / 9pm PT). Skips 05:00-15:00 UTC overnight —
+# during those hours US lines barely move (low volume) and we'd be
+# spending credits to re-snapshot odds that haven't changed since the
+# last late-night scan.
 #
-# Cost: 5 sports × 24 hours = ~120 credits/day. Plus 8 research scans
-# (40) plus resolver (~30) = ~190 credits/day total. Budget is 500.
+# Snapshots write line_history rows as a side effect of odds
+# processing in /api/parlays. Density of those rows directly drives
+# CLV calculation: at parlay grade time, the resolver looks for the
+# most recent line_history row before commence_time to use as the
+# "closing line." Hourly density during active windows means the
+# closing-line estimate is within ~60 min of tipoff for any game in
+# our window — was 6+ hours stale before this cron existed.
 #
-# /api/parlays caches for 5 minutes — hourly calls always hit fresh
-# odds and snapshot fresh line_history rows.
+# Cost: 5 sports × 13 hours = ~65 credits/day. Combined with 6
+# research scans (30) and resolver runs (~30) = ~125 credits/day.
+# Budget is 500/day, leaves 375 headroom.
 
 on:
   schedule:
-    - cron: "0 * * * *"  # top of every hour, UTC
+    - cron: "0 16 * * *"  # 16:00 UTC = 12pm ET / 9am PT
+    - cron: "0 17 * * *"
+    - cron: "0 18 * * *"
+    - cron: "0 19 * * *"
+    - cron: "0 20 * * *"
+    - cron: "0 21 * * *"
+    - cron: "0 22 * * *"
+    - cron: "0 23 * * *"
+    - cron: "0 0 * * *"   # 00:00 UTC = 8pm ET / 5pm PT — peak tipoff
+    - cron: "0 1 * * *"
+    - cron: "0 2 * * *"
+    - cron: "0 3 * * *"
+    - cron: "0 4 * * *"   # 04:00 UTC = 12am ET / 9pm PT
   workflow_dispatch: {}
 
 jobs:
