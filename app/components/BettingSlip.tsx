@@ -10,11 +10,47 @@ interface BettingSlipProps {
     odds: number;
     result: "win" | "loss" | "pending" | "WIN" | "PENDING";
     book?: string;
+    // Game identifier (e.g. "Lakers vs Warriors") and commence time
+    // (ISO string). Both optional for back-compat with old callers; when
+    // present they get rendered as a small subtitle so playoff series
+    // with repeated matchups don't all look the same.
+    game?: string;
+    commenceTime?: string;
   }[];
   stake: number;
   payout: number;
   status: "pending" | "won" | "lost";
   animated?: boolean;
+}
+
+// Compact game-time formatter. Skips year on near-future dates so the
+// label stays narrow inside the slip cell. ISO → "Wed 7:10pm" /
+// "May 6 7:10pm" (later in the week or beyond).
+function formatGameTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return "";
+    const now = new Date();
+    const sameDay =
+      d.toDateString() === now.toDateString();
+    const within7d =
+      d.getTime() - now.getTime() < 7 * 24 * 60 * 60 * 1000;
+    const time = d.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    if (sameDay) return `Today ${time}`;
+    if (within7d) {
+      return d.toLocaleDateString(undefined, { weekday: "short" }) +
+        " " + time;
+    }
+    return d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    }) + " " + time;
+  } catch {
+    return "";
+  }
 }
 
 /* ─── Confetti dots ─── */
@@ -354,6 +390,26 @@ export function BettingSlip({
                     >
                       {leg.pick}
                     </span>
+                    {(leg.game || leg.commenceTime) && (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          color: "rgba(0,0,0,0.4)",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          marginTop: 1,
+                        }}
+                      >
+                        {leg.game}
+                        {leg.game && leg.commenceTime && " · "}
+                        {leg.commenceTime && (
+                          <span style={{ color: "rgba(0,0,0,0.55)", fontWeight: 500 }}>
+                            {formatGameTime(leg.commenceTime)}
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
 

@@ -55,6 +55,27 @@ interface ShareLeg {
   pick: string;
   game: string;
   odds: string;
+  commenceTime?: string;  // ISO; rendered as a compact tip-off label
+}
+
+// Compact tip-off label for the OG card — playoff series have repeated
+// matchups so without dates two cards look identical.
+function ogGameTime(iso: string | undefined): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (!Number.isFinite(d.getTime())) return "";
+    const time = d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }) + " · " + time;
+  } catch {
+    return "";
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -263,6 +284,14 @@ export async function GET(req: NextRequest) {
                   }}
                 >
                   {leg.game}
+                  {leg.commenceTime && ogGameTime(leg.commenceTime) && (
+                    <>
+                      <span style={{ color: "#bbb" }}>{" · "}</span>
+                      <span style={{ color: "#444", fontWeight: 600 }}>
+                        {ogGameTime(leg.commenceTime)}
+                      </span>
+                    </>
+                  )}
                 </span>
               </div>
               <span

@@ -1061,6 +1061,27 @@ export default function ResultsPage() {
                                           )}
                                           <span className="text-xs truncate" style={{ color: "rgba(0,0,0,0.45)" }}>
                                             {leg.game || leg.matchup || ""}
+                                            {leg.commenceTime && (
+                                              <>
+                                                <span style={{ color: "rgba(0,0,0,0.25)" }}>{" · "}</span>
+                                                <span style={{ color: "rgba(0,0,0,0.6)", fontWeight: 500 }}>
+                                                  {(() => {
+                                                    try {
+                                                      const d = new Date(leg.commenceTime);
+                                                      return d.toLocaleDateString(undefined, {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                      }) + " " + d.toLocaleTimeString(undefined, {
+                                                        hour: "numeric",
+                                                        minute: "2-digit",
+                                                      });
+                                                    } catch {
+                                                      return "";
+                                                    }
+                                                  })()}
+                                                </span>
+                                              </>
+                                            )}
                                           </span>
                                         </div>
                                         <div className="text-sm font-medium mt-1" style={{ color: "#0a0a0a" }}>

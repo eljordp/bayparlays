@@ -13,6 +13,7 @@ interface Leg {
   game: string;
   odds: number;
   book?: string;
+  commenceTime?: string;
 }
 
 interface StaticParlayCardProps {
@@ -47,6 +48,7 @@ export function StaticParlayCard({
         pick: l.pick,
         game: l.game,
         odds: formatOdds(l.odds),
+        ...(l.commenceTime ? { commenceTime: l.commenceTime } : {}),
       })),
     ),
     combined: combinedOdds || "—",

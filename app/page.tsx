@@ -617,12 +617,13 @@ export default function Home() {
                 {/* Right: static parlay card preview (replaces Remotion). */}
                 <div className="flex justify-center">
                   <StaticParlayCard
-                    legs={crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number; book?: string }) => ({
+                    legs={crazy.legs?.map((leg: { sport: string; pick: string; game: string; odds: number; book?: string; commenceTime?: string }) => ({
                       sport: leg.sport,
                       pick: leg.pick,
                       odds: leg.odds,
                       book: leg.book || "Best Line",
                       game: leg.game,
+                      commenceTime: leg.commenceTime,
                     })) || []}
                     combinedOdds={crazy.combined_odds || ""}
                     payout={crazy.payout || 0}
@@ -678,12 +679,14 @@ export default function Home() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
                 <motion.div variants={fadeUp} custom={2}>
                   <BettingSlip
-                    legs={featuredParlay.legs.map((leg: { sport: string; pick: string; odds: number; book: string }) => ({
+                    legs={featuredParlay.legs.map((leg: { sport: string; pick: string; odds: number; book: string; game?: string; commenceTime?: string }) => ({
                       sport: leg.sport,
                       pick: leg.pick,
                       odds: leg.odds,
                       result: featuredParlay.status === "won" ? "win" : featuredParlay.status === "lost" ? "loss" : "pending",
                       book: leg.book,
+                      game: leg.game,
+                      commenceTime: leg.commenceTime,
                     }))}
                     stake={100}
                     payout={featuredParlay.payout}
