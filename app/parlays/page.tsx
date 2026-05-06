@@ -243,6 +243,12 @@ export default function ParlaysPage() {
   const [selectedSport, setSelectedSport] = useState("All");
   const [selectedLegs, setSelectedLegs] = useState<number | null>(null);
   const [oddsRange, setOddsRange] = useState<OddsRange>("all");
+  // Slate-rank filter — when set to a number N, only show parlays whose
+  // slate_rank is ≤ N. "all" lets every parlay through. The slate cron
+  // ranks each day's batch by confidence so #1 is the AI's strongest
+  // pick. Visible only when at least one parlay in the slate has a
+  // rank, otherwise we don't surface the filter.
+  const [topNFilter, setTopNFilter] = useState<3 | 5 | 10 | "all">("all");
   // Default to "Most Confident" — users want "will this hit?" before
   // "is this +EV math." Lock picks lead; EV + Payout are optional tabs.
   const [sortBy, setSortBy] = useState<SortOption>("confidence");
@@ -389,6 +395,18 @@ export default function ParlaysPage() {
     // count so a "3" filter doesn't silently include 4-leg parlays.
     if (selectedLegs !== null) {
       pool = pool.filter((p) => p.legs.length === selectedLegs);
+    }
+
+    // Top-N filter — keep only parlays in the AI's top N of today's
+    // slate. Parlays without a rank (live-generated, not from slate)
+    // pass through always so the page never goes blank when ranks
+    // aren't yet populated.
+    if (topNFilter !== "all") {
+      pool = pool.filter((p) => {
+        const r = p.slateRank;
+        if (typeof r !== "number" || r <= 0) return true;
+        return r <= topNFilter;
+      });
     }
 
     // Sort-specific floor on AI hit rate. Keeps lottery tickets out of
@@ -822,6 +840,43 @@ export default function ParlaysPage() {
               })}
             </div>
           </div>
+
+          {/* Slate rank filter — only meaningful when at least one parlay
+              in the current pool actually has a rank assigned. Hidden
+              otherwise so /parlays in non-slate mode doesn't show a
+              dead control. */}
+          {parlays.some((p) => typeof p.slateRank === "number" && p.slateRank > 0) && (
+            <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-2 md:gap-3 mt-2 md:mt-4">
+              <span className="hidden md:inline text-xs font-medium uppercase tracking-wider mr-1 flex-shrink-0" style={{ color: "rgba(0,0,0,0.4)" }}>
+                Show
+              </span>
+              {([
+                { value: "all" as const, label: "All Picks" },
+                { value: 3 as const, label: "Top 3" },
+                { value: 5 as const, label: "Top 5" },
+                { value: 10 as const, label: "Top 10" },
+              ]).map((opt) => {
+                const isActive = topNFilter === opt.value;
+                return (
+                  <button
+                    key={String(opt.value)}
+                    onClick={() => setTopNFilter(opt.value)}
+                    className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium transition-all duration-200 flex-shrink-0 whitespace-nowrap"
+                    style={{
+                      background: isActive ? "rgba(34,197,94,0.10)" : "rgba(0,0,0,0.04)",
+                      color: isActive ? "#0a0a0a" : "rgba(0,0,0,0.5)",
+                      border: isActive
+                        ? "1px solid rgba(34,197,94,0.30)"
+                        : "1px solid rgba(0,0,0,0.06)",
+                      fontWeight: isActive ? 600 : 400,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Odds range — client-side payout bucket filter */}
           <div className="flex overflow-x-auto scrollbar-hide flex-nowrap items-center gap-2 md:gap-3 mt-2 md:mt-4">
@@ -1546,18 +1601,48 @@ function ParlayCard({
           </span>
         </div>
       )}
-      {/* Header: number + confidence + time */}
+      {/* Header: slate rank badge (or position fallback) + confidence + time */}
       <div
         className="px-5 md:px-6 py-4 flex items-center justify-between"
         style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
       >
         <div className="flex items-center gap-3">
-          <span
-            className="text-lg font-black tabular-nums"
-            style={{ color: "rgba(0,0,0,0.25)" }}
-          >
-            #{String(index + 1).padStart(2, "0")}
-          </span>
+          {(() => {
+            // Show slate_rank when the parlay has been published as part of
+            // a curated slate (slate cron output). Top 3 ranks get color
+            // emphasis. Live-generated parlays without slate_rank fall
+            // back to the position-in-list indicator they had before.
+            const sr = parlay.slateRank;
+            if (typeof sr === "number" && sr > 0) {
+              const top3 = sr <= 3;
+              return (
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-[0.18em] px-2 py-1 rounded-full"
+                    style={{
+                      color: top3 ? "#0a0a0a" : "rgba(0,0,0,0.55)",
+                      background: top3
+                        ? "rgba(34,197,94,0.12)"
+                        : "rgba(0,0,0,0.05)",
+                      border: top3
+                        ? "1px solid rgba(34,197,94,0.28)"
+                        : "1px solid rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    {top3 ? `TOP PICK · #${sr}` : `SLATE #${sr}`}
+                  </span>
+                </div>
+              );
+            }
+            return (
+              <span
+                className="text-lg font-black tabular-nums"
+                style={{ color: "rgba(0,0,0,0.25)" }}
+              >
+                #{String(index + 1).padStart(2, "0")}
+              </span>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-3">
           <span
