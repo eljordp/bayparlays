@@ -738,6 +738,12 @@ interface ExtractCtx {
     home: { pace: number | null; off_rating: number | null; def_rating: number | null; net_rating: number | null } | null;
     away: { pace: number | null; off_rating: number | null; def_rating: number | null; net_rating: number | null } | null;
   } | null;  // NBA only — pace + efficiency ratings per team
+  pinnacle?: {
+    ml_home: number | null;
+    ml_away: number | null;
+    total_line: number | null;
+    pinnacle_max_stake: number | null;
+  } | null;  // Sharp benchmark: how the sharpest book has the game priced
 }
 
 // Subset of statcast_pitchers we read into the leg pipeline. Stored separately
@@ -1304,6 +1310,80 @@ function extractLegsFromGame(
             if (Math.abs(d) >= 0.0015) {
               totalDelta += d;
               biasReasons.push(`rest ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
+            }
+          }
+        }
+
+        // NBA team stats — pace + net rating from ESPN-sourced
+        // nba_team_stats. Pace contributes to total expectations;
+        // net rating diff biases spread/moneyline toward the stronger
+        // team. Both effects are deliberately small (caps at ±0.025pp
+        // per signal) since net rating already overlaps with Elo and
+        // we don't want to double-count.
+        if (sportLabel === "NBA" && ctx?.nbaTeams) {
+          const home = ctx.nbaTeams.home;
+          const away = ctx.nbaTeams.away;
+
+          if ((marketKey === "h2h" || marketKey === "spreads")
+              && home?.net_rating !== null && home?.net_rating !== undefined
+              && away?.net_rating !== null && away?.net_rating !== undefined) {
+            const pickIsHome = outcomeInfo.name === game.home_team;
+            const netDiff = pickIsHome
+              ? home.net_rating - away.net_rating
+              : away.net_rating - home.net_rating;
+            // Net rating gap of 10 points → 0.025pp boost. Tiny but real.
+            const d = Math.max(-0.025, Math.min(0.025, netDiff * 0.0025));
+            if (Math.abs(d) >= 0.001) {
+              sideDelta += d;
+              biasReasons.push(`net ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
+            }
+          }
+
+          if (marketKey === "totals"
+              && home?.pace !== null && home?.pace !== undefined
+              && away?.pace !== null && away?.pace !== undefined) {
+            // Combined pace minus league average (~98). Fast game → favor
+            // over, slow → favor under. Capped at ±0.025pp.
+            const combinedPace = home.pace + away.pace;
+            const LEAGUE_PACE_SUM = 196; // 2 × 98 league avg
+            const paceDelta = combinedPace - LEAGUE_PACE_SUM;
+            const pickIsOver = outcomeInfo.name.toLowerCase() === "over";
+            const direction = pickIsOver ? 1 : -1;
+            const d = Math.max(-0.025, Math.min(0.025, paceDelta * 0.002 * direction));
+            if (Math.abs(d) >= 0.001) {
+              totalDelta += d;
+              biasReasons.push(`pace ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
+            }
+          }
+        }
+
+        // Pinnacle benchmark — when our pick's implied probability is
+        // materially better than Pinnacle's, sharps disagree with us
+        // (suspect signal). When ours is worse than Pinnacle's (we're
+        // taking a worse number than the sharpest book), we're either
+        // chasing a stale soft-book number or genuinely wrong.
+        //
+        // ±0.02pp cap. Skipped when Pinnacle data is stale or missing.
+        if (ctx?.pinnacle) {
+          const pin = ctx.pinnacle;
+          if (marketKey === "h2h"
+              && pin.ml_home !== null && pin.ml_away !== null) {
+            const pickIsHome = outcomeInfo.name === game.home_team;
+            const pinPickOdds = pickIsHome ? pin.ml_home : pin.ml_away;
+            // Convert pin odds to implied prob, compare to ours.
+            // If Pinnacle thinks our pick is MORE likely than the soft
+            // book does (lower American odds = higher implied prob),
+            // sharp agreement → boost. If less likely → penalty.
+            const pinImplied = pinPickOdds > 0
+              ? 100 / (pinPickOdds + 100)
+              : -pinPickOdds / (-pinPickOdds + 100);
+            const ourImplied = impliedProb;
+            const diff = pinImplied - ourImplied;
+            // Pinnacle thinks 5pp higher → 0.02pp boost. Symmetric.
+            const d = Math.max(-0.02, Math.min(0.02, diff * 0.4));
+            if (Math.abs(d) >= 0.001) {
+              sideDelta += d;
+              biasReasons.push(`pinn ${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}pp`);
             }
           }
         }
@@ -2172,6 +2252,50 @@ export async function GET(request: NextRequest) {
         })()
       : Promise.resolve(new Map<number, StatcastPitcherSnapshot>());
 
+    // Pinnacle benchmark map — keyed by sport + sorted-team-pair so
+    // ESPN/Odds-API team names match Pinnacle's regardless of which
+    // is "home" vs "away" in their feed. We pull the most recent
+    // snapshot per game and attach to ctx so leg scoring can compare
+    // our pick to the sharpest book's pricing.
+    const pinnacleSignalsPromise: Promise<Map<string, { ml_home: number | null; ml_away: number | null; total_line: number | null; pinnacle_max_stake: number | null; home_team: string }>> = (async () => {
+      try {
+        const { supabaseAdmin } = await import("@/lib/supabase-admin");
+        const { supabase: anon } = await import("@/lib/supabase");
+        const sb = supabaseAdmin ?? anon;
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data } = await sb
+          .from("betting_signals")
+          .select("sport, home_team, away_team, ml_home, ml_away, total_line, pinnacle_max_stake, captured_at")
+          .eq("source", "pinnacle")
+          .gte("captured_at", cutoff)
+          .order("captured_at", { ascending: false })
+          .limit(500);
+        const m = new Map<string, { ml_home: number | null; ml_away: number | null; total_line: number | null; pinnacle_max_stake: number | null; home_team: string }>();
+        function teamKey(sport: string, a: string, b: string): string {
+          const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+          return `${sport.toUpperCase()}|${[norm(a), norm(b)].sort().join("|")}`;
+        }
+        for (const row of (data ?? []) as Array<{ sport: string; home_team: string; away_team: string; ml_home: number | null; ml_away: number | null; total_line: number | null; pinnacle_max_stake: number | null; captured_at: string }>) {
+          if (!row.sport || !row.home_team || !row.away_team) continue;
+          const k = teamKey(row.sport, row.home_team, row.away_team);
+          // First write wins because we ordered DESC by captured_at — the
+          // freshest snapshot per game is what we keep.
+          if (!m.has(k)) {
+            m.set(k, {
+              ml_home: row.ml_home,
+              ml_away: row.ml_away,
+              total_line: row.total_line,
+              pinnacle_max_stake: row.pinnacle_max_stake,
+              home_team: row.home_team,
+            });
+          }
+        }
+        return m;
+      } catch {
+        return new Map();
+      }
+    })();
+
     // NBA team stats map — keyed by lowercase team name. Loads both
     // regular-season and playoff rows; we prefer the playoff row when
     // it exists since it's more recent during the postseason. Empty
@@ -2244,6 +2368,7 @@ export async function GET(request: NextRequest) {
       statcastPitchers,
       statcastBatters,
       nbaTeamStats,
+      pinnacleSignals,
     ] = await Promise.all([
       Promise.allSettled(sportFetches),
       mlbLineupsPromise,
@@ -2255,6 +2380,7 @@ export async function GET(request: NextRequest) {
       statcastPitchersPromise,
       statcastBattersPromise,
       nbaTeamStatsPromise,
+      pinnacleSignalsPromise,
     ]);
 
     // Now we have all games — fetch line movements for them in one query
@@ -2439,6 +2565,36 @@ export async function GET(request: NextRequest) {
             };
           }
         }
+        // Pinnacle benchmark — sharpest book in the market. When their
+        // ML/total is materially different from where Odds API has the
+        // line, that's a sharp-vs-soft divergence we can use as a
+        // confidence boost (agreement) or penalty (disagreement).
+        // Lookup is by normalized sorted-team-pair so we don't care
+        // which feed labels a team home vs away.
+        if (pinnacleSignals.size > 0) {
+          const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const pinKey = `${sport.toUpperCase()}|${[norm(game.home_team), norm(game.away_team)].sort().join("|")}`;
+          const pin = pinnacleSignals.get(pinKey);
+          if (pin) {
+            // Pinnacle stores its own home/away based on their feed —
+            // we need to figure out whether their ml_home matches our
+            // home or our away. Easiest: compare their home_team to ours.
+            const pinHomeIsOurHome =
+              norm(pin.home_team) === norm(game.home_team) ||
+              norm(pin.home_team).includes(norm(game.home_team)) ||
+              norm(game.home_team).includes(norm(pin.home_team));
+            ctx = {
+              ...(ctx || {}),
+              pinnacle: {
+                ml_home: pinHomeIsOurHome ? pin.ml_home : pin.ml_away,
+                ml_away: pinHomeIsOurHome ? pin.ml_away : pin.ml_home,
+                total_line: pin.total_line,
+                pinnacle_max_stake: pin.pinnacle_max_stake,
+              },
+            };
+          }
+        }
+
         // Always include line movements (covers every leg, every sport).
         ctx = { ...(ctx || {}), lineMovements };
 
@@ -2547,6 +2703,11 @@ export async function GET(request: NextRequest) {
           fairProb: l.fairProb,
           sharpEdge: l.sharpEdge,
           evVsFair: l.evVsFair,
+          // Sharp money divergence from Action Network — positive = sharp
+          // money on this leg's pick side, negative = square money on
+          // this side. Used by the research scanner to rank candidate
+          // legs by composite sharpness, not just raw EV.
+          sharpLeanForPick: l.sharpLeanForPick ?? null,
           weatherNote: l.weatherNote ?? null,
           pitcherNote: l.pitcherNote ?? null,
           injuryNote: l.injuryNote ?? null,

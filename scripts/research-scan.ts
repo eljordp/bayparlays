@@ -55,6 +55,10 @@ interface ResearchLeg {
   fairProb?: number;
   sharpEdge?: boolean;
   evVsFair?: number;
+  // Action Network sharp/square money divergence — positive = sharp money
+  // is on this leg's pick side. Used in compositeScore() to bias toward
+  // legs the smart money agrees with, not just legs with high raw EV.
+  sharpLeanForPick?: number | null;
 }
 
 interface ResearchParlay {
@@ -63,6 +67,10 @@ interface ResearchParlay {
   combinedProb: number;
   evPercent: number;
   sharpLegsCount: number;
+  // Composite "sharpness" score combining sharpEdge flags + AN sharp lean
+  // averaged across legs. Used as the persistence-ranking signal so we
+  // store fewer noisy +EV-only longshots and more sharp-aligned combos.
+  sharpnessScore: number;
   sports: string[];
 }
 
@@ -85,20 +93,34 @@ function buildParlay(legs: ResearchLeg[]): ResearchParlay | null {
   let combinedDecimal = 1;
   let combinedProb = 1;
   let sharpLegsCount = 0;
+  let sharpLeanSum = 0;
+  let sharpLeanCount = 0;
   const sportSet = new Set<string>();
   for (const l of legs) {
     combinedDecimal *= americanToDecimal(l.odds);
     combinedProb *= l.ourProb;
     if (l.sharpEdge) sharpLegsCount++;
+    if (typeof l.sharpLeanForPick === "number") {
+      sharpLeanSum += l.sharpLeanForPick;
+      sharpLeanCount++;
+    }
     sportSet.add(l.sport);
   }
   const evPercent = (combinedProb * combinedDecimal - 1) * 100;
+  // Composite sharpness — sum of:
+  //  - 5 points per sharp-edge leg (Pinnacle-style book disagreement)
+  //  - 1 point per percentage point of average sharp lean (AN money/public)
+  // Range typically -30 to +30 for a 3-leg parlay; scale lets it weight
+  // alongside evPercent in the persistence ranking without dominating.
+  const meanSharpLean = sharpLeanCount > 0 ? sharpLeanSum / sharpLeanCount : 0;
+  const sharpnessScore = sharpLegsCount * 5 + meanSharpLean;
   return {
     legs,
     combinedDecimal,
     combinedProb,
     evPercent,
     sharpLegsCount,
+    sharpnessScore: Math.round(sharpnessScore * 10) / 10,
     sports: Array.from(sportSet),
   };
 }
@@ -177,7 +199,17 @@ async function main() {
   // 4. Stats for the scan summary row.
   const positiveEvCount = candidates.filter((p) => p.evPercent > 0).length;
   const sharpEvCount = candidates.filter((p) => p.evPercent >= SHARP_EV_THRESHOLD).length;
-  candidates.sort((a, b) => b.evPercent - a.evPercent);
+  // Composite ranking — used to be evPercent only, which loaded the
+  // training pool with high-EV longshots that hit at near-zero rates
+  // (the calibration data showed bucket=moon and longshot-heavy parlays
+  // were the worst performers). Now we blend evPercent with the
+  // sharpness score (sharp-edge flags + AN money/public divergence).
+  // Both signals are normalized so neither dominates.
+  candidates.sort((a, b) => {
+    const aScore = a.evPercent + a.sharpnessScore * 0.5;
+    const bScore = b.evPercent + b.sharpnessScore * 0.5;
+    return bScore - aScore;
+  });
   const topEvPercent = candidates[0]?.evPercent ?? 0;
   const evValues = candidates.map((p) => p.evPercent).sort((a, b) => a - b);
   const medianEvPercent =
